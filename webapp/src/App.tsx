@@ -61,7 +61,8 @@ const App: React.FC = () => {
           const { data: orderedRefs } = await supabase
             .from('orders')
             .select('user_id')
-            .in('user_id', refIds);
+            .in('user_id', refIds)
+            .eq('status', 'completed');
 
           const uniqueBuyers = new Set((orderedRefs || []).map((o: any) => o.user_id));
           setPurchasedRefsCount(uniqueBuyers.size);
@@ -69,7 +70,7 @@ const App: React.FC = () => {
 
         if (userData.role === 'founder' || userData.role === 'manager') {
           const { count: uCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
-          const { count: oCount } = await supabase.from('orders').select('*', { count: 'exact', head: true });
+          const { count: oCount } = await supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'completed');
           setGlobalStats({
             totalUsers: uCount || 0,
             totalOrders: oCount || 0,

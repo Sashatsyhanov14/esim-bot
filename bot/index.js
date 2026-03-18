@@ -86,6 +86,8 @@ bot.on('text', async (ctx) => {
 
     await saveMessage(telegramId, 'user', userText);
 
+    try { await ctx.sendChatAction('typing'); } catch (e) { }
+
     // Get AI response with Salesperson character
     const aiResponse = await getChatResponse(SALES_SYSTEM_PROMPT(tariffs), history, userText);
 
@@ -98,7 +100,7 @@ bot.on('text', async (ctx) => {
         const tariff = tariffs.find(t => t.id === tariffId);
 
         if (tariff) {
-            await createOrder(telegramId, tariffId);
+            const { data: orderData } = await createOrder(telegramId, tariffId);
 
             finalResponse += `\n\n👇 **Оплатить онлайн:**\n${tariff.payment_link || 'Обратись к менеджеру'}\n\n✅ *Сразу после успешной оплаты мы вышлем твой тариф!*`;
 
@@ -139,7 +141,10 @@ bot.on('text', async (ctx) => {
                             `🚀 **ЗАКАЗ!**\n\n` +
                             `Юзер: @${username} (ID: ${telegramId})\n` +
                             `Тариф: ${tariff.country} | ${tariff.data_gb} на ${tariff.validity_period}\n` +
-                            `Цена: $${tariff.price_usd}`
+                            `Цена: $${tariff.price_usd}`,
+                            orderData ? Markup.inlineKeyboard([
+                                Markup.button.callback('✅ Покупка подтверждена', `confirm_${orderData.id}`)
+                            ]) : undefined
                         );
                     } catch (err) {
                         console.error('Failed to notify manager:', err.message);
@@ -152,6 +157,28 @@ bot.on('text', async (ctx) => {
 
     await saveMessage(telegramId, 'assistant', finalResponse);
     await ctx.reply(finalResponse, { parse_mode: 'Markdown' });
+});
+
+bot.action(/^confirm_(.+)$/, async (ctx) => {
+    const orderId = ctx.match[1];
+    const telegramId = ctx.from.id;
+
+    const { data: user } = await getUser(telegramId);
+    if (!user || (user.role !== 'founder' && user.role !== 'manager')) {
+        return ctx.answerCbQuery('❌ У вас нет прав для подтверждения.', { show_alert: true });
+    }
+
+    const { error } = await supabase.from('orders').update({ status: 'completed' }).eq('id', orderId);
+
+    if (error) {
+        return ctx.answerCbQuery('❌ Ошибка обновления статуса.', { show_alert: true });
+    }
+
+    await ctx.editMessageText(
+        ctx.callbackQuery.message.text + '\n\n✅ ОПЛАЧЕНО И ПОДТВЕРЖДЕНО!'
+    );
+
+    await ctx.answerCbQuery('✅ Покупка подтверждена! Реферальный бонус начислен.', { show_alert: true });
 });
 
 // Если мы НЕ на Vercel (например, запускаем локально или на VPS)
