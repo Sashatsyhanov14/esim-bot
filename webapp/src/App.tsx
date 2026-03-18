@@ -10,6 +10,7 @@ declare global {
 
 const App: React.FC = () => {
   const [user, setUser] = useState<any>(null);
+  const [loginInputId, setLoginInputId] = useState('');
   const [referrals, setReferrals] = useState<any[]>([]);
   const [purchasedRefsCount, setPurchasedRefsCount] = useState(0);
   const [globalStats, setGlobalStats] = useState({ totalUsers: 0, totalOrders: 0, totalSales: 0 });
@@ -23,16 +24,12 @@ const App: React.FC = () => {
   const tg = window.Telegram?.WebApp;
 
   useEffect(() => {
-    if (tg) {
+    if (tg && tg.initDataUnsafe?.user) {
       tg.ready();
       tg.expand();
-      const tgUser = tg.initDataUnsafe?.user;
-      if (tgUser) {
-        fetchUserData(tgUser.id);
-      }
+      fetchUserData(tg.initDataUnsafe.user.id);
     } else {
-      // Подставляем мок-ID для локальной разработки
-      fetchUserData(12345678);
+      setLoading(false); // Вне телеграма просто показываем экран входа
     }
   }, []);
 
@@ -115,7 +112,44 @@ const App: React.FC = () => {
     }
   };
 
-  if (loading) return <div className="p-8 text-center text-on-surface-variant font-body animate-pulse">Загрузка данных...</div>;
+  const handleManualLogin = async () => {
+    if (!loginInputId) return;
+    setLoading(true);
+    await fetchUserData(parseInt(loginInputId));
+  };
+
+  if (loading) return <div className="p-8 text-center text-on-surface-variant font-body animate-pulse mt-20">Загрузка данных...</div>;
+
+  if (!user) {
+    return (
+      <div className="bg-background min-h-screen flex items-center justify-center p-6">
+        <div className="glass-card p-6 rounded-2xl w-full max-w-sm space-y-6 shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
+          <div className="text-center space-y-2">
+            <div className="w-16 h-16 bg-primary-container/20 border border-primary/20 rounded-full mx-auto flex items-center justify-center mb-4 neon-glow">
+              <span className="material-symbols-outlined text-primary text-3xl">login</span>
+            </div>
+            <h1 className="text-2xl font-headline font-bold text-slate-100">Вход в панель</h1>
+            <p className="text-sm font-body text-on-surface-variant">Открыто вне Telegram. Введите свой Telegram ID для доступа.</p>
+          </div>
+          <div className="space-y-4">
+            <input
+              type="number"
+              value={loginInputId}
+              onChange={(e) => setLoginInputId(e.target.value)}
+              placeholder="Введите ID (например, 12345678)"
+              className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-xl p-3 text-on-surface focus:outline-none focus:border-primary/50 text-center font-mono"
+            />
+            <button
+              onClick={handleManualLogin}
+              className="w-full bg-primary/20 text-primary border border-primary/30 py-3 rounded-xl font-bold shadow-[0_0_15px_rgba(208,188,255,0.1)] hover:bg-primary/30 transition-all active:scale-95"
+            >
+              Войти
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const isFounder = user?.role === 'founder';
 
