@@ -14,6 +14,7 @@ const App: React.FC = () => {
   const [referrals, setReferrals] = useState<any[]>([]);
   const [purchasedRefsCount, setPurchasedRefsCount] = useState(0);
   const [globalStats, setGlobalStats] = useState({ totalUsers: 0, totalOrders: 0, totalSales: 0 });
+  const [topReferrers, setTopReferrers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newManagerId, setNewManagerId] = useState('');
@@ -73,6 +74,30 @@ const App: React.FC = () => {
             totalOrders: oCount || 0,
             totalSales: 0
           });
+
+          // Считаем стату по рефералам для фаундера
+          const { data: allUsers } = await supabase.from('users').select('telegram_id, username, referrer_id, balance');
+          if (allUsers) {
+            const counts: Record<string, any> = {};
+            allUsers.forEach((u: any) => {
+              if (u.referrer_id) {
+                if (!counts[u.referrer_id]) {
+                  const refUser = allUsers.find(r => r.telegram_id === u.referrer_id);
+                  counts[u.referrer_id] = {
+                    username: refUser?.username || u.referrer_id,
+                    count: 0,
+                    balance: refUser?.balance || 0
+                  };
+                }
+                counts[u.referrer_id].count += 1;
+              }
+            });
+            const sortedRefs = Object.entries(counts)
+              .map(([id, data]) => ({ id, ...data }))
+              .sort((a, b) => b.count - a.count)
+              .slice(0, 10);
+            setTopReferrers(sortedRefs);
+          }
         }
       }
     } catch (err) {
@@ -256,6 +281,34 @@ const App: React.FC = () => {
               Добавить
             </button>
           </div>
+        </div>
+      </section>
+
+      {/* Top Referrers Leaderboard */}
+      <section className="space-y-4">
+        <h3 className="text-lg font-headline font-bold text-on-surface pl-1">Топ Рефералов</h3>
+        <div className="flex flex-col gap-3">
+          {topReferrers.length === 0 ? (
+            <div className="glass-card p-4 rounded-xl text-center text-sm text-on-surface-variant">Пока нет приглашенных юзеров</div>
+          ) : (
+            topReferrers.map((ref, idx) => (
+              <div key={ref.id} className="glass-card p-4 rounded-xl flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-surface-container-lowest rounded-full flex items-center justify-center border border-outline-variant/10 font-bold text-primary">
+                    #{idx + 1}
+                  </div>
+                  <div>
+                    <p className="font-headline font-semibold text-on-surface truncate w-24 sm:w-32">@{ref.username}</p>
+                    <p className="text-[10px] text-on-surface-variant uppercase mt-0.5">Баланс: {ref.balance} ₽</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-headline font-bold text-secondary">{ref.count}</p>
+                  <p className="text-[10px] text-on-surface-variant uppercase mt-0.5">Приглашены</p>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </section>
     </>
