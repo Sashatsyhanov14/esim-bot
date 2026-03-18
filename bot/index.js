@@ -1,4 +1,4 @@
-const { Telegraf, session } = require('telegraf');
+const { Telegraf, session, Markup } = require('telegraf');
 const dotenv = require('dotenv');
 const { supabase, getUser, createUser, getTariffs, saveMessage, getHistory, createOrder } = require('./src/supabase');
 const { getChatResponse } = require('./src/openai');
@@ -64,7 +64,11 @@ bot.start(async (ctx) => {
         console.log(`New user: ${username} (${telegramId})`);
     }
 
-    await ctx.reply(`Привет, ${username}! 🚀\n\nЯ твой персональный менеджер по eSIM. Помогу выбрать лучший интернет для твоей поездки.\n\nКуда летим? 🌍`);
+    await ctx.reply(`Привет, ${username}! 🚀\n\nЯ твой персональный менеджер по eSIM. Помогу выбрать лучший интернет для твоей поездки.\n\nКуда летим? 🌍`,
+        Markup.inlineKeyboard([
+            [Markup.button.webApp('📱 Открыть Дашборд', 'https://esim-bot.vercel.app')]
+        ])
+    );
 });
 
 bot.on('text', async (ctx) => {
