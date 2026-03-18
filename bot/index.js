@@ -168,7 +168,7 @@ bot.action(/^confirm_(.+)$/, async (ctx) => {
         return ctx.answerCbQuery('❌ У вас нет прав для подтверждения.', { show_alert: true });
     }
 
-    const { error } = await supabase.from('orders').update({ status: 'completed' }).eq('id', orderId);
+    const { error } = await supabase.from('orders').update({ status: 'paid' }).eq('id', orderId);
 
     if (error) {
         return ctx.answerCbQuery('❌ Ошибка обновления статуса.', { show_alert: true });
