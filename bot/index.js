@@ -144,7 +144,7 @@ bot.on('text', async (ctx) => {
                             `Цена: $${tariff.price_usd}`,
                             orderData ? Markup.inlineKeyboard([
                                 Markup.button.callback('✅ Покупка подтверждена', `confirm_${orderData.id}`)
-                            ]) : undefined
+                            ]) : {}
                         );
                     } catch (err) {
                         console.error('Failed to notify manager:', err.message);
