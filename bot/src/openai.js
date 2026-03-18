@@ -4,9 +4,10 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const openai = new OpenAI({
-    baseURL: process.env.OPENAI_BASE_URL || 'https://polza.ai/api/v1',
+    baseURL: 'https://polza.ai/api/v1',
     apiKey: process.env.OPENAI_API_KEY,
 });
+
 
 module.exports = {
     async getChatResponse(systemPrompt, history, userMessage) {

@@ -111,12 +111,26 @@ bot.on('text', async (ctx) => {
                 }
             }
 
-            bot.telegram.sendMessage(MANAGER_ID,
-                `🚀 **ЗАКАЗ!**\n\n` +
-                `Юзер: @${username} (ID: ${telegramId})\n` +
-                `Тариф: ${tariff.country} | ${tariff.data_gb} на ${tariff.validity_period}\n` +
-                `Цена: $${tariff.price_usd}`
-            );
+            // Находим всех менеджеров и фаундеров
+            const { data: managers } = await supabase
+                .from('users')
+                .select('telegram_id')
+                .in('role', ['founder', 'manager']);
+
+            if (managers && managers.length > 0) {
+                for (const manager of managers) {
+                    try {
+                        await bot.telegram.sendMessage(manager.telegram_id,
+                            `🚀 **ЗАКАЗ!**\n\n` +
+                            `Юзер: @${username} (ID: ${telegramId})\n` +
+                            `Тариф: ${tariff.country} | ${tariff.data_gb} на ${tariff.validity_period}\n` +
+                            `Цена: $${tariff.price_usd}`
+                        );
+                    } catch (err) {
+                        console.error('Failed to notify manager:', err.message);
+                    }
+                }
+            }
             return; // Exit here since we replied
         }
     }

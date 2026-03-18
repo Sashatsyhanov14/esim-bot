@@ -92,6 +92,33 @@ const App: React.FC = () => {
     tg?.showAlert('Ссылка скопирована!');
   };
 
+  // --- Добавлено: логика добавления менеджера ---
+  const [newManagerId, setNewManagerId] = useState('');
+
+  const handleAddManager = async () => {
+    if (!newManagerId) return;
+    const tgId = parseInt(newManagerId);
+
+    // Сначала проверим, есть ли юзер
+    const { data: existingUser } = await supabase.from('users').select('*').eq('telegram_id', tgId).single();
+    if (!existingUser) {
+      tg?.showAlert('ОШИБКА: Этот пользователь еще ни разу не запускал бота! Пусть нажмет /start в боте.');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('users')
+      .update({ role: 'manager' })
+      .eq('telegram_id', tgId);
+
+    if (!error) {
+      tg?.showAlert(`Успех! ID ${tgId} теперь Менеджер и будет получать уведомления о заказах.`);
+      setNewManagerId('');
+    } else {
+      tg?.showAlert('Ошибка при добавлении менеджера.');
+    }
+  };
+
   if (loading) return <div className="p-8 text-center text-tg-text">Загрузка данных...</div>;
 
   if (user?.role === 'founder') {
@@ -103,21 +130,37 @@ const App: React.FC = () => {
         </header>
 
         <div className="grid grid-cols-2 gap-4">
-          <div className="card p-4 flex flex-col items-center justify-center space-y-2">
+          <div className="card p-4 flex flex-col items-center justify-center space-y-2 relative">
             <Users className="w-8 h-8 text-blue-500" />
             <span className="text-2xl font-bold">{globalStats.totalUsers}</span>
             <span className="text-xs opacity-70">Всего юзеров</span>
           </div>
-          <div className="card p-4 flex flex-col items-center justify-center space-y-2">
+          <div className="card p-4 flex flex-col items-center justify-center space-y-2 relative">
             <TrendingUp className="w-8 h-8 text-green-500" />
             <span className="text-2xl font-bold">{globalStats.totalOrders}</span>
             <span className="text-xs opacity-70">Всего заказов</span>
           </div>
         </div>
 
-        <div className="card p-4 space-y-4 text-center">
-          <Key className="w-8 h-8 mx-auto text-purple-500" />
-          <p className="text-sm">Ты вошел как <b>Основатель</b>. Здесь в будущем появятся графики и детальная выгрузка по тарифам.</p>
+        {/* Блок управления менеджерами */}
+        <div className="card p-4 space-y-4">
+          <h2 className="font-bold flex items-center gap-2"><Key className="w-5 h-5 text-purple-500" /> Назначить Менеджера</h2>
+          <p className="text-xs opacity-70">Введи Telegram ID человека. Он должен хотя бы раз запустить бота. Ему будут падать уведомления о заказах.</p>
+          <div className="flex gap-2">
+            <input
+              type="number"
+              value={newManagerId}
+              onChange={(e) => setNewManagerId(e.target.value)}
+              placeholder="ID (напр. 12345678)"
+              className="flex-1 p-2 border border-gray-200 dark:border-zinc-700 rounded-lg bg-gray-50 dark:bg-zinc-800 text-sm"
+            />
+            <button
+              onClick={handleAddManager}
+              className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-purple-700"
+            >
+              Добавить
+            </button>
+          </div>
         </div>
       </div>
     );
