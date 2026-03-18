@@ -15,6 +15,7 @@ const App: React.FC = () => {
   const [purchasedRefsCount, setPurchasedRefsCount] = useState(0);
   const [globalStats, setGlobalStats] = useState({ totalUsers: 0, totalOrders: 0, totalSales: 0 });
   const [topReferrers, setTopReferrers] = useState<any[]>([]);
+  const [managersList, setManagersList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newManagerId, setNewManagerId] = useState('');
@@ -98,6 +99,10 @@ const App: React.FC = () => {
               .slice(0, 10);
             setTopReferrers(sortedRefs);
           }
+
+          // Запрашиваем всех менеджеров и фаундеров
+          const { data: mUsers } = await supabase.from('users').select('*').in('role', ['manager', 'founder']);
+          setManagersList(mUsers || []);
         }
       }
     } catch (err) {
@@ -132,8 +137,17 @@ const App: React.FC = () => {
     if (!error) {
       tg?.showAlert(`Успех! ID ${tgId} теперь Менеджер.`);
       setNewManagerId('');
+      fetchUserData(tg?.initDataUnsafe?.user?.id || user?.telegram_id || 12345678);
     } else {
       tg?.showAlert('Ошибка при добавлении менеджера.');
+    }
+  };
+
+  const handleRemoveManager = async (tgId: number) => {
+    const { error } = await supabase.from('users').update({ role: 'user' }).eq('telegram_id', tgId);
+    if (!error) {
+      tg?.showAlert(`Сотрудник ${tgId} удален.`);
+      fetchUserData(tg?.initDataUnsafe?.user?.id || user?.telegram_id || 12345678);
     }
   };
 
@@ -213,46 +227,34 @@ const App: React.FC = () => {
 
   const renderAdminContent = () => (
     <>
-      <section className="relative">
-        <div className="absolute -top-12 -left-12 w-48 h-48 bg-primary-container/20 rounded-full blur-[60px]"></div>
-        <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-secondary-container/10 rounded-full blur-[40px]"></div>
-        <div className="relative z-10 space-y-2">
-          <h2 className="text-display-md font-headline font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">
-            Обзор проекта
-          </h2>
-          <p className="text-on-surface-variant font-body text-sm">Все пользователи и активные заказы.</p>
-        </div>
+      <section className="mb-6">
+        <h2 className="text-xl font-headline font-extrabold text-primary mb-1">
+          Обзор проекта
+        </h2>
+        <p className="text-on-surface-variant font-body text-sm">Все пользователи и активные заказы.</p>
       </section>
 
-      <section className="grid grid-cols-2 gap-3">
+      <section className="grid grid-cols-2 gap-3 mb-6">
         {/* Metric 1 */}
-        <div className="glass-card p-5 rounded-xl flex flex-col justify-between min-h-[120px] group hover:bg-surface-container-high transition-all duration-300">
-          <div className="flex justify-between items-start">
-            <div className="bg-primary/10 p-2.5 rounded-xl">
-              <span className="material-symbols-outlined text-primary">group</span>
+        <div className="bg-[#201f22] p-4 rounded-xl flex flex-col justify-between min-h-[100px] border border-white/5">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="bg-primary/10 p-1.5 rounded-lg flex items-center justify-center">
+              <span className="material-symbols-outlined text-primary text-[18px]">group</span>
             </div>
-          </div>
-          <div className="mt-4">
             <p className="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider">Всего юзеров</p>
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-headline font-extrabold text-on-surface">{globalStats.totalUsers}</span>
-            </div>
           </div>
+          <span className="text-3xl font-headline font-extrabold text-on-surface">{globalStats.totalUsers}</span>
         </div>
 
         {/* Metric 2 */}
-        <div className="glass-card p-5 rounded-xl flex flex-col justify-between min-h-[120px] group hover:bg-surface-container-high transition-all duration-300">
-          <div className="flex justify-between items-start">
-            <div className="bg-secondary/10 p-2.5 rounded-xl">
-              <span className="material-symbols-outlined text-secondary">shopping_bag</span>
+        <div className="bg-[#201f22] p-4 rounded-xl flex flex-col justify-between min-h-[100px] border border-white/5">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="bg-secondary/10 p-1.5 rounded-lg flex items-center justify-center">
+              <span className="material-symbols-outlined text-secondary text-[18px]">shopping_bag</span>
             </div>
-          </div>
-          <div className="mt-4">
             <p className="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider">Всего продаж</p>
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-headline font-extrabold text-on-surface">{globalStats.totalOrders}</span>
-            </div>
           </div>
+          <span className="text-3xl font-headline font-extrabold text-on-surface">{globalStats.totalOrders}</span>
         </div>
       </section>
 
@@ -281,6 +283,26 @@ const App: React.FC = () => {
               Добавить
             </button>
           </div>
+
+          {managersList.length > 0 && (
+            <div className="pt-4 mt-4 border-t border-outline-variant/10 space-y-2">
+              <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Действующие сотрудники</p>
+              {managersList.map((m) => (
+                <div key={m.telegram_id} className="flex justify-between items-center bg-surface-container-lowest p-2 px-3 rounded-lg border border-outline-variant/10">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[16px] text-tertiary">{m.role === 'founder' ? 'shield_person' : 'badge'}</span>
+                    <span className="text-sm text-on-surface font-medium truncate w-32">@{m.username || String(m.telegram_id)}</span>
+                    {m.role === 'founder' && <span className="text-[8px] uppercase tracking-widest bg-primary/20 text-primary px-1.5 py-0.5 rounded-sm font-bold">Владелец</span>}
+                  </div>
+                  {m.role !== 'founder' && (
+                    <button onClick={() => handleRemoveManager(m.telegram_id)} className="text-error hover:bg-error/10 p-1.5 rounded-md transition-colors active:scale-95 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-[16px]">person_remove</span>
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -316,35 +338,32 @@ const App: React.FC = () => {
 
   const renderUserContent = () => (
     <>
-      <section className="relative">
-        <div className="absolute -top-12 -left-12 w-48 h-48 bg-secondary-container/20 rounded-full blur-[60px]"></div>
-        <div className="relative z-10 space-y-2">
-          <h2 className="text-display-md font-headline font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-secondary to-primary">
-            Твой бонусный баланс
-          </h2>
-          <div className="flex items-end gap-3 pt-2">
-            <span className="text-5xl font-bold font-headline text-on-surface">{user?.balance || 0} ₽</span>
-            <button onClick={() => setIsModalOpen(true)} className="mb-1 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 px-5 py-2 rounded-full text-xs font-bold transition-all shadow-[0_0_15px_rgba(208,188,255,0.1)]">
-              Вывести
-            </button>
-          </div>
+      <section className="mb-6">
+        <h2 className="text-xl font-headline font-extrabold text-secondary mb-1">
+          Твой бонусный баланс
+        </h2>
+        <div className="flex items-end gap-3 pt-1">
+          <span className="text-4xl font-bold font-headline text-on-surface">{user?.balance || 0} ₽</span>
+          <button onClick={() => setIsModalOpen(true)} className="mb-1 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 px-5 py-2 rounded-xl text-xs font-bold transition-all shadow-[0_0_15px_rgba(208,188,255,0.1)]">
+            Вывести
+          </button>
         </div>
       </section>
 
-      <section className="grid grid-cols-2 gap-3">
-        <div className="glass-card p-4 rounded-xl flex flex-col justify-between min-h-[110px] group hover:bg-surface-container-high transition-all">
-          <span className="material-symbols-outlined text-secondary">group</span>
-          <div className="mt-2">
+      <section className="grid grid-cols-2 gap-3 mb-6">
+        <div className="bg-[#201f22] p-4 rounded-xl flex flex-col justify-between min-h-[100px] border border-white/5">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="material-symbols-outlined text-secondary text-[18px]">group</span>
             <p className="text-on-surface-variant text-[10px] uppercase font-bold tracking-wider">Приглашено</p>
-            <span className="text-3xl font-headline font-extrabold text-on-surface">{referrals.length}</span>
           </div>
+          <span className="text-3xl font-headline font-extrabold text-on-surface">{referrals.length}</span>
         </div>
-        <div className="glass-card p-4 rounded-xl flex flex-col justify-between min-h-[110px] group hover:bg-surface-container-high transition-all">
-          <span className="material-symbols-outlined text-green-400">shopping_bag</span>
-          <div className="mt-2">
+        <div className="bg-[#201f22] p-4 rounded-xl flex flex-col justify-between min-h-[100px] border border-white/5">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="material-symbols-outlined text-green-400 text-[18px]">shopping_bag</span>
             <p className="text-on-surface-variant text-[10px] uppercase font-bold tracking-wider">Купили eSIM</p>
-            <span className="text-3xl font-headline font-extrabold text-on-surface">{purchasedRefsCount}</span>
           </div>
+          <span className="text-3xl font-headline font-extrabold text-on-surface">{purchasedRefsCount}</span>
         </div>
       </section>
 
