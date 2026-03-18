@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  background-color: var(--tg-theme-secondary-bg-color, #f0f0f0);
+}
+
+body {
+  margin: 0;
+  display: flex;
+  min-width: 320px;
+  min-height: 100vh;
+  color: var(--tg-theme-text-color, #000000);
+}
+
+#root {
+  width: 100%;
+}
+
+.card {
+  background-color: var(--tg-theme-bg-color, #ffffff);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+button {
+  background-color: var(--tg-theme-button-color, #2481cc);
+  color: var(--tg-theme-button-text-color, #ffffff);
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-weight: 600;
+  transition: opacity 0.2s;
+}
+
+button:active {
+  opacity: 0.8;
+}
