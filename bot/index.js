@@ -100,14 +100,25 @@ bot.on('text', async (ctx) => {
         if (tariff) {
             await createOrder(telegramId, tariffId);
 
-            finalResponse += `\n\n💳 **Вот ссылка на оплату:** ${tariff.payment_link || 'Обратись к менеджеру'}\n\nКак только оплатишь, я передам инфо коллегам!`;
+            finalResponse += `\n\n👇 **Оплатить онлайн:**\n${tariff.payment_link || 'Обратись к менеджеру'}\n\n✅ *Сразу после успешной оплаты мы вышлем твой тариф!*`;
 
             await saveMessage(telegramId, 'assistant', finalResponse);
             await ctx.reply(finalResponse, { parse_mode: 'Markdown' });
 
             if (tariff.payment_qr_url) {
+                let finalQrUrl = tariff.payment_qr_url;
+
+                // Хак: Если это ссылка на Google Drive (содержит /file/d/ID/view),
+                // вытаскиваем ID и конвертируем в прямую ссылку на картинку.
+                if (finalQrUrl.includes('drive.google.com')) {
+                    const match = finalQrUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                    if (match && match[1]) {
+                        finalQrUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+                    }
+                }
+
                 try {
-                    await ctx.replyWithPhoto(tariff.payment_qr_url, {
+                    await ctx.replyWithPhoto(finalQrUrl, {
                         caption: `QR-код для оплаты тарифа ${tariff.country}`
                     });
                 } catch (err) {
