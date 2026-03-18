@@ -135,9 +135,12 @@ const App: React.FC = () => {
       .eq('telegram_id', tgId);
 
     if (!error) {
+      setManagersList(prev => {
+        if (prev.find(m => m.telegram_id === tgId)) return prev;
+        return [...prev, { ...existingUser, role: 'manager' }];
+      });
       tg?.showAlert(`Успех! ID ${tgId} теперь Менеджер.`);
       setNewManagerId('');
-      fetchUserData(tg?.initDataUnsafe?.user?.id || user?.telegram_id || 12345678);
     } else {
       tg?.showAlert('Ошибка при добавлении менеджера.');
     }
@@ -146,8 +149,8 @@ const App: React.FC = () => {
   const handleRemoveManager = async (tgId: number) => {
     const { error } = await supabase.from('users').update({ role: 'user' }).eq('telegram_id', tgId);
     if (!error) {
+      setManagersList(prev => prev.filter(m => m.telegram_id !== tgId));
       tg?.showAlert(`Сотрудник ${tgId} удален.`);
-      fetchUserData(tg?.initDataUnsafe?.user?.id || user?.telegram_id || 12345678);
     }
   };
 
