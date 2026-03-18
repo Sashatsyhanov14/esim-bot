@@ -82,7 +82,7 @@ const App: React.FC = () => {
     }
   };
 
-  const refLink = user ? `https://t.me/esim_bot?start=${user.telegram_id}` : '';
+  const refLink = user ? `https://t.me/eesimtestbot?start=${user.telegram_id}` : '';
 
   const copyRefLink = () => {
     navigator.clipboard.writeText(refLink);
