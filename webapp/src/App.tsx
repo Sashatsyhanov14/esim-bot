@@ -45,7 +45,7 @@ const App: React.FC = () => {
 
       if (userData) {
         setUser(userData);
-        if (userData.role === 'founder') {
+        if (userData.role === 'founder' || userData.role === 'manager') {
           setActiveTab('founder');
         }
 
@@ -67,7 +67,7 @@ const App: React.FC = () => {
           setPurchasedRefsCount(uniqueBuyers.size);
         }
 
-        if (userData.role === 'founder') {
+        if (userData.role === 'founder' || userData.role === 'manager') {
           const { count: uCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
           const { count: oCount } = await supabase.from('orders').select('*', { count: 'exact', head: true });
           setGlobalStats({
@@ -190,7 +190,7 @@ const App: React.FC = () => {
     );
   }
 
-  const isFounder = user?.role === 'founder';
+  const isFounder = user?.role === 'founder' || user?.role === 'manager';
 
   const renderAdminHeader = () => (
     <header className="bg-[#131315]/60 dark:bg-[#131315]/60 backdrop-blur-xl flex justify-between items-center px-6 pt-5 pb-4 w-full z-50 sticky top-0 shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
