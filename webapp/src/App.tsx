@@ -82,7 +82,7 @@ const App: React.FC = () => {
             allUsers.forEach((u: any) => {
               if (u.referrer_id) {
                 if (!counts[u.referrer_id]) {
-                  const refUser = allUsers.find(r => r.telegram_id === u.referrer_id);
+                  const refUser = allUsers.find((r: any) => r.telegram_id === u.referrer_id);
                   counts[u.referrer_id] = {
                     username: refUser?.username || u.referrer_id,
                     count: 0,
@@ -179,7 +179,7 @@ const App: React.FC = () => {
   const isFounder = user?.role === 'founder';
 
   const renderAdminHeader = () => (
-    <header className="bg-[#131315]/60 dark:bg-[#131315]/60 backdrop-blur-xl flex justify-between items-center px-6 py-4 w-full z-50 sticky top-0 shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
+    <header className="bg-[#131315]/60 dark:bg-[#131315]/60 backdrop-blur-xl flex justify-between items-center px-6 pt-5 pb-4 w-full z-50 sticky top-0 shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-full overflow-hidden bg-surface-container-high border border-outline-variant/20 flex items-center justify-center">
           <span className="material-symbols-outlined text-primary text-2xl">shield_person</span>
@@ -197,7 +197,7 @@ const App: React.FC = () => {
   );
 
   const renderUserHeader = () => (
-    <header className="bg-[#131315]/60 dark:bg-[#131315]/60 backdrop-blur-xl flex justify-between items-center px-6 py-4 w-full z-50 sticky top-0 shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
+    <header className="bg-[#131315]/60 dark:bg-[#131315]/60 backdrop-blur-xl flex justify-between items-center px-6 pt-5 pb-4 w-full z-50 sticky top-0 shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-full overflow-hidden bg-secondary-container/20 border border-secondary/20 flex items-center justify-center">
           <span className="material-symbols-outlined text-secondary text-2xl">card_giftcard</span>
@@ -224,9 +224,9 @@ const App: React.FC = () => {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <section className="grid grid-cols-2 gap-3">
         {/* Metric 1 */}
-        <div className="glass-card p-6 rounded-xl flex flex-col justify-between h-40 group hover:bg-surface-container-high transition-all duration-300">
+        <div className="glass-card p-5 rounded-xl flex flex-col justify-between min-h-[120px] group hover:bg-surface-container-high transition-all duration-300">
           <div className="flex justify-between items-start">
             <div className="bg-primary/10 p-2.5 rounded-xl">
               <span className="material-symbols-outlined text-primary">group</span>
@@ -241,7 +241,7 @@ const App: React.FC = () => {
         </div>
 
         {/* Metric 2 */}
-        <div className="glass-card p-6 rounded-xl flex flex-col justify-between h-40 group hover:bg-surface-container-high transition-all duration-300">
+        <div className="glass-card p-5 rounded-xl flex flex-col justify-between min-h-[120px] group hover:bg-surface-container-high transition-all duration-300">
           <div className="flex justify-between items-start">
             <div className="bg-secondary/10 p-2.5 rounded-xl">
               <span className="material-symbols-outlined text-secondary">shopping_bag</span>
@@ -324,22 +324,22 @@ const App: React.FC = () => {
           </h2>
           <div className="flex items-end gap-3 pt-2">
             <span className="text-5xl font-bold font-headline text-on-surface">{user?.balance || 0} ₽</span>
-            <button onClick={() => setIsModalOpen(true)} className="mb-1 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 px-4 py-1.5 rounded-full text-xs font-bold transition-all shadow-[0_0_15px_rgba(208,188,255,0.1)]">
+            <button onClick={() => setIsModalOpen(true)} className="mb-1 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 px-5 py-2 rounded-full text-xs font-bold transition-all shadow-[0_0_15px_rgba(208,188,255,0.1)]">
               Вывести
             </button>
           </div>
         </div>
       </section>
 
-      <section className="grid grid-cols-2 gap-4">
-        <div className="glass-card p-5 rounded-xl flex flex-col justify-between h-32 group hover:bg-surface-container-high transition-all">
+      <section className="grid grid-cols-2 gap-3">
+        <div className="glass-card p-4 rounded-xl flex flex-col justify-between min-h-[110px] group hover:bg-surface-container-high transition-all">
           <span className="material-symbols-outlined text-secondary">group</span>
           <div className="mt-2">
             <p className="text-on-surface-variant text-[10px] uppercase font-bold tracking-wider">Приглашено</p>
             <span className="text-3xl font-headline font-extrabold text-on-surface">{referrals.length}</span>
           </div>
         </div>
-        <div className="glass-card p-5 rounded-xl flex flex-col justify-between h-32 group hover:bg-surface-container-high transition-all">
+        <div className="glass-card p-4 rounded-xl flex flex-col justify-between min-h-[110px] group hover:bg-surface-container-high transition-all">
           <span className="material-symbols-outlined text-green-400">shopping_bag</span>
           <div className="mt-2">
             <p className="text-on-surface-variant text-[10px] uppercase font-bold tracking-wider">Купили eSIM</p>
@@ -391,7 +391,7 @@ const App: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('referral')}
-          className={`flex flex-col items-center justify-center p-2 haptic-feedback transition-all duration-300 ${activeTab === 'referral' ? 'text-indigo-300 bg-indigo-500/10 rounded-2xl px-5' : 'text-slate-400 hover:text-indigo-200'}`}
+          className={`flex flex-col items-center justify-center p-2 haptic-feedback transition-all duration-300 ${activeTab === 'referral' ? 'text-indigo-300 bg-indigo-500/10 rounded-2xl px-6 py-2' : 'text-slate-400 hover:text-indigo-200'}`}
         >
           <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'referral' ? "'FILL' 1" : "'FILL' 0" }}>group</span>
           <span className="font-['Inter'] text-[10px] font-medium uppercase tracking-widest mt-1">Рефералка</span>
@@ -400,7 +400,7 @@ const App: React.FC = () => {
         {isFounder && (
           <button
             onClick={() => setActiveTab('founder')}
-            className={`flex flex-col items-center justify-center p-2 haptic-feedback transition-all duration-300 ${activeTab === 'founder' ? 'text-indigo-300 bg-indigo-500/10 rounded-2xl px-5' : 'text-slate-400 hover:text-indigo-200'}`}
+            className={`flex flex-col items-center justify-center p-2 haptic-feedback transition-all duration-300 ${activeTab === 'founder' ? 'text-indigo-300 bg-indigo-500/10 rounded-2xl px-6 py-2' : 'text-slate-400 hover:text-indigo-200'}`}
           >
             <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'founder' ? "'FILL' 1" : "'FILL' 0" }}>dashboard</span>
             <span className="font-['Inter'] text-[10px] font-medium uppercase tracking-widest mt-1">Основатель</span>
