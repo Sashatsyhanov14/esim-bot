@@ -14,11 +14,73 @@ const userLangCache = {};
 bot.use(session());
 
 // --- MANAGER FLOW ---
-// Manager sends photo + caption (Client ID) -> Forward to Client
-bot.on(['photo', 'document'], async (ctx) => {
+bot.on(['photo', 'document', 'text'], async (ctx, next) => {
     const senderId = ctx.from.id;
 
-    if (senderId === MANAGER_ID) {
+    // Skip if it's the start command
+    if (ctx.message.text && ctx.message.text.startsWith('/start')) return next();
+
+    const { data: sender } = await getUser(senderId);
+    const isManager = sender && (sender.role === 'manager' || sender.role === 'founder' || senderId === MANAGER_ID);
+
+    if (!isManager) {
+        return next();
+    }
+
+    // 1. Session flow (using "Send QR" button)
+    if (ctx.session && ctx.session.awaitingQR) {
+        const { orderId, userId } = ctx.session.awaitingQR;
+
+        const clientLang = userLangCache[userId] || 'ru';
+        const caption = clientLang === 'tr'
+            ? `🎉 eSIM'iniz hazır! İşte bağlantınız/kurulum bilgileriniz. İyi yolculuklar! 🌍`
+            : `🎉 Твой eSIM готов! Вот информация для установки. Приятного путешествия! 🌍`;
+
+        let qrSent = false;
+        try {
+            if (ctx.message.photo) {
+                const photoId = ctx.message.photo[ctx.message.photo.length - 1].file_id;
+                await bot.telegram.sendPhoto(userId, photoId, { caption: ctx.message.caption ? `${caption}\n${ctx.message.caption}` : caption });
+                qrSent = true;
+            } else if (ctx.message.document) {
+                await bot.telegram.sendDocument(userId, ctx.message.document.file_id, { caption: ctx.message.caption ? `${caption}\n${ctx.message.caption}` : caption });
+                qrSent = true;
+            } else if (ctx.message.text) {
+                await bot.telegram.sendMessage(userId, `${caption}\n\n${ctx.message.text}`);
+                qrSent = true;
+            }
+        } catch (err) {
+            console.error('Failed to send payload to client:', err.message);
+            return ctx.reply('❌ Ошибка отправки клиенту.');
+        }
+
+        if (qrSent) {
+            await supabase.from('orders').update({ status: 'paid' }).eq('id', orderId);
+            ctx.session.awaitingQR = null;
+
+            // Schedule delayed message (2 minutes)
+            setTimeout(async () => {
+                const delayText = clientLang === 'tr'
+                    ? `Gösterdiğiniz ilgi ve ayırdığınız zaman için teşekkür ederiz. İyi yolculuklar dilerim! ✈️ eSIM'iniz aktif — internet vardığınızda çalışacaktır, eğer zaten yurtdışındaysanız bağlantı hazırdır. eSIM profili için veri dolaşımını açmayı unutmayın.\n\nŞeffaf fiyatlar, yorumlar ve 7/24 destek sunan dijital platformumuz eMedeo uygulamasını yüklemenizi öneririz. Transfer, araç/ev kiralama, turlar, alışveriş ve hukuki danışmanlık hizmetlerini doğrudan, aracısız alın.\n\nBir şeyler ters giderse yanınızdayız: 7/24 destek sohbeti.\n\nUygulamamız:\nAndroid: https://play.google.com/store/apps/details?id=com.emedeo.codeware\nIOS: https://apps.apple.com/app/emedeo/id6738978452`
+                    : `Благодарим за проявленный интерес и уделенное нам время. Желаю Вам Счастливого пути! ✈️ Ваша eSIM активна — интернет заработает по прилёту, а если вы уже за границей, связь уже доступна. Не забудьте включить роуминг данных для профиля eсим.\n\nРекомендуем установить приложение eMedeo — цифровую платформу с прозрачными ценами, отзывами и поддержкой 24/7. Получайте трансфер, аренду авто/жилья, экскурсии, покупки и юридические консультации напрямую, без посредников.\n\nМы рядом, если что-то пойдёт не так: чат поддержки 24/7\n\nНаше приложение:\nAndroid: https://play.google.com/store/apps/details?id=com.emedeo.codeware\nIOS: https://apps.apple.com/app/emedeo/id6738978452`;
+
+                try {
+                    await bot.telegram.sendPhoto(userId, 'https://drive.google.com/uc?export=view&id=1zxDZ_QkKYu6VKFlS7nNlRktlLKLxSx47', {
+                        caption: delayText
+                    });
+                } catch (err) {
+                    try {
+                        await bot.telegram.sendMessage(userId, delayText, { disable_web_page_preview: true });
+                    } catch (e) { }
+                }
+            }, 2 * 60 * 1000);
+
+            return ctx.reply('✅ Данные успешно отправлены клиенту! Покупка зачтена (paid) и рефералу зачислены бонусы.');
+        }
+    }
+
+    // 2. Legacy Flow (Manager sends photo with caption containing client ID)
+    if (ctx.message.photo || ctx.message.document) {
         const caption = ctx.message.caption || '';
         const clientIdMatch = caption.match(/\d+/);
 
@@ -39,10 +101,11 @@ bot.on(['photo', 'document'], async (ctx) => {
             } catch (err) {
                 await ctx.reply(`❌ Ошибка пересылки: ${err.message}`);
             }
-        } else {
-            await ctx.reply("ℹ️ Чтобы переслать QR клиенту, в подписи (caption) укажи его ID.");
         }
+        return; // Handled
     }
+
+    return next();
 });
 
 // --- CLIENT FLOW ---
@@ -138,7 +201,24 @@ bot.on('text', async (ctx) => {
             await saveMessage(telegramId, 'assistant', finalResponse);
             await ctx.reply(finalResponse, { parse_mode: 'Markdown' });
 
-            // AI recommended tariff, sent payment link. QR logic removed (now handled by manager).
+            // Restore AI Payment QR Automated Reply
+            if (tariff.payment_qr_url) {
+                let finalQrUrl = tariff.payment_qr_url;
+                if (finalQrUrl.includes('drive.google.com')) {
+                    const match = finalQrUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                    if (match && match[1]) {
+                        finalQrUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+                    }
+                }
+                try {
+                    await ctx.replyWithPhoto(finalQrUrl, {
+                        caption: `QR-код для оплаты тарифа ${tariff.country}`
+                    });
+                } catch (err) {
+                    console.error('Failed to send QR:', err.message);
+                }
+            }
+
             // Находим всех менеджеров и фаундеров
             const { data: managers } = await supabase
                 .from('users')
@@ -185,64 +265,16 @@ bot.action(/^sendqr_(.+)$/, async (ctx) => {
     const { data: order } = await supabase.from('orders').select('*').eq('id', orderId).single();
     if (!order) return ctx.answerCbQuery('❌ Заказ не найден.', { show_alert: true });
 
-    await supabase.from('orders').update({ status: 'paid' }).eq('id', orderId);
-
-    const { data: tariff } = await supabase.from('tariffs').select('*').eq('id', order.tariff_id).single();
-    if (tariff) {
-        const clientLang = userLangCache[order.user_id] || 'ru';
-        const caption = clientLang === 'tr'
-            ? `🎉 eSIM'iniz hazır! İşte bağlantınız/kurulum bilgileriniz. İyi yolculuklar! 🌍`
-            : `🎉 Твой eSIM готов! Вот информация для установки. Приятного путешествия! 🌍`;
-
-        let qrSent = false;
-        if (tariff.payment_qr_url) {
-            let finalQrUrl = tariff.payment_qr_url;
-            if (finalQrUrl.includes('drive.google.com')) {
-                const match = finalQrUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
-                if (match && match[1]) {
-                    finalQrUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
-                }
-            }
-            try {
-                await bot.telegram.sendPhoto(order.user_id, finalQrUrl, { caption });
-                qrSent = true;
-            } catch (err) {
-                console.error('Failed to send QR to client:', err.message);
-            }
-        }
-
-        if (!qrSent) {
-            try {
-                await bot.telegram.sendMessage(order.user_id, `${caption}\n${tariff.payment_link || ''}`);
-            } catch (e) { }
-        }
-
-        // Schedule delayed message (2 minutes for quick testing)
-        setTimeout(async () => {
-            const delayText = clientLang === 'tr'
-                ? `Gösterdiğiniz ilgi ve ayırdığınız zaman için teşekkür ederiz. İyi yolculuklar dilerim! ✈️ eSIM'iniz aktif — internet vardığınızda çalışacaktır, eğer zaten yurtdışındaysanız bağlantı hazırdır. eSIM profili için veri dolaşımını açmayı unutmayın.\n\nŞeffaf fiyatlar, yorumlar ve 7/24 destek sunan dijital platformumuz eMedeo uygulamasını yüklemenizi öneririz. Transfer, araç/ev kiralama, turlar, alışveriş ve hukuki danışmanlık hizmetlerini doğrudan, aracısız alın.\n\nBir şeyler ters giderse yanınızdayız: 7/24 destek sohbeti.\n\nUygulamamız:\nAndroid: https://play.google.com/store/apps/details?id=com.emedeo.codeware\nIOS: https://apps.apple.com/app/emedeo/id6738978452`
-                : `Благодарим за проявленный интерес и уделенное нам время. Желаю Вам Счастливого пути! ✈️ Ваша eSIM активна — интернет заработает по прилёту, а если вы уже за границей, связь уже доступна. Не забудьте включить роуминг данных для профиля eсим.\n\nРекомендуем установить приложение eMedeo — цифровую платформу с прозрачными ценами, отзывами и поддержкой 24/7. Получайте трансфер, аренду авто/жилья, экскурсии, покупки и юридические консультации напрямую, без посредников.\n\nМы рядом, если что-то пойдёт не так: чат поддержки 24/7\n\nНаше приложение:\nAndroid: https://play.google.com/store/apps/details?id=com.emedeo.codeware\nIOS: https://apps.apple.com/app/emedeo/id6738978452`;
-
-            try {
-                await bot.telegram.sendPhoto(order.user_id, 'https://drive.google.com/uc?export=view&id=1zxDZ_QkKYu6VKFlS7nNlRktlLKLxSx47', {
-                    caption: delayText
-                });
-            } catch (err) {
-                console.error('Failed to send delayed photo:', err.message);
-                try {
-                    await bot.telegram.sendMessage(order.user_id, delayText, { disable_web_page_preview: true });
-                } catch (e) { }
-            }
-        }, 2 * 60 * 1000); // 2 mins
-    }
+    ctx.session = ctx.session || {};
+    ctx.session.awaitingQR = { orderId, userId: order.user_id };
 
     try {
         await ctx.editMessageText(
-            ctx.callbackQuery.message.text + '\n\n✅ QR ОТПРАВЛЕН КЛИЕНТУ! (ПОКУПКА УЧТЕНА)'
+            ctx.callbackQuery.message.text + '\n\n⏳ ОЖИДАНИЕ QR: Отправьте фото или текст в ответ на это сообщение!'
         );
     } catch (e) { }
 
-    await ctx.answerCbQuery('✅ QR отправлен! Награда зачислена.', { show_alert: true });
+    await ctx.answerCbQuery('⏳ Отправьте в чат фото или ссылку-приглашение для клиента.', { show_alert: true });
 });
 
 bot.action(/^cancel_(.+)$/, async (ctx) => {
