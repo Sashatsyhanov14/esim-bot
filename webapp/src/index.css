@@ -2,43 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  background-color: var(--tg-theme-secondary-bg-color, #f0f0f0);
+@layer base {
+  body {
+    @apply bg-background text-on-surface font-body selection:bg-primary/30 min-h-screen pb-24;
+    min-height: max(884px, 100dvh);
+  }
 }
 
-body {
-  margin: 0;
-  display: flex;
-  min-width: 320px;
-  min-height: 100vh;
-  color: var(--tg-theme-text-color, #000000);
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
-#root {
-  width: 100%;
+.glass-card {
+  background: rgba(42, 42, 44, 0.6);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(229, 225, 228, 0.05);
 }
 
-.card {
-  background-color: var(--tg-theme-bg-color, #ffffff);
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-button {
-  background-color: var(--tg-theme-button-color, #2481cc);
-  color: var(--tg-theme-button-text-color, #ffffff);
-  border-radius: 8px;
-  padding: 10px 16px;
-  font-weight: 600;
-  transition: opacity 0.2s;
-}
-
-button:active {
-  opacity: 0.8;
+.neon-glow {
+  box-shadow: 0 0 20px rgba(160, 120, 255, 0.15);
 }

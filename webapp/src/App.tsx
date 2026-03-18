@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
-import { Share2, Users, Wallet, ArrowRightLeft, QrCode, TrendingUp, Key } from 'lucide-react';
 import WithdrawModal from './components/WithdrawModal';
 
 declare global {
@@ -16,6 +15,10 @@ const App: React.FC = () => {
   const [globalStats, setGlobalStats] = useState({ totalUsers: 0, totalOrders: 0, totalSales: 0 });
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newManagerId, setNewManagerId] = useState('');
+
+  // Navigation active state
+  const [activeTab, setActiveTab] = useState<'referral' | 'founder'>('referral');
 
   const tg = window.Telegram?.WebApp;
 
@@ -28,14 +31,13 @@ const App: React.FC = () => {
         fetchUserData(tgUser.id);
       }
     } else {
-      // For dev outside TG
+      // Подставляем мок-ID для локальной разработки
       fetchUserData(12345678);
     }
   }, []);
 
   const fetchUserData = async (tgId: number) => {
     try {
-      // 1. Get User
       const { data: userData } = await supabase
         .from('users')
         .select('*')
@@ -44,8 +46,10 @@ const App: React.FC = () => {
 
       if (userData) {
         setUser(userData);
+        if (userData.role === 'founder') {
+          setActiveTab('founder');
+        }
 
-        // 2. Get Referrals
         const { data: refs } = await supabase
           .from('users')
           .select('telegram_id, username, created_at')
@@ -53,7 +57,6 @@ const App: React.FC = () => {
 
         setReferrals(refs || []);
 
-        // 3. Get Referrals who made a purchase
         if (refs && refs.length > 0) {
           const refIds = refs.map((r: any) => r.telegram_id);
           const { data: orderedRefs } = await supabase
@@ -61,20 +64,17 @@ const App: React.FC = () => {
             .select('user_id')
             .in('user_id', refIds);
 
-          // Count unique users who ordered
           const uniqueBuyers = new Set((orderedRefs || []).map((o: any) => o.user_id));
           setPurchasedRefsCount(uniqueBuyers.size);
         }
 
-        // 4. If Founder, fetch global stats
         if (userData.role === 'founder') {
           const { count: uCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
           const { count: oCount } = await supabase.from('orders').select('*', { count: 'exact', head: true });
-          // Note: we'd need a join to get total revenue easily, but let's just show counts for MVP
           setGlobalStats({
             totalUsers: uCount || 0,
             totalOrders: oCount || 0,
-            totalSales: 0 // placeholder without complex query
+            totalSales: 0
           });
         }
       }
@@ -92,14 +92,10 @@ const App: React.FC = () => {
     tg?.showAlert('Ссылка скопирована!');
   };
 
-  // --- Добавлено: логика добавления менеджера ---
-  const [newManagerId, setNewManagerId] = useState('');
-
   const handleAddManager = async () => {
     if (!newManagerId) return;
     const tgId = parseInt(newManagerId);
 
-    // Сначала проверим, есть ли юзер
     const { data: existingUser } = await supabase.from('users').select('*').eq('telegram_id', tgId).single();
     if (!existingUser) {
       tg?.showAlert('ОШИБКА: Этот пользователь еще ни разу не запускал бота! Пусть нажмет /start в боте.');
@@ -112,134 +108,219 @@ const App: React.FC = () => {
       .eq('telegram_id', tgId);
 
     if (!error) {
-      tg?.showAlert(`Успех! ID ${tgId} теперь Менеджер и будет получать уведомления о заказах.`);
+      tg?.showAlert(`Успех! ID ${tgId} теперь Менеджер.`);
       setNewManagerId('');
     } else {
       tg?.showAlert('Ошибка при добавлении менеджера.');
     }
   };
 
-  if (loading) return <div className="p-8 text-center text-tg-text">Загрузка данных...</div>;
+  if (loading) return <div className="p-8 text-center text-on-surface-variant font-body animate-pulse">Загрузка данных...</div>;
 
-  if (user?.role === 'founder') {
-    return (
-      <div className="p-4 max-w-md mx-auto space-y-6">
-        <header className="text-center space-y-2">
-          <h1 className="text-2xl font-bold text-tg-text">Админ-панель 👑</h1>
-          <p className="opacity-70 text-tg-hint">Сводка по всему боту</p>
-        </header>
+  const isFounder = user?.role === 'founder';
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="card p-4 flex flex-col items-center justify-center space-y-2 relative">
-            <Users className="w-8 h-8 text-blue-500" />
-            <span className="text-2xl font-bold">{globalStats.totalUsers}</span>
-            <span className="text-xs opacity-70">Всего юзеров</span>
+  const renderAdminHeader = () => (
+    <header className="bg-[#131315]/60 dark:bg-[#131315]/60 backdrop-blur-xl flex justify-between items-center px-6 py-4 w-full z-50 sticky top-0 shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full overflow-hidden bg-surface-container-high border border-outline-variant/20 flex items-center justify-center">
+          <span className="material-symbols-outlined text-primary text-2xl">shield_person</span>
+        </div>
+        <div className="flex flex-col">
+          <h1 className="font-headline font-bold tracking-tight text-slate-100 text-lg leading-tight">Панель Основателя 👑</h1>
+          <p className="text-[10px] text-on-surface-variant uppercase tracking-widest font-medium">Глобальная статистика</p>
+        </div>
+      </div>
+      <button className="text-indigo-400 hover:opacity-80 transition-opacity scale-95 active:scale-90 duration-200">
+        <span className="material-symbols-outlined">settings</span>
+      </button>
+      <div className="absolute bottom-0 left-0 w-full bg-gradient-to-b from-slate-100/10 to-transparent h-[1px]"></div>
+    </header>
+  );
+
+  const renderUserHeader = () => (
+    <header className="bg-[#131315]/60 dark:bg-[#131315]/60 backdrop-blur-xl flex justify-between items-center px-6 py-4 w-full z-50 sticky top-0 shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full overflow-hidden bg-secondary-container/20 border border-secondary/20 flex items-center justify-center">
+          <span className="material-symbols-outlined text-secondary text-2xl">card_giftcard</span>
+        </div>
+        <div className="flex flex-col">
+          <h1 className="font-headline font-bold tracking-tight text-slate-100 text-lg leading-tight">Рефералка 🎁</h1>
+          <p className="text-[10px] text-on-surface-variant uppercase tracking-widest font-medium">Твоя статистика</p>
+        </div>
+      </div>
+      <div className="absolute bottom-0 left-0 w-full bg-gradient-to-b from-slate-100/10 to-transparent h-[1px]"></div>
+    </header>
+  );
+
+  const renderAdminContent = () => (
+    <>
+      <section className="relative">
+        <div className="absolute -top-12 -left-12 w-48 h-48 bg-primary-container/20 rounded-full blur-[60px]"></div>
+        <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-secondary-container/10 rounded-full blur-[40px]"></div>
+        <div className="relative z-10 space-y-2">
+          <h2 className="text-display-md font-headline font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">
+            Обзор проекта
+          </h2>
+          <p className="text-on-surface-variant font-body text-sm">Все пользователи и активные заказы.</p>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Metric 1 */}
+        <div className="glass-card p-6 rounded-xl flex flex-col justify-between h-40 group hover:bg-surface-container-high transition-all duration-300">
+          <div className="flex justify-between items-start">
+            <div className="bg-primary/10 p-2.5 rounded-xl">
+              <span className="material-symbols-outlined text-primary">group</span>
+            </div>
           </div>
-          <div className="card p-4 flex flex-col items-center justify-center space-y-2 relative">
-            <TrendingUp className="w-8 h-8 text-green-500" />
-            <span className="text-2xl font-bold">{globalStats.totalOrders}</span>
-            <span className="text-xs opacity-70">Всего заказов</span>
+          <div className="mt-4">
+            <p className="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider">Всего юзеров</p>
+            <div className="flex items-baseline gap-2">
+              <span className="text-4xl font-headline font-extrabold text-on-surface">{globalStats.totalUsers}</span>
+            </div>
           </div>
         </div>
 
-        {/* Блок управления менеджерами */}
-        <div className="card p-4 space-y-4">
-          <h2 className="font-bold flex items-center gap-2"><Key className="w-5 h-5 text-purple-500" /> Назначить Менеджера</h2>
-          <p className="text-xs opacity-70">Введи Telegram ID человека. Он должен хотя бы раз запустить бота. Ему будут падать уведомления о заказах.</p>
-          <div className="flex gap-2">
+        {/* Metric 2 */}
+        <div className="glass-card p-6 rounded-xl flex flex-col justify-between h-40 group hover:bg-surface-container-high transition-all duration-300">
+          <div className="flex justify-between items-start">
+            <div className="bg-secondary/10 p-2.5 rounded-xl">
+              <span className="material-symbols-outlined text-secondary">shopping_bag</span>
+            </div>
+          </div>
+          <div className="mt-4">
+            <p className="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider">Всего продаж</p>
+            <div className="flex items-baseline gap-2">
+              <span className="text-4xl font-headline font-extrabold text-on-surface">{globalStats.totalOrders}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Assignment Card */}
+      <section className="space-y-4">
+        <h3 className="text-lg font-headline font-bold text-on-surface pl-1">Управление Менеджерами</h3>
+        <div className="glass-card p-4 rounded-xl space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-surface-container-lowest rounded-full flex items-center justify-center border border-outline-variant/10">
+              <span className="material-symbols-outlined text-tertiary">person_add</span>
+            </div>
+            <div>
+              <p className="font-headline font-semibold text-on-surface text-sm">Назначить сотрудника</p>
+              <p className="text-xs text-on-surface-variant">Введите Telegram ID пользователя</p>
+            </div>
+          </div>
+          <div className="flex gap-2 pt-2">
             <input
               type="number"
               value={newManagerId}
               onChange={(e) => setNewManagerId(e.target.value)}
-              placeholder="ID (напр. 12345678)"
-              className="flex-1 p-2 border border-gray-200 dark:border-zinc-700 rounded-lg bg-gray-50 dark:bg-zinc-800 text-sm"
+              className="flex-1 bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-2 text-sm text-on-surface focus:outline-none focus:border-primary/50"
+              placeholder="e.g. 12345678"
             />
-            <button
-              onClick={handleAddManager}
-              className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-purple-700"
-            >
+            <button onClick={handleAddManager} className="bg-primary/20 text-primary border border-primary/30 px-4 py-2 rounded-lg text-sm font-bold shadow-[0_0_15px_rgba(208,188,255,0.1)] hover:bg-primary/30 transition-colors">
               Добавить
             </button>
           </div>
         </div>
-      </div>
-    );
-  }
+      </section>
+    </>
+  );
 
-  // Normal User View
-  return (
-    <div className="p-4 max-w-md mx-auto space-y-6 pb-20">
-      <header className="text-center space-y-2">
-        <h1 className="text-2xl font-bold text-tg-text">Рефералка 🎁</h1>
-        <p className="opacity-70 text-tg-hint">Приглашай и зарабатывай!</p>
-      </header>
-
-      {/* Balance Card */}
-      <div className="card flex items-center justify-between p-6">
-        <div className="space-y-1">
-          <p className="text-sm opacity-70">Бонусный баланс</p>
-          <p className="text-3xl font-bold">{user?.balance || 0} ₽</p>
+  const renderUserContent = () => (
+    <>
+      <section className="relative">
+        <div className="absolute -top-12 -left-12 w-48 h-48 bg-secondary-container/20 rounded-full blur-[60px]"></div>
+        <div className="relative z-10 space-y-2">
+          <h2 className="text-display-md font-headline font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-secondary to-primary">
+            Твой бонусный баланс
+          </h2>
+          <div className="flex items-end gap-3 pt-2">
+            <span className="text-5xl font-bold font-headline text-on-surface">{user?.balance || 0} ₽</span>
+            <button onClick={() => setIsModalOpen(true)} className="mb-1 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 px-4 py-1.5 rounded-full text-xs font-bold transition-all shadow-[0_0_15px_rgba(208,188,255,0.1)]">
+              Вывести
+            </button>
+          </div>
         </div>
-        <div className="bg-blue-100 p-3 rounded-full">
-          <Wallet className="w-6 h-6 text-blue-600" />
+      </section>
+
+      <section className="grid grid-cols-2 gap-4">
+        <div className="glass-card p-5 rounded-xl flex flex-col justify-between h-32 group hover:bg-surface-container-high transition-all">
+          <span className="material-symbols-outlined text-secondary">group</span>
+          <div className="mt-2">
+            <p className="text-on-surface-variant text-[10px] uppercase font-bold tracking-wider">Приглашено</p>
+            <span className="text-3xl font-headline font-extrabold text-on-surface">{referrals.length}</span>
+          </div>
         </div>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="card p-4 text-center space-y-1 bg-gray-50 dark:bg-zinc-800/50">
-          <span className="text-2xl font-bold text-tg-text">{referrals.length}</span>
-          <p className="text-xs opacity-70">Приглашено</p>
+        <div className="glass-card p-5 rounded-xl flex flex-col justify-between h-32 group hover:bg-surface-container-high transition-all">
+          <span className="material-symbols-outlined text-green-400">shopping_bag</span>
+          <div className="mt-2">
+            <p className="text-on-surface-variant text-[10px] uppercase font-bold tracking-wider">Купили eSIM</p>
+            <span className="text-3xl font-headline font-extrabold text-on-surface">{purchasedRefsCount}</span>
+          </div>
         </div>
-        <div className="card p-4 text-center space-y-1 bg-gray-50 dark:bg-zinc-800/50">
-          <span className="text-2xl font-bold text-green-500">{purchasedRefsCount}</span>
-          <p className="text-xs opacity-70">Купили eSIM</p>
-        </div>
-      </div>
+      </section>
 
-      {/* QR Code and Link */}
-      <div className="card space-y-4 flex flex-col items-center text-center">
-        <div className="flex items-center gap-2 self-start mb-2">
-          <QrCode className="w-5 h-5 text-purple-500" />
-          <h2 className="font-semibold text-tg-text">Твой QR-код</h2>
-        </div>
+      <section className="space-y-4">
+        <h3 className="text-lg font-headline font-bold text-on-surface pl-1">Пригласить друга</h3>
 
-        <div className="p-2 bg-white rounded-xl shadow-sm border border-gray-100 dark:border-zinc-800">
-          <img
-            src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(refLink)}&margin=10`}
-            alt="Реферальный QR"
-            className="w-44 h-44 rounded-lg"
-          />
+        <div className="glass-card p-4 rounded-xl flex items-center justify-between gap-3">
+          <div className="truncate flex-1 bg-surface-container-lowest px-3 py-2.5 rounded-lg text-xs text-on-surface-variant border border-outline-variant/10 font-mono">
+            {refLink || 'Загрузка...'}
+          </div>
+          <button onClick={copyRefLink} className="bg-surface-container-high p-2.5 rounded-lg text-secondary hover:bg-secondary/10 hover:text-secondary-fixed transition-colors">
+            <span className="material-symbols-outlined text-[20px]">content_copy</span>
+          </button>
         </div>
 
-        <p className="text-sm opacity-70 text-tg-hint w-full text-left mt-2">Дай отсканировать этот код другу или отправь ссылку.</p>
-
-        <button
-          onClick={copyRefLink}
-          className="w-full flex items-center justify-center gap-2 mt-2"
-        >
-          <Share2 className="w-4 h-4" />
-          Копировать ссылку
-        </button>
-      </div>
-
-      {/* Withdrawal Action (Fixed Bottom) */}
-      <div className="fixed bottom-4 left-4 right-4 max-w-md mx-auto">
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="w-full py-4 bg-green-600 flex items-center justify-center gap-2 shadow-lg hover:shadow-green-500/20"
-        >
-          <ArrowRightLeft className="w-5 h-5" />
-          Вывести средства
-        </button>
-      </div>
+        <div className="flex justify-center pt-6 pb-4">
+          <div className="p-4 bg-white rounded-2xl shadow-[0_0_40px_rgba(208,188,255,0.15)]">
+            <img
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(refLink)}&margin=10`}
+              alt="QR Code"
+              className="w-44 h-44 rounded-xl"
+            />
+          </div>
+        </div>
+      </section>
 
       <WithdrawModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         balance={user?.balance || 0}
       />
-    </div>
+    </>
+  );
+
+  return (
+    <>
+      {activeTab === 'founder' ? renderAdminHeader() : renderUserHeader()}
+
+      <main className="px-6 pt-8 space-y-8 max-w-2xl mx-auto">
+        {activeTab === 'founder' ? renderAdminContent() : renderUserContent()}
+      </main>
+
+      <nav className="fixed bottom-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 bg-[#353437]/60 dark:bg-[#353437]/60 backdrop-blur-2xl rounded-t-[1.5rem] shadow-[0_-10px_30px_rgba(0,0,0,0.5)] border-t border-slate-100/10">
+
+        <button
+          onClick={() => setActiveTab('referral')}
+          className={`flex flex-col items-center justify-center p-2 haptic-feedback transition-all duration-300 ${activeTab === 'referral' ? 'text-indigo-300 bg-indigo-500/10 rounded-2xl px-5' : 'text-slate-400 hover:text-indigo-200'}`}
+        >
+          <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'referral' ? "'FILL' 1" : "'FILL' 0" }}>group</span>
+          <span className="font-['Inter'] text-[10px] font-medium uppercase tracking-widest mt-1">Рефералка</span>
+        </button>
+
+        {isFounder && (
+          <button
+            onClick={() => setActiveTab('founder')}
+            className={`flex flex-col items-center justify-center p-2 haptic-feedback transition-all duration-300 ${activeTab === 'founder' ? 'text-indigo-300 bg-indigo-500/10 rounded-2xl px-5' : 'text-slate-400 hover:text-indigo-200'}`}
+          >
+            <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'founder' ? "'FILL' 1" : "'FILL' 0" }}>dashboard</span>
+            <span className="font-['Inter'] text-[10px] font-medium uppercase tracking-widest mt-1">Основатель</span>
+          </button>
+        )}
+      </nav>
+    </>
   );
 };
 
