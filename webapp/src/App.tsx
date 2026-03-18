@@ -282,8 +282,8 @@ const App: React.FC = () => {
               className="flex-1 bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 min-h-[42px] text-sm text-on-surface focus:outline-none focus:border-primary/50"
               placeholder="e.g. 12345678"
             />
-            <button onClick={handleAddManager} className="whitespace-nowrap bg-primary/20 text-primary border border-primary/30 px-5 min-h-[42px] flex items-center justify-center rounded-lg text-sm font-bold shadow-[0_0_15px_rgba(208,188,255,0.1)] hover:bg-primary/30 transition-colors active:scale-95">
-              Добавить
+            <button onClick={handleAddManager} className="whitespace-nowrap bg-primary/20 text-primary border border-primary/30 w-[42px] h-[42px] min-w-[42px] flex items-center justify-center rounded-lg shadow-[0_0_15px_rgba(208,188,255,0.1)] hover:bg-primary/30 transition-colors active:scale-95">
+              <span className="material-symbols-outlined font-bold text-xl">add</span>
             </button>
           </div>
 
