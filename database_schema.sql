@@ -51,3 +51,12 @@ CREATE TABLE orders (
 
 CREATE INDEX idx_users_referrer ON users(referrer_id);
 CREATE INDEX idx_chat_history_user ON chat_history(user_id);
+
+-- 5. FAQ / Knowledge Base table
+CREATE TABLE faq (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    topic TEXT NOT NULL,
+    content_ru TEXT NOT NULL,
+    content_tr TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);

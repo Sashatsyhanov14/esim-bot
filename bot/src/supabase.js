@@ -60,6 +60,11 @@ module.exports = {
     return { data: (data || []).reverse(), error };
   },
 
+  async getFaq() {
+    const { data, error } = await supabase.from('faq').select('*');
+    return { data, error };
+  },
+
   async createOrder(userId, tariffId) {
     const { data, error } = await supabase
       .from('orders')
