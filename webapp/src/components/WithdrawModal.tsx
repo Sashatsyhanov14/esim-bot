@@ -10,21 +10,21 @@ interface WithdrawModalProps {
 const translations = {
     ru: {
         title: "Вывод бонусов",
-        amountLabel: "Сумма (Макс: {balance} ₽)",
+        amountLabel: "Сумма (Макс: {balance} $)",
         amountPlaceholder: "0.00",
         methodLabel: "Способ выплаты (Карта / USDT / Номер)",
         methodPlaceholder: "Реквизиты...",
         submit: "Отправить запрос",
-        alert: "Заявка на вывод {amount} ₽ ({method}) отправлена менеджеру!"
+        alert: "Заявка на вывод {amount} $ ({method}) отправлена менеджеру!"
     },
     tr: {
         title: "Bonus Çekimi",
-        amountLabel: "Tutar (Maks: {balance} ₽)",
+        amountLabel: "Tutar (Maks: {balance} $)",
         amountPlaceholder: "0.00",
         methodLabel: "Ödeme Yöntemi (Kart / USDT / Numara)",
         methodPlaceholder: "Hesap Bilgileri...",
         submit: "Talebi Gönder",
-        alert: "Çekim talebi {amount} ₽ ({method}) yöneticiye gönderildi!"
+        alert: "Çekim talebi {amount} $ ({method}) yöneticiye gönderildi!"
     }
 };
 

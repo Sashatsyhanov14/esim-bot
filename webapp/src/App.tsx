@@ -43,7 +43,14 @@ const translations = {
     managerAddError: "ОШИБКА: Этот пользователь еще ни разу не запускал бота! Пусть нажмет /start в боте.",
     managerAddSuccess: "Успех! ID {id} теперь Менеджер.",
     managerRemoveSuccess: "Сотрудник {id} удален.",
-    managerAddFail: "Ошибка при добавлении менеджера."
+    managerAddFail: "Ошибка при добавлении менеджера.",
+    promoTitle: "Поделись ссылкой или Промокодом:",
+    promoLabel: "ПРОМОКОД",
+    getQrChat: "Получить QR в чат",
+    enterPromoPlaceholder: "Введите промокод (ID друга)",
+    applyPromoBtn: "Применить",
+    promoSuccess: "Промокод успешно применён!",
+    promoError: "Неверный промокод или ошибка."
   },
   tr: {
     adminTitle: "Kurucu Paneli 👑",
@@ -79,7 +86,14 @@ const translations = {
     managerAddError: "HATA: Bu kullanıcı botu hiç başlatmamış! Botta /start'a bassın.",
     managerAddSuccess: "Başarı! ID {id} artık Yönetici.",
     managerRemoveSuccess: "Çalışan {id} kaldırıldı.",
-    managerAddFail: "Yönetici eklerken hata oluştu."
+    managerAddFail: "Yönetici eklerken hata oluştu.",
+    promoTitle: "Bağlantınızı veya Promosyon Kodunuzu paylaşın:",
+    promoLabel: "PROMO",
+    getQrChat: "QR'ı Sohbete Al",
+    enterPromoPlaceholder: "Arkadaşınızın kodunu (ID) girin",
+    applyPromoBtn: "Uygula",
+    promoSuccess: "Promosyon kodu uygulandı!",
+    promoError: "Geçersiz kod veya hata."
   }
 };
 
@@ -96,9 +110,12 @@ const App: React.FC = () => {
   const [newManagerId, setNewManagerId] = useState('');
   const [lang, setLang] = useState<'ru' | 'tr'>('ru');
 
+
   const [activeTab, setActiveTab] = useState<'referral' | 'founder'>('referral');
 
   const tg = window.Telegram?.WebApp;
+
+
 
   useEffect(() => {
     if (tg && tg.initDataUnsafe?.user) {
@@ -402,7 +419,7 @@ const App: React.FC = () => {
                   </div>
                   <div>
                     <p className="font-headline font-semibold text-on-surface truncate w-24 sm:w-32">@{ref.username}</p>
-                    <p className="text-[10px] text-on-surface-variant uppercase mt-0.5">{t.balance}: {ref.balance} ₽</p>
+                    <p className="text-[10px] text-on-surface-variant uppercase mt-0.5">{t.balance}: ${ref.balance}</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -424,7 +441,7 @@ const App: React.FC = () => {
           {t.bonusBalance}
         </h2>
         <div className="flex items-end gap-3 pt-1">
-          <span className="text-4xl font-bold font-headline text-on-surface">{user?.balance || 0} ₽</span>
+          <span className="text-4xl font-bold font-headline text-on-surface">${user?.balance || 0}</span>
           <button onClick={() => setIsModalOpen(true)} className="mb-1 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 px-5 py-2 rounded-xl text-xs font-bold transition-all shadow-[0_0_15px_rgba(208,188,255,0.1)]">
             {t.withdraw}
           </button>
@@ -450,6 +467,7 @@ const App: React.FC = () => {
 
       <section className="space-y-4">
         <h3 className="text-lg font-headline font-bold text-on-surface pl-1">{t.inviteFriend}</h3>
+        <p className="text-sm text-on-surface-variant pl-1">{t.promoTitle}</p>
 
         <div className="glass-card p-4 rounded-xl flex items-center justify-between gap-3">
           <div className="truncate flex-1 bg-surface-container-lowest px-3 py-2.5 rounded-lg text-xs text-on-surface-variant border border-outline-variant/10 font-mono">
@@ -460,15 +478,50 @@ const App: React.FC = () => {
           </button>
         </div>
 
-        <div className="flex justify-center pt-6 pb-4">
-          <div className="p-4 bg-white rounded-2xl shadow-[0_0_40px_rgba(208,188,255,0.15)]">
+        <div className="glass-card p-4 rounded-xl flex items-center justify-between gap-3">
+          <div className="truncate flex-1 bg-surface-container-lowest px-3 py-2.5 rounded-lg text-xs text-on-surface border border-outline-variant/10 font-mono font-bold text-primary">
+            {t.promoLabel}: {user?.telegram_id}
+          </div>
+          <button onClick={() => {
+            navigator.clipboard.writeText(String(user?.telegram_id));
+            tg?.showAlert(t.linkCopied);
+          }} className="bg-surface-container-high p-2.5 rounded-lg text-primary hover:bg-primary/10 hover:text-primary-fixed transition-colors">
+            <span className="material-symbols-outlined text-[20px]">content_copy</span>
+          </button>
+        </div>
+
+        <div className="flex flex-col items-center pt-4 pb-2 gap-3">
+          <div className="p-4 bg-white rounded-2xl shadow-[0_0_40px_rgba(208,188,255,0.15)] shrink-0">
             <img
               src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(refLink)}&margin=10`}
               alt="QR Code"
               className="w-44 h-44 rounded-xl"
             />
           </div>
+          <div className="flex gap-3 w-full justify-center">
+            <a
+              href={`https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(refLink)}&margin=10`}
+              download="referral-qr.png"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 bg-surface-container-high text-on-surface-variant border border-outline-variant/20 flex-1 max-w-[160px] py-3 rounded-xl font-bold hover:bg-surface-container transition-colors"
+            >
+              <span className="material-symbols-outlined text-[18px]">download</span>
+              {lang === 'tr' ? 'İndir' : 'Скачать'}
+            </a>
+            <a
+              href="https://t.me/eesimtestbot?text=/ref"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 bg-secondary/20 text-secondary flex-1 max-w-[160px] py-3 rounded-xl font-bold hover:bg-secondary/30 transition-colors shadow-[0_0_15px_rgba(208,188,255,0.1)]"
+              onClick={() => tg?.close()}
+            >
+              <span className="material-symbols-outlined text-[18px]">send_to_mobile</span>
+              {t.getQrChat}
+            </a>
+          </div>
         </div>
+
       </section>
 
       <WithdrawModal

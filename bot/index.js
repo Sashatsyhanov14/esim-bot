@@ -58,6 +58,28 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
             await supabase.from('orders').update({ status: 'paid' }).eq('id', orderId);
             ctx.session.awaitingQR = null;
 
+            // --- REFERRAL PAYOUT: 15% of tariff price ---
+            try {
+                const { data: buyer } = await supabase.from('users').select('referrer_id').eq('telegram_id', userId).single();
+                const { data: orderRow } = await supabase.from('orders').select('tariff_id').eq('id', orderId).single();
+                if (buyer?.referrer_id && orderRow?.tariff_id) {
+                    const { data: tariffRow } = await supabase.from('tariffs').select('price_usd').eq('id', orderRow.tariff_id).single();
+                    if (tariffRow?.price_usd) {
+                        const reward = Math.round(tariffRow.price_usd * 0.15 * 100) / 100; // 15%, 2 decimal
+                        const { data: refUser } = await supabase.from('users').select('balance').eq('telegram_id', buyer.referrer_id).single();
+                        const newBalance = Math.round(((refUser?.balance || 0) + reward) * 100) / 100;
+                        await supabase.from('users').update({ balance: newBalance }).eq('telegram_id', buyer.referrer_id);
+                        // Notify referrer
+                        try {
+                            await bot.telegram.sendMessage(buyer.referrer_id, `💰 Вам начислено $${reward} (15% от продажи eSIM)! Ваш новый баланс: $${newBalance}`);
+                        } catch (e) { }
+                    }
+                }
+            } catch (e) {
+                console.error('Referral payout error:', e.message);
+            }
+            // -------------------------------------------------
+
             // Schedule delayed message (2 minutes)
             setTimeout(async () => {
                 const delayText = clientLang === 'tr'
@@ -132,13 +154,16 @@ bot.start(async (ctx) => {
         console.log(`New user: ${username} (${telegramId})`);
     }
 
+    // Only prompt for promo code if user didn't arrive via a referral link/QR
+    const noReferralUsed = !startPayload || isNaN(startPayload);
+
     const welcomeParams = lang === 'tr'
         ? {
-            text: `Merhaba, ${username}! 🚀\n\nBen senin kişisel eSIM yöneticinim. Seyahatin için en iyi internet paketini seçmene yardımcı olacağım.\n\nNereye uçuyoruz? 🌍`,
+            text: `Merhaba, ${username}! 🚀\n\nBen senin kişisel eSIM yöneticinim. Seyahatin için en iyi internet paketini seçmene yardımcı olacağım.\n\n${noReferralUsed && !user.referrer_id ? '🎁 Bir promosyon kodunuz varsa, şimdi gönderebilirsiniz (sadece numarayı yazın).\n\n' : ''}Nereye uçuyoruz? 🌍`,
             btn: '📱 Paneli Aç'
         }
         : {
-            text: `Привет, ${username}! 🚀\n\nЯ твой персональный менеджер по eSIM. Помогу выбрать лучший интернет для твоей поездки.\n\nКуда летим? 🌍`,
+            text: `Привет, ${username}! 🚀\n\nЯ твой персональный менеджер по eSIM. Помогу выбрать лучший интернет для твоей поездки.\n\n${noReferralUsed && !user.referrer_id ? '🎁 Если у тебя есть промокод, можешь прислать его прямо сейчас (просто цифры без пробелов).\n\n' : ''}Куда летим? 🌍`,
             btn: '📱 Открыть Дашборд'
         };
 
@@ -149,19 +174,59 @@ bot.start(async (ctx) => {
     );
 });
 
+bot.command('ref', async (ctx) => {
+    const telegramId = ctx.from.id;
+    const lang = ctx.from.language_code === 'tr' ? 'tr' : 'ru';
+    const refLink = `https://t.me/eesimtestbot?start=${telegramId}`;
+
+    const text = lang === 'tr'
+        ? `🎁 İşte davet linkiniz ve QR kodunuz:\n\n${refLink}\n\nPromosyon kodunuz (linki açamayanlar için): \`${telegramId}\``
+        : `🎁 Вот твоя пригласительная ссылка и QR-код:\n\n${refLink}\n\nТвой промокод (для ввода вручную): \`${telegramId}\``;
+
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(refLink)}&margin=10`;
+
+    try {
+        await ctx.replyWithPhoto(qrUrl, { caption: text, parse_mode: 'Markdown' });
+    } catch (err) {
+        await ctx.reply(text, { parse_mode: 'Markdown', disable_web_page_preview: true });
+    }
+});
+
 bot.on('text', async (ctx) => {
     const telegramId = ctx.from.id;
     if (telegramId === MANAGER_ID) return;
 
     const username = ctx.from.username || ctx.from.first_name;
-    const userText = ctx.message.text;
+    const userText = ctx.message.text.trim();
 
     const lang = ctx.from.language_code === 'tr' ? 'tr' : 'ru';
     userLangCache[telegramId] = lang;
 
-    const { data: user } = await getUser(telegramId);
+    let { data: user } = await getUser(telegramId);
     if (!user) {
         return ctx.reply(lang === 'tr' ? 'Başlamak için /start\'a basın.' : 'Нажми /start для начала.');
+    }
+
+    // --- PROMO CODE LOGIC ---
+    if (!user.referrer_id && /^\d{6,15}$/.test(userText)) {
+        const promoId = parseInt(userText);
+        if (promoId !== telegramId) {
+            const { data: promoUser } = await getUser(promoId);
+            if (promoUser) {
+                await supabase.from('users').update({ referrer_id: promoId }).eq('telegram_id', telegramId);
+                user.referrer_id = promoId;
+
+                const successText = lang === 'tr'
+                    ? '✅ Promosyon kodu başarıyla uygulandı! Teşekkürler.\n\nŞimdi nereye uçtuğumuzu söyle? 🌍'
+                    : '✅ Промокод успешно применен! Спасибо.\n\nА теперь подскажи, куда летим? 🌍';
+                return ctx.reply(successText);
+            }
+        }
+
+        const failText = lang === 'tr'
+            ? '❌ Geçersiz promosyon kodu.'
+            : '❌ Неверный или недействительный промокод.';
+        return ctx.reply(failText);
     }
 
     const { data: history } = await getHistory(telegramId);
