@@ -539,20 +539,10 @@ const App: React.FC = () => {
           </div>
           <div className="flex gap-3 w-full justify-center">
             <a
-              href={`https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(refLink)}&margin=10`}
-              download="referral-qr.png"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 bg-surface-container-high text-on-surface-variant border border-outline-variant/20 flex-1 max-w-[160px] py-3 rounded-xl font-bold hover:bg-surface-container transition-colors"
-            >
-              <span className="material-symbols-outlined text-[18px]">download</span>
-              {lang === 'tr' ? 'İndir' : 'Скачать'}
-            </a>
-            <a
               href="https://t.me/eesimtestbot?text=/ref"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 bg-secondary/20 text-secondary flex-1 max-w-[160px] py-3 rounded-xl font-bold hover:bg-secondary/30 transition-colors shadow-[0_0_15px_rgba(208,188,255,0.1)]"
+              className="flex items-center justify-center gap-2 bg-secondary/20 text-secondary w-full max-w-[280px] py-3 rounded-xl font-bold hover:bg-secondary/30 transition-colors shadow-[0_0_15px_rgba(208,188,255,0.1)]"
               onClick={() => tg?.close()}
             >
               <span className="material-symbols-outlined text-[18px]">send_to_mobile</span>
