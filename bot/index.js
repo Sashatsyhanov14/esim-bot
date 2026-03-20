@@ -182,6 +182,12 @@ bot.start(async (ctx) => {
     };
     const welcomeParams = welcomeTexts[uiLang];
 
+    // Remove any stuck reply keyboard silently
+    try {
+        const killMsg = await ctx.reply('…', Markup.removeKeyboard());
+        await bot.telegram.deleteMessage(ctx.chat.id, killMsg.message_id);
+    } catch (e) { }
+
     await ctx.reply(welcomeParams.text,
         Markup.inlineKeyboard([
             [Markup.button.webApp(welcomeParams.btn, 'https://esim-bot.vercel.app')]
