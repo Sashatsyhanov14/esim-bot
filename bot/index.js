@@ -82,9 +82,13 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
 
             // Schedule delayed message (2 minutes)
             setTimeout(async () => {
-                const delayText = clientLang === 'tr'
-                    ? `Gösterdiğiniz ilgi ve ayırdığınız zaman için teşekkür ederiz. İyi yolculuklar dilerim! ✈️ eSIM'iniz aktif — internet vardığınızda çalışacaktır, eğer zaten yurtdışındaysanız bağlantı hazırdır. eSIM profili için veri dolaşımını açmayı unutmayın.\n\nŞeffaf fiyatlar, yorumlar ve 7/24 destek sunan dijital platformumuz eMedeo uygulamasını yüklemenizi öneririz. Transfer, araç/ev kiralama, turlar, alışveriş ve hukuki danışmanlık hizmetlerini doğrudan, aracısız alın.\n\nBir şeyler ters giderse yanınızdayız: 7/24 destek sohbeti.\n\nUygulamamız:\nAndroid: https://play.google.com/store/apps/details?id=com.emedeo.codeware\nIOS: https://apps.apple.com/app/emedeo/id6738978452`
-                    : `Благодарим за проявленный интерес и уделенное нам время. Желаю Вам Счастливого пути! ✈️ Ваша eSIM активна — интернет заработает по прилёту, а если вы уже за границей, связь уже доступна. Не забудьте включить роуминг данных для профиля eсим.\n\nРекомендуем установить приложение eMedeo — цифровую платформу с прозрачными ценами, отзывами и поддержкой 24/7. Получайте трансфер, аренду авто/жилья, экскурсии, покупки и юридические консультации напрямую, без посредников.\n\nМы рядом, если что-то пойдёт не так: чат поддержки 24/7\n\nНаше приложение:\nAndroid: https://play.google.com/store/apps/details?id=com.emedeo.codeware\nIOS: https://apps.apple.com/app/emedeo/id6738978452`;
+                const uiLang = clientLang === 'ru' ? 'ru' : (clientLang === 'tr' ? 'tr' : 'en');
+                const delayTexts = {
+                    ru: `Благодарим за проявленный интерес и уделенное нам время. Желаю Вам Счастливого пути! ✈️ Ваша eSIM активна — интернет заработает по прилёту, а если вы уже за границей, связь уже доступна. Не забудьте включить роуминг данных для профиля eсим.\n\nРекомендуем установить приложение eMedeo — цифровую платформу с прозрачными ценами, отзывами и поддержкой 24/7. Получайте трансфер, аренду авто/жилья, экскурсии, покупки и юридические консультации напрямую, без посредников.\n\nМы рядом, если что-то пойдёт не так: чат поддержки 24/7\n\nНаше приложение:\nAndroid: https://play.google.com/store/apps/details?id=com.emedeo.codeware\nIOS: https://apps.apple.com/app/emedeo/id6738978452`,
+                    tr: `Gösterdiğiniz ilgi ve ayırdığınız zaman için teşekkür ederiz. İyi yolculuklar dilerim! ✈️ eSIM'iniz aktif — internet vardığınızda çalışacaktır, eğer zaten yurtdışındaysanız bağlantı hazırdır. eSIM profili için veri dolaşımını açmayı unutmayın.\n\nŞeffaf fiyatlar, yorumlar ve 7/24 destek sunan dijital platformumuz eMedeo uygulamasını yüklemenizi öneririz. Transfer, araç/ev kiralama, turlar, alışveriş ve hukuki danışmanlık hizmetlerini doğrudan, aracısız alın.\n\nBir şeyler ters giderse yanınızdayız: 7/24 destek sohbeti.\n\nUygulamamız:\nAndroid: https://play.google.com/store/apps/details?id=com.emedeo.codeware\nIOS: https://apps.apple.com/app/emedeo/id6738978452`,
+                    en: `Thank you for your interest and your time. Have a great trip! ✈️ Your eSIM is active — the internet will work upon arrival, and if you are already abroad, the connection is ready. Don't forget to turn on data roaming for the eSIM profile.\n\nWe recommend installing the eMedeo app — a digital platform with transparent prices, reviews, and 24/7 support. Book transfers, car/home rentals, tours, shopping, and legal consultations directly, without intermediaries.\n\nWe are here if something goes wrong: 24/7 support chat.\n\nOur App:\nAndroid: https://play.google.com/store/apps/details?id=com.emedeo.codeware\nIOS: https://apps.apple.com/app/emedeo/id6738978452`
+                };
+                const delayText = delayTexts[uiLang];
 
                 try {
                     await bot.telegram.sendPhoto(userId, 'https://drive.google.com/uc?export=view&id=1zxDZ_QkKYu6VKFlS7nNlRktlLKLxSx47', {
@@ -137,11 +141,10 @@ bot.start(async (ctx) => {
     const username = ctx.from.username || ctx.from.first_name;
     const startPayload = ctx.payload;
 
-    const lang = ctx.from.language_code === 'tr' ? 'tr' : 'ru';
+    const lang = ctx.from.language_code || 'en';
     userLangCache[telegramId] = lang;
 
     let { data: user } = await getUser(telegramId);
-
     if (!user) {
         const referrerId = startPayload && !isNaN(startPayload) ? parseInt(startPayload) : null;
         const { data: newUser } = await createUser({
@@ -157,15 +160,22 @@ bot.start(async (ctx) => {
     // Only prompt for promo code if user didn't arrive via a referral link/QR
     const noReferralUsed = !startPayload || isNaN(startPayload);
 
-    const welcomeParams = lang === 'tr'
-        ? {
-            text: `Merhaba, ${username}! 🚀\n\nBen senin kişisel eSIM yöneticinim. Seyahatin için en iyi internet paketini seçmene yardımcı olacağım.\n\n${noReferralUsed && !user.referrer_id ? '🎁 Bir promosyon kodunuz varsa, şimdi gönderebilirsiniz (sadece numarayı yazın).\n\n' : ''}Nereye uçuyoruz? 🌍`,
-            btn: '📱 Paneli Aç'
-        }
-        : {
+    const uiLang = lang === 'ru' ? 'ru' : (lang === 'tr' ? 'tr' : 'en');
+    const welcomeTexts = {
+        ru: {
             text: `Привет, ${username}! 🚀\n\nЯ твой персональный менеджер по eSIM. Помогу выбрать лучший интернет для твоей поездки.\n\n${noReferralUsed && !user.referrer_id ? '🎁 Если у тебя есть промокод, можешь прислать его прямо сейчас (просто цифры без пробелов).\n\n' : ''}Куда летим? 🌍`,
             btn: '📱 Открыть Дашборд'
-        };
+        },
+        tr: {
+            text: `Merhaba, ${username}! 🚀\n\nBen senin kişisel eSIM yöneticinim. Seyahatin için en iyi internet paketini seçmene yardımcı olacağım.\n\n${noReferralUsed && !user.referrer_id ? '🎁 Bir promosyon kodunuz varsa, şimdi gönderebilirsiniz (sadece numarayı yazın).\n\n' : ''}Nereye uçuyoruz? 🌍`,
+            btn: '📱 Paneli Aç'
+        },
+        en: {
+            text: `Hello, ${username}! 🚀\n\nI am your personal eSIM manager. I will help you choose the best internet package for your trip.\n\n${noReferralUsed && !user.referrer_id ? '🎁 If you have a promo code, you can send it right now (just the numbers).\n\n' : ''}Where are we flying? 🌍`,
+            btn: '📱 Dashboard'
+        }
+    };
+    const welcomeParams = welcomeTexts[uiLang];
 
     await ctx.reply(welcomeParams.text,
         Markup.inlineKeyboard([
@@ -176,12 +186,16 @@ bot.start(async (ctx) => {
 
 bot.command('ref', async (ctx) => {
     const telegramId = ctx.from.id;
-    const lang = ctx.from.language_code === 'tr' ? 'tr' : 'ru';
+    const rawLang = ctx.from.language_code || 'en';
+    const lang = rawLang === 'ru' ? 'ru' : (rawLang === 'tr' ? 'tr' : 'en');
     const refLink = `https://t.me/eesimtestbot?start=${telegramId}`;
 
-    const text = lang === 'tr'
-        ? `🎁 İşte davet linkiniz ve QR kodunuz:\n\n${refLink}\n\nPromosyon kodunuz (linki açamayanlar için): \`${telegramId}\``
-        : `🎁 Вот твоя пригласительная ссылка и QR-код:\n\n${refLink}\n\nТвой промокод (для ввода вручную): \`${telegramId}\``;
+    const texts = {
+        ru: `🎁 Вот твоя пригласительная ссылка и QR-код:\n\n${refLink}\n\nТвой промокод (для ввода вручную): \`${telegramId}\``,
+        tr: `🎁 İşte davet linkiniz ve QR kodunuz:\n\n${refLink}\n\nPromosyon kodunuz (linki açamayanlar için): \`${telegramId}\``,
+        en: `🎁 Here is your invitation link and QR code:\n\n${refLink}\n\nYour promo code (for manual entry): \`${telegramId}\``
+    };
+    const text = texts[lang];
 
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(refLink)}&margin=10`;
 
@@ -199,12 +213,14 @@ bot.on('text', async (ctx) => {
     const username = ctx.from.username || ctx.from.first_name;
     const userText = ctx.message.text.trim();
 
-    const lang = ctx.from.language_code === 'tr' ? 'tr' : 'ru';
+    const lang = ctx.from.language_code || 'en';
+    const uiLang = lang === 'ru' ? 'ru' : (lang === 'tr' ? 'tr' : 'en');
     userLangCache[telegramId] = lang;
 
     let { data: user } = await getUser(telegramId);
     if (!user) {
-        return ctx.reply(lang === 'tr' ? 'Başlamak için /start\'a basın.' : 'Нажми /start для начала.');
+        const msg = { ru: 'Нажми /start для начала.', tr: 'Başlamak için /start\'a basın.', en: 'Press /start to begin.' };
+        return ctx.reply(msg[uiLang]);
     }
 
     // --- PROMO CODE LOGIC ---
@@ -216,17 +232,17 @@ bot.on('text', async (ctx) => {
                 await supabase.from('users').update({ referrer_id: promoId }).eq('telegram_id', telegramId);
                 user.referrer_id = promoId;
 
-                const successText = lang === 'tr'
-                    ? '✅ Promosyon kodu başarıyla uygulandı! Teşekkürler.\n\nŞimdi nereye uçtuğumuzu söyle? 🌍'
-                    : '✅ Промокод успешно применен! Спасибо.\n\nА теперь подскажи, куда летим? 🌍';
-                return ctx.reply(successText);
+                const successTexts = {
+                    ru: '✅ Промокод успешно применен! Спасибо.\n\nА теперь подскажи, куда летим? 🌍',
+                    tr: '✅ Promosyon kodu başarıyla uygulandı! Teşekkürler.\n\nŞimdi nereye uçtuğumuzu söyle? 🌍',
+                    en: '✅ Promo code applied successfully! Thank you.\n\nNow, tell me, where are we flying? 🌍'
+                };
+                return ctx.reply(successTexts[uiLang]);
             }
         }
 
-        const failText = lang === 'tr'
-            ? '❌ Geçersiz promosyon kodu.'
-            : '❌ Неверный или недействительный промокод.';
-        return ctx.reply(failText);
+        const failTexts = { ru: '❌ Неверный или недействительный промокод.', tr: '❌ Geçersiz promosyon kodu.', en: '❌ Invalid promo code.' };
+        return ctx.reply(failTexts[uiLang]);
     }
 
     const { data: history } = await getHistory(telegramId);
@@ -239,7 +255,7 @@ bot.on('text', async (ctx) => {
     const { data: faqRows } = await getFaq();
     let faqText = '';
     if (faqRows && faqRows.length > 0) {
-        faqText = faqRows.map(f => `- ${f.topic}: ${lang === 'tr' ? f.content_tr : f.content_ru}`).join('\n');
+        faqText = faqRows.map(f => `- ${f.topic}: ${uiLang === 'tr' ? f.content_tr : f.content_ru}`).join('\n');
     }
 
     // Get AI response with Salesperson character
@@ -256,10 +272,14 @@ bot.on('text', async (ctx) => {
         if (tariff) {
             const { data: orderData } = await createOrder(telegramId, tariffId);
 
-            const lang = ctx.from.language_code === 'tr' ? 'tr' : 'ru';
-            const payText = lang === 'tr'
-                ? `\n\n👇 **Online Öde:**\n${tariff.payment_link || 'Yöneticiye başvurun'}\n\n✅ *Başarılı ödemeden hemen sonra tarifenizi göndereceğiz!*`
-                : `\n\n👇 **Оплатить онлайн:**\n${tariff.payment_link || 'Обратись к менеджеру'}\n\n✅ *Сразу после успешной оплаты мы вышлем твой тариф!*`;
+            const rawLang = ctx.from.language_code || 'en';
+            const uiLang = rawLang === 'ru' ? 'ru' : (rawLang === 'tr' ? 'tr' : 'en');
+            const payTexts = {
+                ru: `\n\n👇 **Оплатить онлайн:**\n${tariff.payment_link || 'Обратись к менеджеру'}\n\n✅ *Сразу после успешной оплаты мы вышлем твой тариф!*`,
+                tr: `\n\n👇 **Online Öde:**\n${tariff.payment_link || 'Yöneticiye başvurun'}\n\n✅ *Başarılı ödemeden hemen sonra tarifenizi göndereceğiz!*`,
+                en: `\n\n👇 **Pay Online:**\n${tariff.payment_link || 'Contact a manager'}\n\n✅ *We will send your eSIM immediately after successful payment!*`
+            };
+            const payText = payTexts[uiLang];
 
             finalResponse += payText;
 

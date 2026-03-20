@@ -190,8 +190,35 @@ const App: React.FC = () => {
                 counts[u.referrer_id].count += 1;
               }
             });
+            // Fetch all paid orders to count purchases per referrer
+            const allReferrerIds = Object.keys(counts);
+            let purchasedPerRef: Record<string, number> = {};
+            if (allReferrerIds.length > 0) {
+              // Get all referral user IDs grouped by referrer
+              const refIdsByReferrer: Record<string, number[]> = {};
+              allUsers.forEach((u: any) => {
+                if (u.referrer_id && counts[u.referrer_id]) {
+                  if (!refIdsByReferrer[u.referrer_id]) refIdsByReferrer[u.referrer_id] = [];
+                  refIdsByReferrer[u.referrer_id].push(u.telegram_id);
+                }
+              });
+              // Fetch all paid orders for referred users
+              const allRefUserIds = allUsers.filter((u: any) => u.referrer_id).map((u: any) => u.telegram_id);
+              if (allRefUserIds.length > 0) {
+                const { data: paidOrders } = await supabase
+                  .from('orders')
+                  .select('user_id')
+                  .in('user_id', allRefUserIds)
+                  .eq('status', 'paid');
+                const buyerSet = new Set((paidOrders || []).map((o: any) => o.user_id));
+                Object.entries(refIdsByReferrer).forEach(([refId, refUserIds]) => {
+                  purchasedPerRef[refId] = refUserIds.filter(id => buyerSet.has(id)).length;
+                });
+              }
+            }
+
             const sortedRefs = Object.entries(counts)
-              .map(([id, data]) => ({ id, ...data }))
+              .map(([id, data]) => ({ id, ...data, purchased: purchasedPerRef[id] || 0 }))
               .sort((a, b) => b.count - a.count)
               .slice(0, 10);
             setTopReferrers(sortedRefs);
@@ -422,9 +449,15 @@ const App: React.FC = () => {
                     <p className="text-[10px] text-on-surface-variant uppercase mt-0.5">{t.balance}: ${ref.balance}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-headline font-bold text-secondary">{ref.count}</p>
-                  <p className="text-[10px] text-on-surface-variant uppercase mt-0.5">{t.invitedCount}</p>
+                <div className="flex flex-col items-end gap-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-on-surface-variant uppercase tracking-wider">{t.invitedLabel}:</span>
+                    <span className="font-headline font-bold text-secondary text-sm">{ref.count}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-on-surface-variant uppercase tracking-wider">{t.boughtEsimLabel}:</span>
+                    <span className="font-headline font-bold text-green-400 text-sm">{ref.purchased || 0}</span>
+                  </div>
                 </div>
               </div>
             ))
