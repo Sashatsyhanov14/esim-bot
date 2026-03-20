@@ -61,19 +61,16 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
             // --- REFERRAL PAYOUT: 15% of tariff price ---
             try {
                 const { data: buyer } = await supabase.from('users').select('referrer_id').eq('telegram_id', userId).single();
-                const { data: orderRow } = await supabase.from('orders').select('tariff_id').eq('id', orderId).single();
-                if (buyer?.referrer_id && orderRow?.tariff_id) {
-                    const { data: tariffRow } = await supabase.from('tariffs').select('price_usd').eq('id', orderRow.tariff_id).single();
-                    if (tariffRow?.price_usd) {
-                        const reward = Math.round(tariffRow.price_usd * 0.15 * 100) / 100; // 15%, 2 decimal
-                        const { data: refUser } = await supabase.from('users').select('balance').eq('telegram_id', buyer.referrer_id).single();
-                        const newBalance = Math.round(((refUser?.balance || 0) + reward) * 100) / 100;
-                        await supabase.from('users').update({ balance: newBalance }).eq('telegram_id', buyer.referrer_id);
-                        // Notify referrer
-                        try {
-                            await bot.telegram.sendMessage(buyer.referrer_id, `💰 Вам начислено $${reward} (15% от продажи eSIM)! Ваш новый баланс: $${newBalance}`);
-                        } catch (e) { }
-                    }
+                const { data: orderRow } = await supabase.from('orders').select('price_usd').eq('id', orderId).single();
+                if (buyer?.referrer_id && orderRow?.price_usd) {
+                    const reward = Math.round(orderRow.price_usd * 0.15 * 100) / 100; // 15%, 2 decimal
+                    const { data: refUser } = await supabase.from('users').select('balance').eq('telegram_id', buyer.referrer_id).single();
+                    const newBalance = Math.round(((refUser?.balance || 0) + reward) * 100) / 100;
+                    await supabase.from('users').update({ balance: newBalance }).eq('telegram_id', buyer.referrer_id);
+                    // Notify referrer
+                    try {
+                        await bot.telegram.sendMessage(buyer.referrer_id, `💰 Вам начислено $${reward} (15% от продажи eSIM)! Ваш новый баланс: $${newBalance}`);
+                    } catch (e) { }
                 }
             } catch (e) {
                 console.error('Referral payout error:', e.message);
@@ -270,7 +267,7 @@ bot.on('text', async (ctx) => {
         const tariff = tariffs.find(t => t.id === tariffId);
 
         if (tariff) {
-            const { data: orderData } = await createOrder(telegramId, tariffId);
+            const { data: orderData } = await createOrder(telegramId, tariffId, tariff.price_usd);
 
             const rawLang = ctx.from.language_code || 'en';
             const uiLang = rawLang === 'ru' ? 'ru' : (rawLang === 'tr' ? 'tr' : 'en');

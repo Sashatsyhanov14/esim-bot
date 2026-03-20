@@ -65,10 +65,10 @@ module.exports = {
     return { data, error };
   },
 
-  async createOrder(userId, tariffId) {
+  async createOrder(userId, tariffId, priceUsd) {
     const { data, error } = await supabase
       .from('orders')
-      .insert([{ user_id: userId, tariff_id: tariffId, status: 'pending' }])
+      .insert([{ user_id: userId, tariff_id: tariffId, price_usd: priceUsd, status: 'pending' }])
       .select()
       .single();
     return { data, error };

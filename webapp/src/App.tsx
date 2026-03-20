@@ -167,11 +167,17 @@ const App: React.FC = () => {
 
         if (userData.role === 'founder' || userData.role === 'manager') {
           const { count: uCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
-          const { count: oCount } = await supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'paid');
+          const { data: paidOrdersList, count: oCount } = await supabase.from('orders').select('price_usd', { count: 'exact' }).eq('status', 'paid');
+
+          let sumSales = 0;
+          if (paidOrdersList) {
+            sumSales = paidOrdersList.reduce((acc: number, order: any) => acc + (Number(order.price_usd) || 0), 0);
+          }
+
           setGlobalStats({
             totalUsers: uCount || 0,
             totalOrders: oCount || 0,
-            totalSales: 0
+            totalSales: sumSales
           });
 
           const { data: allUsers } = await supabase.from('users').select('telegram_id, username, referrer_id, balance');

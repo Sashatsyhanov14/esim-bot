@@ -45,6 +45,7 @@ CREATE TABLE orders (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id BIGINT REFERENCES users(telegram_id) ON DELETE CASCADE,
     tariff_id UUID REFERENCES tariffs(id),
+    price_usd DECIMAL(10, 2), -- Цена на момент покупки
     status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'cancelled')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
