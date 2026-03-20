@@ -234,7 +234,7 @@ bot.on('text', async (ctx) => {
     let { data: user } = await getUser(telegramId);
     if (!user) {
         const msg = { ru: 'Нажми /start для начала.', tr: 'Başlamak için /start\'a basın.', en: 'Press /start to begin.' };
-        return ctx.reply(msg[uiLang]);
+        return ctx.reply(msg[uiLang], Markup.removeKeyboard());
     }
 
     // --- PROMO CODE LOGIC ---
