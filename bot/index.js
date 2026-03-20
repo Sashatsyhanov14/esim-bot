@@ -273,7 +273,7 @@ bot.on('text', async (ctx) => {
     }
 
     // Get AI response with Salesperson character
-    const aiResponse = await getChatResponse(SALES_SYSTEM_PROMPT(tariffs, lang, faqText), history, userText);
+    const aiResponse = await getChatResponse(SALES_SYSTEM_PROMPT(tariffs, currentLang, faqText), history, userText);
 
     // AI Language detection tag extraction [LANG:code]
     const langMatch = aiResponse.match(/\[LANG:\s*(ru|tr|en)\]/i);
