@@ -1,6 +1,11 @@
--- eSIM Knowledge Base — FAQ Seed (полный текст, без турецкого — ИИ переведёт сам)
--- Вставь в Supabase SQL Editor и нажми Run
+-- 1. УДАЛЯЕМ ЛИШНЮЮ КОЛОНКУ (если она есть)
+-- Это решит проблему с ошибкой "null value ... violates not-null constraint"
+ALTER TABLE faq DROP COLUMN IF EXISTS content_tr;
 
+-- 2. ОЧИЩАЕМ СТАРЫЕ ДАННЫЕ (опционально, чтобы не было дублей)
+TRUNCATE TABLE faq;
+
+-- 3. ЗАЛИВАЕМ ПОЛНЫЙ ТЕКСТ (только на русском, ИИ переведет сам)
 INSERT INTO faq (topic, content_ru) VALUES
 
 ('Что такое eSIM',

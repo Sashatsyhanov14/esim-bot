@@ -269,7 +269,7 @@ bot.on('text', async (ctx) => {
     const { data: faqRows } = await getFaq();
     let faqText = '';
     if (faqRows && faqRows.length > 0) {
-        faqText = faqRows.map(f => `- ${f.topic}: ${uiLang === 'tr' ? f.content_tr : f.content_ru}`).join('\n');
+        faqText = faqRows.map(f => `- ${f.topic}: ${f.content_ru}`).join('\n');
     }
 
     // Get AI response with Salesperson character
