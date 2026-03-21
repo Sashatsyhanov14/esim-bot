@@ -13,7 +13,7 @@ declare global {
 
 const translations = {
   ru: {
-    adminTitle: "Панель Основателя 👑",
+    adminTitle: "Панель Основателя",
     adminSubtitle: "Глобальная статистика",
     overview: "Обзор проекта",
     overviewDesc: "Все пользователи и активные заказы.",
@@ -26,7 +26,7 @@ const translations = {
     ownerBadge: "Владелец",
     balance: "Баланс",
     invitedCount: "Приглашены",
-    userTitle: "Рефералка 🎁",
+    userTitle: "Рефералка",
     userSubtitle: "Твоя статистика",
     bonusBalance: "Твой бонусный баланс",
     withdraw: "Вывести",
@@ -79,10 +79,22 @@ const translations = {
     editFaq: "Редактировать",
     faqTopic: "Тема / Вопрос",
     faqContent: "Ответ (на русском)...",
-    deleteFaqConfirm: "Точно удалить этот вопрос?"
+    deleteFaqConfirm: "Точно удалить этот вопрос?",
+    // Admin Stats
+    tabOrders: "Заказы",
+    tabUsers: "Юзеры",
+    analyzing: "Анализ базы...",
+    noOrders: "Нет заказов",
+    invitedLabelStats: "ПРИГЛАСИЛ:",
+    purchasesLabel: "ПОКУПОК:",
+    spentLabel: "Потратил",
+    hideAll: "Скрыть ⬆",
+    showAll: "Показать все ({count}) ⬇",
+    deletedTariff: "Удаленный тариф",
+    unknownUser: "Неизвестный"
   },
   tr: {
-    adminTitle: "Kurucu Paneli 👑",
+    adminTitle: "Kurucu Paneli",
     adminSubtitle: "Küresel İstatistikler",
     overview: "Proje İncelemesi",
     overviewDesc: "Tüm kullanıcılar ve aktif siparişler.",
@@ -95,7 +107,7 @@ const translations = {
     ownerBadge: "Sahibi",
     balance: "Bakiye",
     invitedCount: "Kişi",
-    userTitle: "Referans 🎁",
+    userTitle: "Referans",
     userSubtitle: "İstatistiklerin",
     bonusBalance: "Bonus Bakiyen",
     withdraw: "Para Çek",
@@ -148,7 +160,19 @@ const translations = {
     editFaq: "Düzenle",
     faqTopic: "Konu / Soru",
     faqContent: "Cevap (Rusça)...",
-    deleteFaqConfirm: "Bu soruyu silmek istediğinize emin misiniz?"
+    deleteFaqConfirm: "Bu soruyu silmek istediğinize emin misiniz?",
+    // Admin Stats
+    tabOrders: "Siparişler",
+    tabUsers: "Kullanıcılar",
+    analyzing: "Veritabanı Analizi...",
+    noOrders: "Sipariş Yok",
+    invitedLabelStats: "DAVET ETTİ:",
+    purchasesLabel: "SATIN ALMALAR:",
+    spentLabel: "Harcadı",
+    hideAll: "Gizle ⬆",
+    showAll: "Tümünü Göster ({count}) ⬇",
+    deletedTariff: "Silinmiş Tarife",
+    unknownUser: "Bilinmeyen"
   }
 };
 

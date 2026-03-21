@@ -144,11 +144,11 @@ export default function AdminTariffs({ t }: { t: any }) {
                             </div>
                         </div>
 
-                        <div className="absolute bottom-3 right-3 flex gap-2">
-                            <button onClick={() => { setEditingId(tData.id); setFormData(tData); }} className="w-8 h-8 rounded-lg bg-surface-container-high text-on-surface flex items-center justify-center transition-colors hover:bg-surface-container-highest active:scale-90">
+                        <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-outline-variant/10">
+                            <button onClick={() => { setEditingId(tData.id); setFormData(tData); }} className="w-8 h-8 rounded-lg bg-surface-container-high text-on-surface flex items-center justify-center transition-colors hover:bg-surface-container-highest active:scale-90 pb-[1px]">
                                 <span className="material-symbols-outlined text-[18px]">edit</span>
                             </button>
-                            <button onClick={() => handleDelete(tData.id)} className="w-8 h-8 rounded-lg bg-error/10 text-error flex items-center justify-center transition-all hover:bg-error hover:text-white active:scale-90">
+                            <button onClick={() => handleDelete(tData.id)} className="w-8 h-8 rounded-lg bg-error/10 text-error flex items-center justify-center transition-all hover:bg-error hover:text-white active:scale-90 pb-[1px]">
                                 <span className="material-symbols-outlined text-[18px]">delete</span>
                             </button>
                         </div>

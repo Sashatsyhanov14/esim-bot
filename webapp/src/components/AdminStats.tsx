@@ -83,19 +83,19 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                         <div className="bg-secondary/10 p-1.5 rounded-lg flex items-center justify-center">
                             <span className="material-symbols-outlined text-secondary text-[18px]">shopping_bag</span>
                         </div>
-                        <p className="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider">{t.totalSales || 'Продажи'}</p>
+                        <p className="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider">{t.totalSales}</p>
                     </div>
                     <span className="text-3xl font-headline font-extrabold text-on-surface">${globalStats.totalSales.toFixed(2)}</span>
                 </div>
             </section>
 
             <div className="flex gap-2 p-1 bg-surface-container-lowest rounded-xl">
-                <button onClick={() => setActiveTab('orders')} className={`flex-1 py-1.5 rounded-lg text-sm font-bold ${activeTab === 'orders' ? 'bg-primary/20 text-primary' : 'text-on-surface-variant'}`}>Заказы</button>
-                <button onClick={() => setActiveTab('users')} className={`flex-1 py-1.5 rounded-lg text-sm font-bold ${activeTab === 'users' ? 'bg-primary/20 text-primary' : 'text-on-surface-variant'}`}>Юзеры</button>
+                <button onClick={() => setActiveTab('orders')} className={`flex-1 py-1.5 rounded-lg text-sm font-bold ${activeTab === 'orders' ? 'bg-primary/20 text-primary' : 'text-on-surface-variant'}`}>{t.tabOrders}</button>
+                <button onClick={() => setActiveTab('users')} className={`flex-1 py-1.5 rounded-lg text-sm font-bold ${activeTab === 'users' ? 'bg-primary/20 text-primary' : 'text-on-surface-variant'}`}>{t.tabUsers}</button>
             </div>
 
             {loading ? (
-                <div className="text-center p-4 animate-pulse text-on-surface-variant">Анализ базы...</div>
+                <div className="text-center p-4 animate-pulse text-on-surface-variant">{t.analyzing}</div>
             ) : activeTab === 'orders' ? (
                 <div className="space-y-4">
                     <div className="flex gap-2 overflow-x-auto pb-2 clean-scrollbar">
@@ -111,7 +111,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                     </div>
 
                     <div className="flex flex-col gap-3">
-                        {filteredOrders.length === 0 ? <div className="text-sm text-center text-on-surface-variant mt-4">Нет заказов</div> : null}
+                        {filteredOrders.length === 0 ? <div className="text-sm text-center text-on-surface-variant mt-4">{t.noOrders}</div> : null}
                         {filteredOrders.slice(0, isOrdersExpanded ? undefined : 6).map((o: any) => {
                             const u = o.users as any;
                             const uObj = Array.isArray(u) ? u[0] : u;
@@ -120,14 +120,20 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                                 <div key={o.id} className="glass-card p-4 rounded-xl relative border-l-4 border-l-primary/30 text-sm">
                                     <div className="flex justify-between items-start mb-2">
                                         <div className="font-bold text-on-surface flex items-center gap-2">
-                                            {uObj?.username ? `@${uObj.username}` : uObj?.telegram_id || 'Unknown'}
+                                            {uObj?.username ? `@${uObj.username}` : uObj?.telegram_id || t.unknownUser}
                                         </div>
                                         <b className="text-green-400">${o.price_usd}</b>
                                     </div>
 
-                                    <div className="text-on-surface-variant text-xs space-y-1 mb-2">
-                                        <p>📦 {o.tariffs ? `${o.tariffs.country} | ${o.tariffs.data_gb} | ${o.tariffs.validity_period}` : 'Удаленный тариф'}</p>
-                                        <p>📅 {new Date(o.created_at).toLocaleString()}</p>
+                                    <div className="text-on-surface-variant text-xs space-y-1.5 mb-2">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="material-symbols-outlined text-[14px]">inventory_2</span>
+                                            <span>{o.tariffs ? `${o.tariffs.country} | ${o.tariffs.data_gb} | ${o.tariffs.validity_period}` : t.deletedTariff}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="material-symbols-outlined text-[14px]">calendar_today</span>
+                                            <span>{new Date(o.created_at).toLocaleString()}</span>
+                                        </div>
                                     </div>
 
                                     <div className="flex justify-between items-center mt-3 pt-2 border-t border-outline-variant/10">
@@ -145,7 +151,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                                 onClick={() => setIsOrdersExpanded(!isOrdersExpanded)}
                                 className="w-full py-3 mt-1 bg-surface-container-high hover:bg-surface-container-highest rounded-xl text-primary text-sm font-bold active:scale-95 transition-all text-center border border-white/5"
                             >
-                                {isOrdersExpanded ? 'Скрыть ⬆' : `Показать все (${filteredOrders.length}) ⬇`}
+                                {isOrdersExpanded ? t.hideAll : t.showAll.replace('{count}', filteredOrders.length)}
                             </button>
                         )}
                     </div>
@@ -157,12 +163,12 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                             <div>
                                 <p className="font-headline font-semibold text-on-surface text-sm">{u.username ? `@${u.username}` : u.telegram_id}</p>
                                 <div className="text-[10px] text-on-surface-variant uppercase mt-1 flex gap-3">
-                                    <span>ПРИГЛАСИЛ: <b className="text-primary">{u.invitedCount}</b></span>
-                                    <span>ПОКУПОК: <b className="text-secondary">{u.ordersCount}</b></span>
+                                    <span>{t.invitedLabelStats} <b className="text-primary">{u.invitedCount}</b></span>
+                                    <span>{t.purchasesLabel} <b className="text-secondary">{u.ordersCount}</b></span>
                                 </div>
                             </div>
                             <div className="text-right">
-                                <p className="text-xs text-on-surface-variant">Потратил</p>
+                                <p className="text-xs text-on-surface-variant">{t.spentLabel}</p>
                                 <p className="font-headline font-bold text-green-400">${u.totalSpend.toFixed(2)}</p>
                             </div>
                         </div>
