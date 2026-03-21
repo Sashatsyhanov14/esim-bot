@@ -334,7 +334,7 @@ const App: React.FC = () => {
 
   const renderAdminContent = () => {
     if (activeTab === 'tariffs') {
-      return <AdminTariffs t={t} />;
+      return <AdminTariffs />;
     }
     if (activeTab === 'faq') {
       return <AdminFaq />;

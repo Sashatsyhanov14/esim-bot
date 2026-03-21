@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
 export default function AdminStats({ t, globalStats }: { t: any, globalStats: any }) {
@@ -16,8 +16,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
         setLoading(true);
 
         // Fetch orders with users and tariffs info
-        // In Supabase, we can use foreign key relations
-        const { data: ordersData, error: ordersErr } = await supabase
+        const { data: ordersData } = await supabase
             .from('orders')
             .select(`
         id, created_at, status, price_usd, assigned_manager,
@@ -33,18 +32,20 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
 
         if (allUsers && ordersData) {
             const uMap: Record<string, any> = {};
-            allUsers.forEach(u => {
+            allUsers.forEach((u: any) => {
                 uMap[u.telegram_id] = { ...u, invitedCount: 0, ordersCount: 0, totalSpend: 0 };
             });
 
-            allUsers.forEach(u => {
+            allUsers.forEach((u: any) => {
                 if (u.referrer_id && uMap[u.referrer_id]) {
                     uMap[u.referrer_id].invitedCount++;
                 }
             });
 
-            ordersData.forEach(o => {
-                const uId = o.users?.telegram_id;
+            ordersData.forEach((o: any) => {
+                const userObj = o.users as any;
+                const uId = userObj?.telegram_id ? userObj.telegram_id : (Array.isArray(userObj) ? userObj[0]?.telegram_id : null);
+
                 if (uId && uMap[uId] && o.status === 'paid') {
                     uMap[uId].ordersCount++;
                     uMap[uId].totalSpend += (Number(o.price_usd) || 0);
@@ -52,8 +53,8 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
             });
 
             const sortedUsers = Object.values(uMap)
-                .filter(u => u.invitedCount > 0 || u.ordersCount > 0 || u.balance > 0)
-                .sort((a, b) => b.totalSpend - a.totalSpend);
+                .filter((u: any) => u.invitedCount > 0 || u.ordersCount > 0 || u.balance > 0)
+                .sort((a: any, b: any) => b.totalSpend - a.totalSpend);
 
             setUsersInfo(sortedUsers);
         }
@@ -61,7 +62,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
         setLoading(false);
     };
 
-    const filteredOrders = orders.filter(o => statusFilter === 'all' || o.status === statusFilter);
+    const filteredOrders = orders.filter((o: any) => statusFilter === 'all' || o.status === statusFilter);
 
     return (
         <div className="space-y-6">
@@ -110,28 +111,33 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
 
                     <div className="flex flex-col gap-3">
                         {filteredOrders.length === 0 ? <div className="text-sm text-center text-on-surface-variant mt-4">Нет заказов</div> : null}
-                        {filteredOrders.map(o => (
-                            <div key={o.id} className="glass-card p-4 rounded-xl relative border-l-4 border-l-primary/30 text-sm">
-                                <div className="flex justify-between items-start mb-2">
-                                    <div className="font-bold text-on-surface flex items-center gap-2">
-                                        {o.users?.username ? `@${o.users.username}` : o.users?.telegram_id || 'Unknown'}
+                        {filteredOrders.map((o: any) => {
+                            const u = o.users as any;
+                            const uObj = Array.isArray(u) ? u[0] : u;
+
+                            return (
+                                <div key={o.id} className="glass-card p-4 rounded-xl relative border-l-4 border-l-primary/30 text-sm">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div className="font-bold text-on-surface flex items-center gap-2">
+                                            {uObj?.username ? `@${uObj.username}` : uObj?.telegram_id || 'Unknown'}
+                                        </div>
+                                        <b className="text-green-400">${o.price_usd}</b>
                                     </div>
-                                    <b className="text-green-400">${o.price_usd}</b>
-                                </div>
 
-                                <div className="text-on-surface-variant text-xs space-y-1 mb-2">
-                                    <p>📦 {o.tariffs ? `${o.tariffs.country} | ${o.tariffs.data_gb} | ${o.tariffs.validity_period}` : 'Удаленный тариф'}</p>
-                                    <p>📅 {new Date(o.created_at).toLocaleString()}</p>
-                                </div>
+                                    <div className="text-on-surface-variant text-xs space-y-1 mb-2">
+                                        <p>📦 {o.tariffs ? `${o.tariffs.country} | ${o.tariffs.data_gb} | ${o.tariffs.validity_period}` : 'Удаленный тариф'}</p>
+                                        <p>📅 {new Date(o.created_at).toLocaleString()}</p>
+                                    </div>
 
-                                <div className="flex justify-between items-center mt-3 pt-2 border-t border-outline-variant/10">
-                                    <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${o.status === 'paid' ? 'bg-green-500/20 text-green-400' : o.status === 'pending' ? 'bg-orange-500/20 text-orange-400' : o.status === 'awaiting_qr' ? 'bg-blue-500/20 text-blue-400' : 'bg-red-500/20 text-red-400'}`}>
-                                        {o.status}
-                                    </span>
-                                    {o.assigned_manager && <span className="text-[10px] text-on-surface-variant">Manager ID: {o.assigned_manager}</span>}
+                                    <div className="flex justify-between items-center mt-3 pt-2 border-t border-outline-variant/10">
+                                        <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${o.status === 'paid' ? 'bg-green-500/20 text-green-400' : o.status === 'pending' ? 'bg-orange-500/20 text-orange-400' : o.status === 'awaiting_qr' ? 'bg-blue-500/20 text-blue-400' : 'bg-red-500/20 text-red-400'}`}>
+                                            {o.status}
+                                        </span>
+                                        {o.assigned_manager && <span className="text-[10px] text-on-surface-variant">Manager ID: {o.assigned_manager}</span>}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             ) : (

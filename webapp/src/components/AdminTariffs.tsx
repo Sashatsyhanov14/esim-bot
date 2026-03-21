@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
 interface Tariff {
@@ -13,7 +13,7 @@ interface Tariff {
     is_active: boolean;
 }
 
-export default function AdminTariffs({ t }: { t: any }) {
+export default function AdminTariffs() {
     const [tariffs, setTariffs] = useState<Tariff[]>([]);
     const [loading, setLoading] = useState(true);
     const [editingId, setEditingId] = useState<string | null>(null);
