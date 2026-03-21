@@ -240,10 +240,24 @@ bot.command('ref', async (ctx) => {
 
 bot.on('web_app_data', async (ctx) => {
     if (ctx.message.web_app_data?.data === '/ref') {
-        const msg = ctx.message;
-        msg.text = '/ref';
-        msg.entities = [{ type: 'bot_command', offset: 0, length: 4 }];
-        return bot.handleUpdate({ ...ctx.update, message: msg });
+        const telegramId = ctx.from.id;
+        const rawLang = userLangCache[telegramId] || ctx.from.language_code || 'en';
+        const lang = rawLang === 'ru' ? 'ru' : (rawLang === 'tr' ? 'tr' : 'en');
+        const refLink = `https://t.me/eesimtestbot?start=${telegramId}`;
+
+        const texts = {
+            ru: `🎁 Вот твоя пригласительная ссылка и QR-код:\n\n${refLink}\n\nТвой промокод (для ввода вручную): \`${telegramId}\``,
+            tr: `🎁 İşte davet linkiniz ve QR kodunuz:\n\n${refLink}\n\nPromosyon kodunuz (linki açamayanlar için): \`${telegramId}\``,
+            en: `🎁 Here is your invitation link and QR code:\n\n${refLink}\n\nYour promo code (for manual entry): \`${telegramId}\``
+        };
+        const text = texts[lang];
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(refLink)}&margin=10`;
+
+        try {
+            await ctx.replyWithPhoto(qrUrl, { caption: text, parse_mode: 'Markdown' });
+        } catch (err) {
+            await ctx.reply(text, { parse_mode: 'Markdown', disable_web_page_preview: true });
+        }
     }
 });
 
