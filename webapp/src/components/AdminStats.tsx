@@ -10,6 +10,10 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
     const [loading, setLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState<string>('all');
 
+    const [newManagerId, setNewManagerId] = useState('');
+    const [managersList, setManagersList] = useState<any[]>([]);
+    const tg = window.Telegram?.WebApp;
+
     useEffect(() => {
         fetchData();
     }, []);
@@ -17,7 +21,6 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
     const fetchData = async () => {
         setLoading(true);
 
-        // Fetch orders with users and tariffs info
         const { data: ordersData } = await supabase
             .from('orders')
             .select(`
@@ -29,7 +32,6 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
 
         if (ordersData) setOrders(ordersData);
 
-        // Prepare users aggregation if tab is active or just prepare it anyway
         const { data: allUsers } = await supabase.from('users').select('telegram_id, username, referrer_id, balance');
 
         if (allUsers && ordersData) {
@@ -61,13 +63,98 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
             setUsersInfo(sortedUsers);
         }
 
+        const { data: mUsers } = await supabase.from('users').select('*').in('role', ['manager', 'founder']);
+        if (mUsers) setManagersList(mUsers);
+
         setLoading(false);
+    };
+
+    const handleAddManager = async () => {
+        if (!newManagerId) return;
+        const tgId = parseInt(newManagerId);
+
+        const { data: existingUser } = await supabase.from('users').select('*').eq('telegram_id', tgId).single();
+        if (!existingUser) {
+            tg?.showAlert(t.managerAddError);
+            return;
+        }
+
+        const { error } = await supabase.from('users').update({ role: 'manager' }).eq('telegram_id', tgId);
+
+        if (!error) {
+            setManagersList(prev => {
+                if (prev.find(m => m.telegram_id === tgId)) return prev;
+                return [...prev, { ...existingUser, role: 'manager' }];
+            });
+            tg?.showAlert(t.managerAddSuccess?.replace('{id}', String(tgId)) || `Success!`);
+            setNewManagerId('');
+        } else {
+            tg?.showAlert(t.managerAddFail);
+        }
+    };
+
+    const handleRemoveManager = async (tgId: number) => {
+        const { error } = await supabase.from('users').update({ role: 'user' }).eq('telegram_id', tgId);
+        if (!error) {
+            setManagersList(prev => prev.filter(m => m.telegram_id !== tgId));
+            tg?.showAlert(t.managerRemoveSuccess?.replace('{id}', String(tgId)) || `Removed`);
+        }
     };
 
     const filteredOrders = orders.filter((o: any) => statusFilter === 'all' || o.status === statusFilter);
 
     return (
         <div className="space-y-6">
+            <section className="space-y-4 mb-2 border-b border-white/5 pb-6">
+                <h3 className="text-lg font-headline font-bold text-on-surface flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary">engineering</span>
+                    {t.manageManagers}
+                </h3>
+                <div className="glass-card p-4 rounded-xl space-y-3">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-surface-container-lowest rounded-full flex items-center justify-center border border-outline-variant/10">
+                            <span className="material-symbols-outlined text-tertiary">person_add</span>
+                        </div>
+                        <div>
+                            <p className="font-headline font-semibold text-on-surface text-sm">{t.assignEmployee}</p>
+                            <p className="text-xs text-on-surface-variant">{t.enterTgId}</p>
+                        </div>
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                        <input
+                            type="number"
+                            value={newManagerId}
+                            onChange={(e) => setNewManagerId(e.target.value)}
+                            className="flex-1 bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-4 min-h-[42px] text-sm text-on-surface focus:outline-none focus:border-primary/50"
+                            placeholder="12345678"
+                        />
+                        <button onClick={handleAddManager} className="whitespace-nowrap bg-primary/20 text-primary border border-primary/30 w-[42px] h-[42px] min-w-[42px] flex items-center justify-center rounded-lg shadow-[0_0_15px_rgba(208,188,255,0.1)] hover:bg-primary/30 transition-colors active:scale-95">
+                            <span className="material-symbols-outlined font-bold text-xl">add</span>
+                        </button>
+                    </div>
+
+                    {managersList.length > 0 && (
+                        <div className="pt-4 mt-4 border-t border-outline-variant/10 space-y-2">
+                            <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">{t.activeEmployees}</p>
+                            {managersList.map((m) => (
+                                <div key={m.telegram_id} className="flex justify-between items-center bg-surface-container-lowest p-2 px-3 rounded-lg border border-outline-variant/10">
+                                    <div className="flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-[16px] text-tertiary">{m.role === 'founder' ? 'shield_person' : 'badge'}</span>
+                                        <span className="text-sm text-on-surface font-medium truncate w-32">@{m.username || String(m.telegram_id)}</span>
+                                        {m.role === 'founder' && <span className="text-[8px] uppercase tracking-widest bg-primary/20 text-primary px-1.5 py-0.5 rounded-sm font-bold">{t.ownerBadge}</span>}
+                                    </div>
+                                    {m.role !== 'founder' && (
+                                        <button onClick={() => handleRemoveManager(m.telegram_id)} className="text-error hover:bg-error/10 p-1.5 rounded-md transition-colors active:scale-95 flex items-center justify-center">
+                                            <span className="material-symbols-outlined text-[16px]">person_remove</span>
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </section>
+
             <section className="grid grid-cols-2 gap-3">
                 <div className="bg-[#201f22] p-4 rounded-xl flex flex-col justify-between min-h-[100px] border border-white/5">
                     <div className="flex items-center gap-2 mb-2">

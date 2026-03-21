@@ -19,6 +19,14 @@ const translations = {
     overviewDesc: "Все пользователи и активные заказы.",
     totalUsers: "Всего юзеров",
     totalSales: "Выручка",
+    manageManagers: "Управление Менеджерами",
+    assignEmployee: "Назначить сотрудника",
+    enterTgId: "Введите Telegram ID",
+    activeEmployees: "Действующие сотрудники",
+    managerAddError: "ОШИБКА: Этот пользователь еще ни разу не запускал бота! Пусть нажмет /start в боте.",
+    managerAddSuccess: "Успех! ID {id} теперь Менеджер.",
+    managerRemoveSuccess: "Сотрудник {id} удален.",
+    managerAddFail: "Ошибка при добавлении менеджера.",
     ownerBadge: "Владелец",
     balance: "Баланс",
     invitedCount: "Приглашены",
@@ -99,6 +107,14 @@ const translations = {
     overviewDesc: "Tüm kullanıcılar ve aktif siparişler.",
     totalUsers: "Toplam Kullanıcı",
     totalSales: "Ciro",
+    manageManagers: "Yönetici Yönetimi",
+    assignEmployee: "Çalışan Ata",
+    enterTgId: "Telegram ID girin",
+    activeEmployees: "Aktif Çalışanlar",
+    managerAddError: "HATA: Bu kullanıcı botu hiç başlatmamış! Botta /start'a bassın.",
+    managerAddSuccess: "Başarı! ID {id} artık Yönetici.",
+    managerRemoveSuccess: "Çalışan {id} kaldırıldı.",
+    managerAddFail: "Yönetici eklerken hata oluştu.",
     ownerBadge: "Sahibi",
     balance: "Bakiye",
     invitedCount: "Kişi",
@@ -436,8 +452,8 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-5 border-t border-outline-variant/10 pt-5 flex justify-center pb-2">
-          <div className="bg-white p-3 rounded-2xl w-fit mx-auto relative group shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+        <div className="mt-5 border-t border-outline-variant/10 pt-5 flex flex-col items-center pb-2">
+          <div className="bg-white p-3 rounded-2xl w-fit mx-auto relative group shadow-[0_0_20px_rgba(255,255,255,0.1)] mb-4">
             <img
               src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(refLink)}`}
               alt="QR Code"
@@ -446,6 +462,13 @@ const App: React.FC = () => {
               className="rounded-xl block"
             />
           </div>
+          <button
+            onClick={() => tg?.sendData("get_qr")}
+            className="w-full bg-primary/20 text-primary border border-primary/30 py-3.5 rounded-xl font-bold active:scale-95 transition-transform flex items-center justify-center gap-2"
+          >
+            <span className="material-symbols-outlined text-[20px]">send_to_mobile</span>
+            {t.getQrChat}
+          </button>
         </div>
       </div>
     </div>
