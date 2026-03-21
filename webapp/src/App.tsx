@@ -53,7 +53,33 @@ const translations = {
     enterPromoPlaceholder: "Введите промокод (ID друга)",
     applyPromoBtn: "Применить",
     promoSuccess: "Промокод успешно применён!",
-    promoError: "Неверный промокод или ошибка."
+    promoError: "Неверный промокод или ошибка.",
+    // Admin Tariffs
+    manageTariffs: "Управление тарифами",
+    addTariff: "Добавить",
+    newTariff: "Новый тариф",
+    editTariff: "Редактировать",
+    sortNumber: "Сортировка (1, 2...)",
+    country: "Страна (Turkiye, Europe)",
+    traffic: "Трафик (1 Gb, unlimited)",
+    validity: "Срок (7 days)",
+    price: "Цена USD (10.50)",
+    qrLink: "QR ссылка (https://...)",
+    paymentLink: "Ссылка на оплату (https://...)",
+    isActive: "Активен",
+    saveBtn: "Сохранить",
+    cancelBtn: "Отмена",
+    deleteConfirm: "Точно удалить тариф?",
+    linkQr: "QR",
+    linkPay: "Оплата",
+    // Admin FAQ
+    manageFaq: "Управление FAQ",
+    addFaq: "Добавить",
+    newFaq: "Новый FAQ",
+    editFaq: "Редактировать",
+    faqTopic: "Тема / Вопрос",
+    faqContent: "Ответ (на русском)...",
+    deleteFaqConfirm: "Точно удалить этот вопрос?"
   },
   tr: {
     adminTitle: "Kurucu Paneli 👑",
@@ -96,7 +122,33 @@ const translations = {
     enterPromoPlaceholder: "Arkadaşınızın kodunu (ID) girin",
     applyPromoBtn: "Uygula",
     promoSuccess: "Promosyon kodu uygulandı!",
-    promoError: "Geçersiz kod veya hata."
+    promoError: "Geçersiz kod veya hata.",
+    // Admin Tariffs
+    manageTariffs: "Tarife Yönetimi",
+    addTariff: "Ekle",
+    newTariff: "Yeni Tarife",
+    editTariff: "Düzenle",
+    sortNumber: "Sıralama (1, 2...)",
+    country: "Ülke (Türkiye, Europe)",
+    traffic: "İnternet (1 GB, sınırsız)",
+    validity: "Süre (7 gün)",
+    price: "Fiyat USD (10.50)",
+    qrLink: "QR Bağlantısı (https://...)",
+    paymentLink: "Ödeme Bağlantısı (https://...)",
+    isActive: "Aktif",
+    saveBtn: "Kaydet",
+    cancelBtn: "İptal",
+    deleteConfirm: "Tarifi silmek istediğinize emin misiniz?",
+    linkQr: "QR",
+    linkPay: "Ödeme",
+    // Admin FAQ
+    manageFaq: "SSS Yönetimi",
+    addFaq: "Ekle",
+    newFaq: "Yeni SSS",
+    editFaq: "Düzenle",
+    faqTopic: "Konu / Soru",
+    faqContent: "Cevap (Rusça)...",
+    deleteFaqConfirm: "Bu soruyu silmek istediğinize emin misiniz?"
   }
 };
 
@@ -334,10 +386,10 @@ const App: React.FC = () => {
 
   const renderAdminContent = () => {
     if (activeTab === 'tariffs') {
-      return <AdminTariffs />;
+      return <AdminTariffs t={t} />;
     }
     if (activeTab === 'faq') {
-      return <AdminFaq />;
+      return <AdminFaq t={t} />;
     }
 
     // Default to 'stats'
