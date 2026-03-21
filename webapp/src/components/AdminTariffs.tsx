@@ -144,21 +144,6 @@ export default function AdminTariffs({ t }: { t: any }) {
                             </div>
                         </div>
 
-                        <div className="space-y-1 mt-1 pr-14">
-                            {tData.payment_link && (
-                                <div className="flex items-center gap-1.5 text-[10px] text-tertiary">
-                                    <span className="material-symbols-outlined text-[14px]">link</span>
-                                    <span className="truncate flex-1 font-mono opacity-80">{t.linkPay}: {tData.payment_link.replace(/^https?:\/\//, '')}</span>
-                                </div>
-                            )}
-                            {tData.payment_qr_url && (
-                                <div className="flex items-center gap-1.5 text-[10px] text-tertiary">
-                                    <span className="material-symbols-outlined text-[14px]">qr_code</span>
-                                    <span className="truncate flex-1 font-mono opacity-80">{t.linkQr}: {tData.payment_qr_url.replace(/^https?:\/\//, '')}</span>
-                                </div>
-                            )}
-                        </div>
-
                         <div className="absolute bottom-3 right-3 flex gap-2">
                             <button onClick={() => { setEditingId(tData.id); setFormData(tData); }} className="w-8 h-8 rounded-lg bg-surface-container-high text-on-surface flex items-center justify-center transition-colors hover:bg-surface-container-highest active:scale-90">
                                 <span className="material-symbols-outlined text-[18px]">edit</span>

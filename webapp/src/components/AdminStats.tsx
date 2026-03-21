@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 
 export default function AdminStats({ t, globalStats }: { t: any, globalStats: any }) {
     const [activeTab, setActiveTab] = useState<'orders' | 'users'>('orders');
+    const [isOrdersExpanded, setIsOrdersExpanded] = useState(false);
     const [orders, setOrders] = useState<any[]>([]);
     const [usersInfo, setUsersInfo] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -111,7 +112,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
 
                     <div className="flex flex-col gap-3">
                         {filteredOrders.length === 0 ? <div className="text-sm text-center text-on-surface-variant mt-4">Нет заказов</div> : null}
-                        {filteredOrders.map((o: any) => {
+                        {filteredOrders.slice(0, isOrdersExpanded ? undefined : 6).map((o: any) => {
                             const u = o.users as any;
                             const uObj = Array.isArray(u) ? u[0] : u;
 
@@ -138,6 +139,15 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                                 </div>
                             );
                         })}
+
+                        {filteredOrders.length > 6 && (
+                            <button
+                                onClick={() => setIsOrdersExpanded(!isOrdersExpanded)}
+                                className="w-full py-3 mt-1 bg-surface-container-high hover:bg-surface-container-highest rounded-xl text-primary text-sm font-bold active:scale-95 transition-all text-center border border-white/5"
+                            >
+                                {isOrdersExpanded ? 'Скрыть ⬆' : `Показать все (${filteredOrders.length}) ⬇`}
+                            </button>
+                        )}
                     </div>
                 </div>
             ) : (
