@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
 import WithdrawModal from './components/WithdrawModal';
+import AdminStats from './components/AdminStats';
+import AdminTariffs from './components/AdminTariffs';
+import AdminFaq from './components/AdminFaq';
 
 declare global {
   interface Window {
@@ -15,14 +18,12 @@ const translations = {
     overview: "Обзор проекта",
     overviewDesc: "Все пользователи и активные заказы.",
     totalUsers: "Всего юзеров",
-    totalSales: "Всего продаж",
+    totalSales: "Выручка",
     manageManagers: "Управление Менеджерами",
     assignEmployee: "Назначить сотрудника",
     enterTgId: "Введите Telegram ID пользователя",
     activeEmployees: "Действующие сотрудники",
     ownerBadge: "Владелец",
-    topReferrers: "Топ Рефералов",
-    noInvitedUsers: "Пока нет приглашенных юзеров",
     balance: "Баланс",
     invitedCount: "Приглашены",
     userTitle: "Рефералка 🎁",
@@ -33,7 +34,9 @@ const translations = {
     boughtEsimLabel: "Купили eSIM",
     inviteFriend: "Пригласить друга",
     tabReferral: "Рефералка",
-    tabFounder: "Основатель",
+    tabStats: "Статистика",
+    tabTariffs: "Тарифы",
+    tabFaq: "FAQ",
     loginTitle: "Вход в панель",
     loginDesc: "Открыто вне Telegram. Введите свой Telegram ID для доступа.",
     loginPlaceholder: "Введите ID (например, 12345678)",
@@ -58,14 +61,12 @@ const translations = {
     overview: "Proje İncelemesi",
     overviewDesc: "Tüm kullanıcılar ve aktif siparişler.",
     totalUsers: "Toplam Kullanıcı",
-    totalSales: "Toplam Satış",
+    totalSales: "Ciro",
     manageManagers: "Yönetici Yönetimi",
     assignEmployee: "Çalışan Ata",
     enterTgId: "Kullanıcı Telegram ID girin",
     activeEmployees: "Aktif Çalışanlar",
     ownerBadge: "Sahibi",
-    topReferrers: "En İyi Referanslar",
-    noInvitedUsers: "Henüz davet edilen kullanıcı yok",
     balance: "Bakiye",
     invitedCount: "Kişi",
     userTitle: "Referans 🎁",
@@ -76,7 +77,9 @@ const translations = {
     boughtEsimLabel: "eSIM Aldı",
     inviteFriend: "Arkadaş Davet Et",
     tabReferral: "Referans",
-    tabFounder: "Kurucu",
+    tabStats: "İstatistik",
+    tabTariffs: "Tarifeler",
+    tabFaq: "SSS",
     loginTitle: "Panele Giriş",
     loginDesc: "Telegram dışında açıldı. Erişim için Telegram ID'nizi girin.",
     loginPlaceholder: "ID girin (örn. 12345678)",
@@ -103,19 +106,16 @@ const App: React.FC = () => {
   const [referrals, setReferrals] = useState<any[]>([]);
   const [purchasedRefsCount, setPurchasedRefsCount] = useState(0);
   const [globalStats, setGlobalStats] = useState({ totalUsers: 0, totalOrders: 0, totalSales: 0 });
-  const [topReferrers, setTopReferrers] = useState<any[]>([]);
   const [managersList, setManagersList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newManagerId, setNewManagerId] = useState('');
   const [lang, setLang] = useState<'ru' | 'tr'>('ru');
+  const [promoInput, setPromoInput] = useState('');
 
-
-  const [activeTab, setActiveTab] = useState<'referral' | 'founder'>('referral');
+  const [activeTab, setActiveTab] = useState<'referral' | 'stats' | 'tariffs' | 'faq'>('referral');
 
   const tg = window.Telegram?.WebApp;
-
-
 
   useEffect(() => {
     if (tg && tg.initDataUnsafe?.user) {
@@ -143,7 +143,7 @@ const App: React.FC = () => {
       if (userData) {
         setUser(userData);
         if (userData.role === 'founder' || userData.role === 'manager') {
-          setActiveTab('founder');
+          setActiveTab('stats');
         }
 
         const { data: refs } = await supabase
@@ -180,56 +180,6 @@ const App: React.FC = () => {
             totalSales: sumSales
           });
 
-          const { data: allUsers } = await supabase.from('users').select('telegram_id, username, referrer_id, balance');
-          if (allUsers) {
-            const counts: Record<string, any> = {};
-            allUsers.forEach((u: any) => {
-              if (u.referrer_id) {
-                if (!counts[u.referrer_id]) {
-                  const refUser = allUsers.find((r: any) => r.telegram_id === u.referrer_id);
-                  counts[u.referrer_id] = {
-                    username: refUser?.username || u.referrer_id,
-                    count: 0,
-                    balance: refUser?.balance || 0
-                  };
-                }
-                counts[u.referrer_id].count += 1;
-              }
-            });
-            // Fetch all paid orders to count purchases per referrer
-            const allReferrerIds = Object.keys(counts);
-            let purchasedPerRef: Record<string, number> = {};
-            if (allReferrerIds.length > 0) {
-              // Get all referral user IDs grouped by referrer
-              const refIdsByReferrer: Record<string, number[]> = {};
-              allUsers.forEach((u: any) => {
-                if (u.referrer_id && counts[u.referrer_id]) {
-                  if (!refIdsByReferrer[u.referrer_id]) refIdsByReferrer[u.referrer_id] = [];
-                  refIdsByReferrer[u.referrer_id].push(u.telegram_id);
-                }
-              });
-              // Fetch all paid orders for referred users
-              const allRefUserIds = allUsers.filter((u: any) => u.referrer_id).map((u: any) => u.telegram_id);
-              if (allRefUserIds.length > 0) {
-                const { data: paidOrders } = await supabase
-                  .from('orders')
-                  .select('user_id')
-                  .in('user_id', allRefUserIds)
-                  .eq('status', 'paid');
-                const buyerSet = new Set((paidOrders || []).map((o: any) => o.user_id));
-                Object.entries(refIdsByReferrer).forEach(([refId, refUserIds]) => {
-                  purchasedPerRef[refId] = refUserIds.filter(id => buyerSet.has(id)).length;
-                });
-              }
-            }
-
-            const sortedRefs = Object.entries(counts)
-              .map(([id, data]) => ({ id, ...data, purchased: purchasedPerRef[id] || 0 }))
-              .sort((a, b) => b.count - a.count)
-              .slice(0, 10);
-            setTopReferrers(sortedRefs);
-          }
-
           const { data: mUsers } = await supabase.from('users').select('*').in('role', ['manager', 'founder']);
           setManagersList(mUsers || []);
         }
@@ -246,6 +196,31 @@ const App: React.FC = () => {
   const copyRefLink = () => {
     navigator.clipboard.writeText(refLink);
     tg?.showAlert(t.linkCopied);
+  };
+
+  const handleApplyPromo = async () => {
+    if (!promoInput || !user) return;
+    const refId = parseInt(promoInput);
+
+    if (refId === user.telegram_id) {
+      tg?.showAlert(t.promoError);
+      return;
+    }
+
+    const { data: existingRef } = await supabase.from('users').select('*').eq('telegram_id', refId).single();
+    if (!existingRef) {
+      tg?.showAlert(t.promoError);
+      return;
+    }
+
+    const { error } = await supabase.from('users').update({ referrer_id: refId }).eq('telegram_id', user.telegram_id);
+
+    if (!error) {
+      setUser({ ...user, referrer_id: refId });
+      tg?.showAlert(t.promoSuccess);
+    } else {
+      tg?.showAlert(t.promoError);
+    }
   };
 
   const handleAddManager = async () => {
@@ -325,153 +300,100 @@ const App: React.FC = () => {
   const isFounder = user?.role === 'founder' || user?.role === 'manager';
 
   const renderAdminHeader = () => (
-    <header className="bg-[#131315]/60 dark:bg-[#131315]/60 backdrop-blur-xl flex justify-between items-center px-6 pt-5 pb-4 w-full z-50 sticky top-0 shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full overflow-hidden bg-surface-container-high border border-outline-variant/20 flex items-center justify-center">
-          <span className="material-symbols-outlined text-primary text-2xl">shield_person</span>
+    <header className="px-6 pt-10 pb-6 relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 rounded-full blur-[80px] -z-10 translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
+      <div className="absolute top-0 left-0 w-48 h-48 bg-secondary/10 rounded-full blur-[60px] -z-10 -translate-x-1/2 translate-y-1/4 pointer-events-none"></div>
+
+      <div className="flex justify-between items-start">
+        <div className="space-y-1">
+          <p className="text-sm font-bold text-primary tracking-widest uppercase">{t.adminSubtitle}</p>
+          <h1 className="text-3xl font-headline font-extrabold text-slate-100">{t.adminTitle}</h1>
         </div>
-        <div className="flex flex-col">
-          <h1 className="font-headline font-bold tracking-tight text-slate-100 text-lg leading-tight">{t.adminTitle}</h1>
-          <p className="text-[10px] text-on-surface-variant uppercase tracking-widest font-medium">{t.adminSubtitle}</p>
+        <div className="w-12 h-12 bg-surface-container border border-white/10 rounded-full flex items-center justify-center cursor-pointer hover:bg-white/5 transition-colors">
+          <span className="material-symbols-outlined text-on-surface">account_circle</span>
         </div>
       </div>
-      <button onClick={() => setLang(lang === 'ru' ? 'tr' : 'ru')} className="bg-surface-container-high border border-outline-variant/20 px-3 py-1 rounded-lg text-xs font-bold font-mono text-on-surface-variant hover:text-white transition-colors">
-        {lang === 'ru' ? '🇹🇷 TR' : '🇷🇺 RU'}
-      </button>
-      <div className="absolute bottom-0 left-0 w-full bg-gradient-to-b from-slate-100/10 to-transparent h-[1px]"></div>
     </header>
   );
 
   const renderUserHeader = () => (
-    <header className="bg-[#131315]/60 dark:bg-[#131315]/60 backdrop-blur-xl flex justify-between items-center px-6 pt-5 pb-4 w-full z-50 sticky top-0 shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full overflow-hidden bg-secondary-container/20 border border-secondary/20 flex items-center justify-center">
-          <span className="material-symbols-outlined text-secondary text-2xl">card_giftcard</span>
+    <header className="px-6 pt-10 pb-6 relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-64 h-64 bg-secondary/20 rounded-full blur-[80px] -z-10 translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
+
+      <div className="flex justify-between items-start">
+        <div className="space-y-1">
+          <p className="text-sm font-bold text-secondary tracking-widest uppercase">{t.userSubtitle}</p>
+          <h1 className="text-3xl font-headline font-extrabold text-slate-100">{t.userTitle}</h1>
         </div>
-        <div className="flex flex-col">
-          <h1 className="font-headline font-bold tracking-tight text-slate-100 text-lg leading-tight">{t.userTitle}</h1>
-          <p className="text-[10px] text-on-surface-variant uppercase tracking-widest font-medium">{t.userSubtitle}</p>
+        <div className="w-12 h-12 bg-surface-container border border-white/10 rounded-full flex items-center justify-center cursor-pointer">
+          <span className="material-symbols-outlined text-secondary">wallet</span>
         </div>
       </div>
-      <button onClick={() => setLang(lang === 'ru' ? 'tr' : 'ru')} className="bg-surface-container-high border border-outline-variant/20 px-3 py-1 rounded-lg text-xs font-bold font-mono text-on-surface-variant hover:text-white transition-colors">
-        {lang === 'ru' ? '🇹🇷 TR' : '🇷🇺 RU'}
-      </button>
-      <div className="absolute bottom-0 left-0 w-full bg-gradient-to-b from-slate-100/10 to-transparent h-[1px]"></div>
     </header>
   );
 
-  const renderAdminContent = () => (
-    <>
-      <section className="mb-6">
-        <h2 className="text-xl font-headline font-extrabold text-primary mb-1">
-          {t.overview}
-        </h2>
-        <p className="text-on-surface-variant font-body text-sm">{t.overviewDesc}</p>
-      </section>
+  const renderAdminContent = () => {
+    if (activeTab === 'tariffs') {
+      return <AdminTariffs t={t} />;
+    }
+    if (activeTab === 'faq') {
+      return <AdminFaq />;
+    }
 
-      <section className="grid grid-cols-2 gap-3 mb-6">
-        <div className="bg-[#201f22] p-4 rounded-xl flex flex-col justify-between min-h-[100px] border border-white/5">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="bg-primary/10 p-1.5 rounded-lg flex items-center justify-center">
-              <span className="material-symbols-outlined text-primary text-[18px]">group</span>
-            </div>
-            <p className="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider">{t.totalUsers}</p>
-          </div>
-          <span className="text-3xl font-headline font-extrabold text-on-surface">{globalStats.totalUsers}</span>
-        </div>
+    // Default to 'stats'
+    return (
+      <div className="space-y-8">
+        <AdminStats t={t} globalStats={globalStats} />
 
-        <div className="bg-[#201f22] p-4 rounded-xl flex flex-col justify-between min-h-[100px] border border-white/5">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="bg-secondary/10 p-1.5 rounded-lg flex items-center justify-center">
-              <span className="material-symbols-outlined text-secondary text-[18px]">shopping_bag</span>
-            </div>
-            <p className="text-on-surface-variant text-[10px] font-bold uppercase tracking-wider">{t.totalSales}</p>
-          </div>
-          <span className="text-3xl font-headline font-extrabold text-on-surface">{globalStats.totalOrders}</span>
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <h3 className="text-lg font-headline font-bold text-on-surface pl-1">{t.manageManagers}</h3>
-        <div className="glass-card p-4 rounded-xl space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-surface-container-lowest rounded-full flex items-center justify-center border border-outline-variant/10">
-              <span className="material-symbols-outlined text-tertiary">person_add</span>
-            </div>
-            <div>
-              <p className="font-headline font-semibold text-on-surface text-sm">{t.assignEmployee}</p>
-              <p className="text-xs text-on-surface-variant">{t.enterTgId}</p>
-            </div>
-          </div>
-          <div className="flex gap-2 pt-2">
-            <input
-              type="number"
-              value={newManagerId}
-              onChange={(e) => setNewManagerId(e.target.value)}
-              className="flex-1 bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 min-h-[42px] text-sm text-on-surface focus:outline-none focus:border-primary/50"
-              placeholder="e.g. 12345678"
-            />
-            <button onClick={handleAddManager} className="whitespace-nowrap bg-primary/20 text-primary border border-primary/30 w-[42px] h-[42px] min-w-[42px] flex items-center justify-center rounded-lg shadow-[0_0_15px_rgba(208,188,255,0.1)] hover:bg-primary/30 transition-colors active:scale-95">
-              <span className="material-symbols-outlined font-bold text-xl">add</span>
-            </button>
-          </div>
-
-          {managersList.length > 0 && (
-            <div className="pt-4 mt-4 border-t border-outline-variant/10 space-y-2">
-              <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">{t.activeEmployees}</p>
-              {managersList.map((m) => (
-                <div key={m.telegram_id} className="flex justify-between items-center bg-surface-container-lowest p-2 px-3 rounded-lg border border-outline-variant/10">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[16px] text-tertiary">{m.role === 'founder' ? 'shield_person' : 'badge'}</span>
-                    <span className="text-sm text-on-surface font-medium truncate w-32">@{m.username || String(m.telegram_id)}</span>
-                    {m.role === 'founder' && <span className="text-[8px] uppercase tracking-widest bg-primary/20 text-primary px-1.5 py-0.5 rounded-sm font-bold">{t.ownerBadge}</span>}
-                  </div>
-                  {m.role !== 'founder' && (
-                    <button onClick={() => handleRemoveManager(m.telegram_id)} className="text-error hover:bg-error/10 p-1.5 rounded-md transition-colors active:scale-95 flex items-center justify-center">
-                      <span className="material-symbols-outlined text-[16px]">person_remove</span>
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <h3 className="text-lg font-headline font-bold text-on-surface pl-1">{t.topReferrers}</h3>
-        <div className="flex flex-col gap-3">
-          {topReferrers.length === 0 ? (
-            <div className="glass-card p-4 rounded-xl text-center text-sm text-on-surface-variant">{t.noInvitedUsers}</div>
-          ) : (
-            topReferrers.map((ref, idx) => (
-              <div key={ref.id} className="glass-card p-4 rounded-xl flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-surface-container-lowest rounded-full flex items-center justify-center border border-outline-variant/10 font-bold text-primary">
-                    #{idx + 1}
-                  </div>
-                  <div>
-                    <p className="font-headline font-semibold text-on-surface truncate w-24 sm:w-32">@{ref.username}</p>
-                    <p className="text-[10px] text-on-surface-variant uppercase mt-0.5">{t.balance}: ${ref.balance}</p>
-                  </div>
-                </div>
-                <div className="flex flex-col items-end gap-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-on-surface-variant uppercase tracking-wider">{t.invitedLabel}:</span>
-                    <span className="font-headline font-bold text-secondary text-sm">{ref.count}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-on-surface-variant uppercase tracking-wider">{t.boughtEsimLabel}:</span>
-                    <span className="font-headline font-bold text-green-400 text-sm">{ref.purchased || 0}</span>
-                  </div>
-                </div>
+        <section className="space-y-4">
+          <h3 className="text-lg font-headline font-bold text-on-surface pl-1">{t.manageManagers}</h3>
+          <div className="glass-card p-4 rounded-xl space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-surface-container-lowest rounded-full flex items-center justify-center border border-outline-variant/10">
+                <span className="material-symbols-outlined text-tertiary">person_add</span>
               </div>
-            ))
-          )}
-        </div>
-      </section>
-    </>
-  );
+              <div>
+                <p className="font-headline font-semibold text-on-surface text-sm">{t.assignEmployee}</p>
+                <p className="text-xs text-on-surface-variant">{t.enterTgId}</p>
+              </div>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <input
+                type="number"
+                value={newManagerId}
+                onChange={(e) => setNewManagerId(e.target.value)}
+                className="flex-1 bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 min-h-[42px] text-sm text-on-surface focus:outline-none focus:border-primary/50"
+                placeholder="e.g. 12345678"
+              />
+              <button onClick={handleAddManager} className="whitespace-nowrap bg-primary/20 text-primary border border-primary/30 w-[42px] h-[42px] min-w-[42px] flex items-center justify-center rounded-lg shadow-[0_0_15px_rgba(208,188,255,0.1)] hover:bg-primary/30 transition-colors active:scale-95">
+                <span className="material-symbols-outlined font-bold text-xl">add</span>
+              </button>
+            </div>
+
+            {managersList.length > 0 && (
+              <div className="pt-4 mt-4 border-t border-outline-variant/10 space-y-2">
+                <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">{t.activeEmployees}</p>
+                {managersList.map((m) => (
+                  <div key={m.telegram_id} className="flex justify-between items-center bg-surface-container-lowest p-2 px-3 rounded-lg border border-outline-variant/10">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[16px] text-tertiary">{m.role === 'founder' ? 'shield_person' : 'badge'}</span>
+                      <span className="text-sm text-on-surface font-medium truncate w-32">@{m.username || String(m.telegram_id)}</span>
+                      {m.role === 'founder' && <span className="text-[8px] uppercase tracking-widest bg-primary/20 text-primary px-1.5 py-0.5 rounded-sm font-bold">{t.ownerBadge}</span>}
+                    </div>
+                    {m.role !== 'founder' && (
+                      <button onClick={() => handleRemoveManager(m.telegram_id)} className="text-error hover:bg-error/10 p-1.5 rounded-md transition-colors active:scale-95 flex items-center justify-center">
+                        <span className="material-symbols-outlined text-[16px]">person_remove</span>
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
+    );
+  };
 
   const renderUserContent = () => (
     <>
@@ -508,26 +430,47 @@ const App: React.FC = () => {
         <h3 className="text-lg font-headline font-bold text-on-surface pl-1">{t.inviteFriend}</h3>
         <p className="text-sm text-on-surface-variant pl-1">{t.promoTitle}</p>
 
-        <div className="glass-card p-4 rounded-xl flex items-center justify-between gap-3">
-          <div className="truncate flex-1 bg-surface-container-lowest px-3 py-2.5 rounded-lg text-xs text-on-surface-variant border border-outline-variant/10 font-mono">
-            {refLink || '...'}
+        <div className="glass-card p-4 rounded-xl flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="truncate flex-1 bg-surface-container-lowest px-3 py-2.5 rounded-lg text-xs text-on-surface-variant border border-outline-variant/10 font-mono">
+              {refLink || '...'}
+            </div>
+            <button onClick={copyRefLink} className="bg-surface-container-high p-2.5 rounded-lg text-secondary hover:bg-secondary/10 hover:text-secondary-fixed transition-colors">
+              <span className="material-symbols-outlined text-[20px]">content_copy</span>
+            </button>
           </div>
-          <button onClick={copyRefLink} className="bg-surface-container-high p-2.5 rounded-lg text-secondary hover:bg-secondary/10 hover:text-secondary-fixed transition-colors">
-            <span className="material-symbols-outlined text-[20px]">content_copy</span>
-          </button>
+
+          <div className="flex items-center justify-between gap-3">
+            <div className="truncate flex-1 bg-surface-container-lowest px-3 py-2.5 rounded-lg text-xs text-on-surface border border-outline-variant/10 font-mono font-bold text-primary">
+              {t.promoLabel}: {user?.telegram_id}
+            </div>
+            <button onClick={() => {
+              navigator.clipboard.writeText(String(user?.telegram_id));
+              tg?.showAlert(t.linkCopied);
+            }} className="bg-surface-container-high p-2.5 rounded-lg text-primary hover:bg-primary/10 hover:text-primary-fixed transition-colors">
+              <span className="material-symbols-outlined text-[20px]">content_copy</span>
+            </button>
+          </div>
         </div>
 
-        <div className="glass-card p-4 rounded-xl flex items-center justify-between gap-3">
-          <div className="truncate flex-1 bg-surface-container-lowest px-3 py-2.5 rounded-lg text-xs text-on-surface border border-outline-variant/10 font-mono font-bold text-primary">
-            {t.promoLabel}: {user?.telegram_id}
+        {/* Input for applying a promo code (only show if user has NO referrer) */}
+        {!user?.referrer_id && (
+          <div className="glass-card p-4 rounded-xl flex gap-2">
+            <input
+              type="number"
+              value={promoInput}
+              onChange={(e) => setPromoInput(e.target.value)}
+              placeholder={t.enterPromoPlaceholder}
+              className="flex-1 bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-3 min-h-[42px] text-sm text-on-surface focus:outline-none focus:border-secondary/50"
+            />
+            <button
+              onClick={handleApplyPromo}
+              className="bg-secondary/20 text-secondary border border-secondary/30 px-4 py-2 rounded-lg font-bold text-sm hover:bg-secondary/30 transition-colors active:scale-95"
+            >
+              {t.applyPromoBtn}
+            </button>
           </div>
-          <button onClick={() => {
-            navigator.clipboard.writeText(String(user?.telegram_id));
-            tg?.showAlert(t.linkCopied);
-          }} className="bg-surface-container-high p-2.5 rounded-lg text-primary hover:bg-primary/10 hover:text-primary-fixed transition-colors">
-            <span className="material-symbols-outlined text-[20px]">content_copy</span>
-          </button>
-        </div>
+        )}
 
         <div className="flex flex-col items-center pt-4 pb-2 gap-3">
           <div className="p-4 bg-white rounded-2xl shadow-[0_0_40px_rgba(208,188,255,0.15)] shrink-0">
@@ -564,30 +507,48 @@ const App: React.FC = () => {
 
   return (
     <>
-      {activeTab === 'founder' ? renderAdminHeader() : renderUserHeader()}
+      {activeTab === 'referral' ? renderUserHeader() : renderAdminHeader()}
 
       <main className="px-6 pt-8 space-y-8 max-w-2xl mx-auto pb-24">
-        {activeTab === 'founder' ? renderAdminContent() : renderUserContent()}
+        {activeTab === 'referral' ? renderUserContent() : renderAdminContent()}
       </main>
 
       <nav className="fixed bottom-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 bg-[#131315]/60 dark:bg-[#131315]/80 backdrop-blur-2xl rounded-t-[1.5rem] shadow-[0_-10px_30px_rgba(0,0,0,0.5)] border-t border-white/5">
 
         <button
           onClick={() => setActiveTab('referral')}
-          className={`flex flex-col items-center justify-center p-2 haptic-feedback transition-all duration-300 ${activeTab === 'referral' ? 'text-indigo-300 bg-indigo-500/10 rounded-2xl px-6 py-2' : 'text-slate-400 hover:text-indigo-200'}`}
+          className={`flex flex-col items-center justify-center p-2 haptic-feedback transition-all duration-300 ${activeTab === 'referral' ? 'text-indigo-300 bg-indigo-500/10 rounded-2xl px-5 py-2' : 'text-slate-400 hover:text-indigo-200'}`}
         >
           <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'referral' ? "'FILL' 1" : "'FILL' 0" }}>group</span>
-          <span className="font-['Inter'] text-[10px] font-medium uppercase tracking-widest mt-1">{t.tabReferral}</span>
+          <span className="font-['Inter'] text-[9px] font-medium uppercase tracking-widest mt-1">{t.tabReferral}</span>
         </button>
 
         {isFounder && (
-          <button
-            onClick={() => setActiveTab('founder')}
-            className={`flex flex-col items-center justify-center p-2 haptic-feedback transition-all duration-300 ${activeTab === 'founder' ? 'text-indigo-300 bg-indigo-500/10 rounded-2xl px-6 py-2' : 'text-slate-400 hover:text-indigo-200'}`}
-          >
-            <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'founder' ? "'FILL' 1" : "'FILL' 0" }}>dashboard</span>
-            <span className="font-['Inter'] text-[10px] font-medium uppercase tracking-widest mt-1">{t.tabFounder}</span>
-          </button>
+          <>
+            <button
+              onClick={() => setActiveTab('stats')}
+              className={`flex flex-col items-center justify-center p-2 haptic-feedback transition-all duration-300 ${activeTab === 'stats' ? 'text-indigo-300 bg-indigo-500/10 rounded-2xl px-5 py-2' : 'text-slate-400 hover:text-indigo-200'}`}
+            >
+              <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'stats' ? "'FILL' 1" : "'FILL' 0" }}>bar_chart</span>
+              <span className="font-['Inter'] text-[9px] font-medium uppercase tracking-widest mt-1">{t.tabStats}</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('tariffs')}
+              className={`flex flex-col items-center justify-center p-2 haptic-feedback transition-all duration-300 ${activeTab === 'tariffs' ? 'text-indigo-300 bg-indigo-500/10 rounded-2xl px-5 py-2' : 'text-slate-400 hover:text-indigo-200'}`}
+            >
+              <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'tariffs' ? "'FILL' 1" : "'FILL' 0" }}>sell</span>
+              <span className="font-['Inter'] text-[9px] font-medium uppercase tracking-widest mt-1">{t.tabTariffs}</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('faq')}
+              className={`flex flex-col items-center justify-center p-2 haptic-feedback transition-all duration-300 ${activeTab === 'faq' ? 'text-indigo-300 bg-indigo-500/10 rounded-2xl px-5 py-2' : 'text-slate-400 hover:text-indigo-200'}`}
+            >
+              <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'faq' ? "'FILL' 1" : "'FILL' 0" }}>help</span>
+              <span className="font-['Inter'] text-[9px] font-medium uppercase tracking-widest mt-1">{t.tabFaq}</span>
+            </button>
+          </>
         )}
       </nav>
     </>

@@ -27,9 +27,18 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
         return next();
     }
 
-    // 1. Session flow (using "Send QR" button)
-    if (ctx.session && ctx.session.awaitingQR) {
-        const { orderId, userId } = ctx.session.awaitingQR;
+    // 1. DB-based flow (using "Send QR" button → orders.status='awaiting_qr')
+    const { data: pendingOrder } = await supabase
+        .from('orders').select('*')
+        .eq('assigned_manager', senderId)
+        .eq('status', 'awaiting_qr')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+    if (pendingOrder) {
+        const orderId = pendingOrder.id;
+        const userId = pendingOrder.user_id;
 
         const rawLang = userLangCache[userId] || 'en';
         const uiLang = rawLang === 'ru' ? 'ru' : (rawLang === 'tr' ? 'tr' : 'en');
@@ -59,19 +68,16 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
         }
 
         if (qrSent) {
-            await supabase.from('orders').update({ status: 'paid' }).eq('id', orderId);
-            ctx.session.awaitingQR = null;
+            await supabase.from('orders').update({ status: 'paid', assigned_manager: null }).eq('id', orderId);
 
             // --- REFERRAL PAYOUT: 15% of tariff price ---
             try {
                 const { data: buyer } = await supabase.from('users').select('referrer_id').eq('telegram_id', userId).single();
-                const { data: orderRow } = await supabase.from('orders').select('price_usd').eq('id', orderId).single();
-                if (buyer?.referrer_id && orderRow?.price_usd) {
-                    const reward = Math.round(orderRow.price_usd * 0.15 * 100) / 100; // 15%, 2 decimal
+                if (buyer?.referrer_id && pendingOrder.price_usd) {
+                    const reward = Math.round(pendingOrder.price_usd * 0.15 * 100) / 100;
                     const { data: refUser } = await supabase.from('users').select('balance').eq('telegram_id', buyer.referrer_id).single();
                     const newBalance = Math.round(((refUser?.balance || 0) + reward) * 100) / 100;
                     await supabase.from('users').update({ balance: newBalance }).eq('telegram_id', buyer.referrer_id);
-                    // Notify referrer
                     try {
                         await bot.telegram.sendMessage(buyer.referrer_id, `💰 Вам начислено $${reward} (15% от продажи eSIM)! Ваш новый баланс: $${newBalance}`);
                     } catch (e) { }
@@ -79,31 +85,25 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
             } catch (e) {
                 console.error('Referral payout error:', e.message);
             }
-            // -------------------------------------------------
 
-            // Schedule delayed message (2 minutes)
+            // Schedule delayed promo message (2 minutes)
+            const clientLang = rawLang;
             setTimeout(async () => {
-                const uiLang = clientLang === 'ru' ? 'ru' : (clientLang === 'tr' ? 'tr' : 'en');
+                const dLang = clientLang === 'ru' ? 'ru' : (clientLang === 'tr' ? 'tr' : 'en');
                 const delayTexts = {
                     ru: `Благодарим за проявленный интерес и уделенное нам время. Желаю Вам Счастливого пути! ✈️ Ваша eSIM активна — интернет заработает по прилёту, а если вы уже за границей, связь уже доступна. Не забудьте включить роуминг данных для профиля eсим.\n\nРекомендуем установить приложение eMedeo — цифровую платформу с прозрачными ценами, отзывами и поддержкой 24/7. Получайте трансфер, аренду авто/жилья, экскурсии, покупки и юридические консультации напрямую, без посредников.\n\nМы рядом, если что-то пойдёт не так: чат поддержки 24/7\n\nНаше приложение:\nAndroid: https://play.google.com/store/apps/details?id=com.emedeo.codeware\nIOS: https://apps.apple.com/app/emedeo/id6738978452`,
                     tr: `Gösterdiğiniz ilgi ve ayırdığınız zaman için teşekkür ederiz. İyi yolculuklar dilerim! ✈️ eSIM'iniz aktif — internet vardığınızda çalışacaktır, eğer zaten yurtdışındaysanız bağlantı hazırdır. eSIM profili için veri dolaşımını açmayı unutmayın.\n\nŞeffaf fiyatlar, yorumlar ve 7/24 destek sunan dijital platformumuz eMedeo uygulamasını yüklemenizi öneririz. Transfer, araç/ev kiralama, turlar, alışveriş ve hukuki danışmanlık hizmetlerini doğrudan, aracısız alın.\n\nBir şeyler ters giderse yanınızdayız: 7/24 destek sohbeti.\n\nUygulamamız:\nAndroid: https://play.google.com/store/apps/details?id=com.emedeo.codeware\nIOS: https://apps.apple.com/app/emedeo/id6738978452`,
                     en: `Thank you for your interest and your time. Have a great trip! ✈️ Your eSIM is active — the internet will work upon arrival, and if you are already abroad, the connection is ready. Don't forget to turn on data roaming for the eSIM profile.\n\nWe recommend installing the eMedeo app — a digital platform with transparent prices, reviews, and 24/7 support. Book transfers, car/home rentals, tours, shopping, and legal consultations directly, without intermediaries.\n\nWe are here if something goes wrong: 24/7 support chat.\n\nOur App:\nAndroid: https://play.google.com/store/apps/details?id=com.emedeo.codeware\nIOS: https://apps.apple.com/app/emedeo/id6738978452`
                 };
-                const delayText = delayTexts[uiLang];
-
+                const delayText = delayTexts[dLang];
                 try {
                     const res = await fetch('https://drive.google.com/uc?export=download&id=1zxDZ_QkKYu6VKFlS7nNlRktlLKLxSx47');
                     const arrayBuffer = await res.arrayBuffer();
                     const buffer = Buffer.from(arrayBuffer);
-
-                    await bot.telegram.sendPhoto(userId, { source: buffer }, {
-                        caption: delayText
-                    });
+                    await bot.telegram.sendPhoto(userId, { source: buffer }, { caption: delayText });
                 } catch (err) {
                     console.error('Promo photo error:', err.message);
-                    try {
-                        await bot.telegram.sendMessage(userId, delayText, { disable_web_page_preview: true });
-                    } catch (e) { }
+                    try { await bot.telegram.sendMessage(userId, delayText, { disable_web_page_preview: true }); } catch (e) { }
                 }
             }, 2 * 60 * 1000);
 
@@ -394,8 +394,8 @@ bot.action(/^sendqr_(.+)$/, async (ctx) => {
     const { data: order } = await supabase.from('orders').select('*').eq('id', orderId).single();
     if (!order) return ctx.answerCbQuery('❌ Заказ не найден.', { show_alert: true });
 
-    ctx.session = ctx.session || {};
-    ctx.session.awaitingQR = { orderId, userId: order.user_id };
+    // Persist awaiting state in DB (survives Vercel webhook restarts)
+    await supabase.from('orders').update({ status: 'awaiting_qr', assigned_manager: telegramId }).eq('id', orderId);
 
     try {
         await ctx.editMessageText(
@@ -418,10 +418,8 @@ bot.action(/^cancelqr_(.+)$/, async (ctx) => {
         return ctx.answerCbQuery('❌ У вас нет прав.', { show_alert: true });
     }
 
-    // Clear session waiting state
-    if (ctx.session && ctx.session.awaitingQR && ctx.session.awaitingQR.orderId === orderId) {
-        ctx.session.awaitingQR = null;
-    }
+    // Clear DB waiting state
+    await supabase.from('orders').update({ status: 'pending', assigned_manager: null }).eq('id', orderId);
 
     try {
         await ctx.editMessageText(
