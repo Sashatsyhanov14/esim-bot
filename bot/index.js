@@ -238,6 +238,15 @@ bot.command('ref', async (ctx) => {
     }
 });
 
+bot.on('web_app_data', async (ctx) => {
+    if (ctx.message.web_app_data?.data === '/ref') {
+        const msg = ctx.message;
+        msg.text = '/ref';
+        msg.entities = [{ type: 'bot_command', offset: 0, length: 4 }];
+        return bot.handleUpdate({ ...ctx.update, message: msg });
+    }
+});
+
 bot.on('text', async (ctx) => {
     const telegramId = ctx.from.id;
     if (telegramId === MANAGER_ID) return;

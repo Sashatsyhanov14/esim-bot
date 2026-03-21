@@ -463,7 +463,7 @@ const App: React.FC = () => {
             />
           </div>
           <button
-            onClick={() => tg?.openTelegramLink("https://t.me/eesimtestbot?start=getqr")}
+            onClick={() => tg?.sendData("/ref")}
             className="w-full bg-primary/20 text-primary border border-primary/30 py-3.5 rounded-xl font-bold active:scale-95 transition-transform flex items-center justify-center gap-2"
           >
             <span className="material-symbols-outlined text-[20px]">send_to_mobile</span>
