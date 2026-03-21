@@ -1,9 +1,3 @@
 {
-    "outputDirectory": "webapp/dist",
-    "rewrites": [
-        {
-            "source": "/api/:path*",
-            "destination": "/api/:path*"
-        }
-    ]
+    "outputDirectory": "webapp/dist"
 }

@@ -465,7 +465,7 @@ const App: React.FC = () => {
           <button
             onClick={async () => {
               try {
-                const resp = await fetch('/api/send-ref', {
+                const resp = await fetch('https://esim-bot.vercel.app/api/send-ref', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ telegram_id: user?.telegram_id, lang })
