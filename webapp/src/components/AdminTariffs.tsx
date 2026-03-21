@@ -18,6 +18,7 @@ export default function AdminTariffs({ t }: { t: any }) {
     const [loading, setLoading] = useState(true);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [formData, setFormData] = useState<Partial<Tariff>>({});
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         fetchTariffs();
@@ -50,6 +51,11 @@ export default function AdminTariffs({ t }: { t: any }) {
 
     if (loading) return <div className="text-center p-4 animate-pulse text-on-surface-variant">Загрузка тарифов...</div>;
 
+    const filteredTariffs = tariffs.filter(t =>
+        t.country.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.data_gb.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     return (
         <div className="space-y-4">
             <div className="flex justify-between items-center pl-1">
@@ -61,6 +67,17 @@ export default function AdminTariffs({ t }: { t: any }) {
                     <span className="material-symbols-outlined text-[18px]">add</span>
                     {t.addTariff}
                 </button>
+            </div>
+
+            <div className="relative">
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
+                <input
+                    type="text"
+                    placeholder={t.searchTariffs || (t.addTariff === 'Добавить' ? 'Поиск по стране или трафику...' : 'Ülke veya internet ara...')}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-xl py-3.5 pl-11 pr-4 text-sm text-on-surface focus:border-primary/50 focus:outline-none transition-colors shadow-sm"
+                />
             </div>
 
             {editingId && (
@@ -121,7 +138,7 @@ export default function AdminTariffs({ t }: { t: any }) {
             )}
 
             <div className="flex flex-col gap-3">
-                {tariffs.map(tData => (
+                {filteredTariffs.map(tData => (
                     <div key={tData.id} className={`glass-card p-4 rounded-xl relative transition-all overflow-hidden ${!tData.is_active ? 'opacity-50 grayscale select-none' : ''}`}>
                         {tData.is_active && <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full blur-[30px] -z-10 translate-x-1/2 -translate-y-1/2"></div>}
 

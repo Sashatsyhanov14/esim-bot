@@ -183,7 +183,6 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [lang, setLang] = useState<'ru' | 'tr'>('ru');
-  const [promoInput, setPromoInput] = useState('');
 
   const [activeTab, setActiveTab] = useState<'referral' | 'stats' | 'tariffs' | 'faq'>('referral');
 
@@ -281,31 +280,6 @@ const App: React.FC = () => {
     tg?.showAlert(t.linkCopied);
   };
 
-  const handleApplyPromo = async () => {
-    if (!promoInput || !user) return;
-    const refId = parseInt(promoInput);
-
-    if (refId === user.telegram_id) {
-      tg?.showAlert(t.promoError);
-      return;
-    }
-
-    const { data: existingRef } = await supabase.from('users').select('*').eq('telegram_id', refId).single();
-    if (!existingRef) {
-      tg?.showAlert(t.promoError);
-      return;
-    }
-
-    const { error } = await supabase.from('users').update({ referrer_id: refId }).eq('telegram_id', user.telegram_id);
-
-    if (!error) {
-      setUser({ ...user, referrer_id: refId });
-      tg?.showAlert(t.promoSuccess);
-    } else {
-      tg?.showAlert(t.promoError);
-    }
-  };
-
   const handleManualLogin = async () => {
     if (!loginInputId) return;
     setLoading(true);
@@ -395,13 +369,7 @@ const App: React.FC = () => {
           <span className="material-symbols-outlined text-secondary text-2xl">account_balance_wallet</span>
         </div>
         <p className="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-1">{t.bonusBalance}</p>
-        <h2 className="text-4xl font-headline font-extrabold text-slate-100 mb-6">${user?.balance?.toFixed(2) || '0.00'}</h2>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="w-full bg-secondary/20 text-secondary border border-secondary/30 py-3.5 rounded-xl font-bold active:scale-95 transition-transform"
-        >
-          {t.withdraw}
-        </button>
+        <h2 className="text-4xl font-headline font-extrabold text-slate-100 mb-2">${user?.balance?.toFixed(2) || '0.00'}</h2>
       </div>
 
       <div className="grid grid-cols-2 gap-3 mx-2">
@@ -468,18 +436,15 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-5 border-t border-outline-variant/10 pt-5">
-          <div className="flex items-center gap-2 bg-surface-container-lowest p-1 rounded-xl border border-outline-variant/10">
-            <input
-              type="number"
-              placeholder={t.enterPromoPlaceholder}
-              value={promoInput}
-              onChange={(e) => setPromoInput(e.target.value)}
-              className="flex-1 bg-transparent text-sm text-on-surface outline-none px-3"
+        <div className="mt-5 border-t border-outline-variant/10 pt-5 flex justify-center pb-2">
+          <div className="bg-white p-3 rounded-2xl w-fit mx-auto relative group shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+            <img
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(refLink)}`}
+              alt="QR Code"
+              width={180}
+              height={180}
+              className="rounded-xl block"
             />
-            <button onClick={handleApplyPromo} className="bg-primary/20 border border-primary/30 text-primary text-sm font-bold px-4 py-2.5 rounded-lg active:scale-95 transition-transform hover:bg-primary/30">
-              {t.applyPromoBtn}
-            </button>
           </div>
         </div>
       </div>
