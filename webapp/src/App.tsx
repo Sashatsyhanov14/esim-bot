@@ -463,19 +463,7 @@ const App: React.FC = () => {
             />
           </div>
           <button
-            onClick={async () => {
-              try {
-                const resp = await fetch('https://esim-bot.vercel.app/api/send-ref', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ telegram_id: user?.telegram_id, lang })
-                });
-                if (resp.ok) {
-                  tg?.showAlert(lang === 'ru' ? 'QR-код отправлен в чат!' : 'QR kodu sohbete gönderildi!');
-                  tg?.close();
-                }
-              } catch (e) { }
-            }}
+            onClick={() => tg?.sendData("/ref")}
             className="w-full bg-primary/20 text-primary border border-primary/30 py-3.5 rounded-xl font-bold active:scale-95 transition-transform flex items-center justify-center gap-2"
           >
             <span className="material-symbols-outlined text-[20px]">send_to_mobile</span>

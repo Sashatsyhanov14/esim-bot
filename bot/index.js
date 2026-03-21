@@ -210,9 +210,9 @@ bot.start(async (ctx) => {
     } catch (e) { }
 
     await ctx.reply(welcomeParams.text,
-        Markup.inlineKeyboard([
+        Markup.keyboard([
             [Markup.button.webApp(welcomeParams.btn, 'https://esim-bot.vercel.app')]
-        ])
+        ]).resize()
     );
 });
 
