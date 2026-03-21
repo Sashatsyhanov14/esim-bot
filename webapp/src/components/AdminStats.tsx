@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 export default function AdminStats({ t, globalStats }: { t: any, globalStats: any }) {
     const [activeTab, setActiveTab] = useState<'orders' | 'users'>('orders');
     const [isOrdersExpanded, setIsOrdersExpanded] = useState(false);
+    const [isUsersExpanded, setIsUsersExpanded] = useState(false);
     const [orders, setOrders] = useState<any[]>([]);
     const [usersInfo, setUsersInfo] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -103,9 +104,9 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                             <button
                                 key={st}
                                 onClick={() => setStatusFilter(st)}
-                                className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${statusFilter === st ? 'bg-secondary/20 text-secondary border border-secondary/30' : 'bg-surface-container-low text-on-surface-variant'}`}
+                                className={`px-3 py-1 rounded-full text-[10px] uppercase font-bold whitespace-nowrap ${statusFilter === st ? 'bg-secondary/20 text-secondary border border-secondary/30' : 'bg-surface-container-low text-on-surface-variant'}`}
                             >
-                                {st.toUpperCase().replace('_', ' ')}
+                                {t.statuses ? (t.statuses[st] || st.toUpperCase().replace('_', ' ')) : st.toUpperCase().replace('_', ' ')}
                             </button>
                         ))}
                     </div>
@@ -138,7 +139,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
 
                                     <div className="flex justify-between items-center mt-3 pt-2 border-t border-outline-variant/10">
                                         <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${o.status === 'paid' ? 'bg-green-500/20 text-green-400' : o.status === 'pending' ? 'bg-orange-500/20 text-orange-400' : o.status === 'awaiting_qr' ? 'bg-blue-500/20 text-blue-400' : 'bg-red-500/20 text-red-400'}`}>
-                                            {o.status}
+                                            {t.statuses ? (t.statuses[o.status] || o.status) : o.status}
                                         </span>
                                         {o.assigned_manager && <span className="text-[10px] text-on-surface-variant">Manager ID: {o.assigned_manager}</span>}
                                     </div>
@@ -158,7 +159,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                 </div>
             ) : (
                 <div className="flex flex-col gap-3">
-                    {usersInfo.map(u => (
+                    {usersInfo.slice(0, isUsersExpanded ? undefined : 6).map(u => (
                         <div key={u.telegram_id} className="glass-card p-4 rounded-xl flex items-center justify-between">
                             <div>
                                 <p className="font-headline font-semibold text-on-surface text-sm">{u.username ? `@${u.username}` : u.telegram_id}</p>
@@ -173,6 +174,15 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                             </div>
                         </div>
                     ))}
+
+                    {usersInfo.length > 6 && (
+                        <button
+                            onClick={() => setIsUsersExpanded(!isUsersExpanded)}
+                            className="w-full py-3 mt-1 bg-surface-container-high hover:bg-surface-container-highest rounded-xl text-primary text-sm font-bold active:scale-95 transition-all text-center border border-white/5"
+                        >
+                            {isUsersExpanded ? t.hideAll : t.showAll.replace('{count}', usersInfo.length)}
+                        </button>
+                    )}
                 </div>
             )}
         </div>
