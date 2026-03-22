@@ -2,7 +2,6 @@ const { Telegraf, session, Markup } = require('telegraf');
 const dotenv = require('dotenv');
 const { supabase, getUser, createUser, getTariffs, saveMessage, getHistory, createOrder, getFaq, clearHistory } = require('./src/supabase');
 const { getChatResponse } = require('./src/openai');
-const { SALES_SYSTEM_PROMPT } = require('./src/prompts');
 
 dotenv.config();
 
@@ -333,8 +332,8 @@ bot.on('text', async (ctx) => {
         faqText = faqRows.map(f => `- ${f.topic}: ${f.content_ru}`).join('\n');
     }
 
-    // Get AI response with Salesperson character
-    const aiResponse = await getChatResponse(SALES_SYSTEM_PROMPT(tariffs, currentLang, faqText), history, userText);
+    // Get AI response with Multi-Agent System (Analyzer -> Writer)
+    const aiResponse = await getChatResponse(tariffs, faqText, history, userText);
 
     // AI Language detection tag extraction [LANG:code]
     const langMatch = aiResponse.match(/\[LANG:\s*(ru|tr|en)\]/i);

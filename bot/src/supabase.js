@@ -46,6 +46,7 @@ module.exports = {
     const { error } = await supabase
       .from('chat_history')
       .insert([{ user_id: userId, role, content }]);
+    if (error) console.error('Supabase saveMessage error:', error.message);
     return { error };
   },
 
