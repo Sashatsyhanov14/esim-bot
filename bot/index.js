@@ -1,6 +1,6 @@
 const { Telegraf, session, Markup } = require('telegraf');
 const dotenv = require('dotenv');
-const { supabase, getUser, createUser, getTariffs, saveMessage, getHistory, createOrder, getFaq } = require('./src/supabase');
+const { supabase, getUser, createUser, getTariffs, saveMessage, getHistory, createOrder, getFaq, clearHistory } = require('./src/supabase');
 const { getChatResponse } = require('./src/openai');
 const { SALES_SYSTEM_PROMPT } = require('./src/prompts');
 
@@ -146,6 +146,8 @@ bot.start(async (ctx) => {
     const telegramId = ctx.from.id;
     const username = ctx.from.username || ctx.from.first_name;
     const startPayload = ctx.payload;
+
+    await clearHistory(telegramId);
 
     if (startPayload === 'getqr') {
         const rawLang = userLangCache[telegramId] || ctx.from.language_code || 'en';

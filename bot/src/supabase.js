@@ -49,6 +49,14 @@ module.exports = {
     return { error };
   },
 
+  async clearHistory(userId) {
+    const { error } = await supabase
+      .from('chat_history')
+      .delete()
+      .eq('user_id', userId);
+    return { error };
+  },
+
   async getHistory(userId, limit = 10) {
     const { data, error } = await supabase
       .from('chat_history')
