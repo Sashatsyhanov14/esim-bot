@@ -205,16 +205,30 @@ const App: React.FC = () => {
   const tg = window.Telegram?.WebApp;
 
   useEffect(() => {
-    if (tg && tg.initDataUnsafe?.user) {
-      if (tg.initDataUnsafe.user.language_code === 'tr') {
-        setLang('tr');
+    // Ждем немного, пока Telegram WebApp инициализируется
+    const init = () => {
+      if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
+        const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
+        if (tgUser.language_code === 'tr') setLang('tr');
+        window.Telegram.WebApp.ready();
+        window.Telegram.WebApp.expand();
+        fetchUserData(tgUser.id);
+      } else {
+        // Если данных нет, подорждем полсекунды (бывает на медленных VPS)
+        setTimeout(() => {
+          if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
+            const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
+            if (tgUser.language_code === 'tr') setLang('tr');
+            window.Telegram.WebApp.ready();
+            window.Telegram.WebApp.expand();
+            fetchUserData(tgUser.id);
+          } else {
+            setLoading(false);
+          }
+        }, 500);
       }
-      tg.ready();
-      tg.expand();
-      fetchUserData(tg.initDataUnsafe.user.id);
-    } else {
-      setLoading(false);
-    }
+    };
+    init();
   }, []);
 
   const t = translations[lang];
