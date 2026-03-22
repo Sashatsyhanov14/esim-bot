@@ -173,14 +173,24 @@ bot.start(async (ctx) => {
     let { data: user } = await getUser(telegramId);
     if (!user) {
         const referrerId = startPayload && !isNaN(startPayload) ? parseInt(startPayload) : null;
-        const { data: newUser } = await createUser({
+        const { data: newUser, error: createError } = await createUser({
             telegram_id: telegramId,
             username: username,
-            referrer_id: (referrerId && referrerId !== telegramId) ? referrerId : null,
+            referral_id: (referrerId && referrerId !== telegramId) ? referrerId : null,
             balance: 0
         });
+
+        if (createError) {
+            console.error('Error creating user:', createError);
+            return ctx.reply('Ошибка при регистрации. Пожалуйста, попробуйте позже.');
+        }
+
         user = newUser;
         console.log(`New user: ${username} (${telegramId})`);
+    }
+
+    if (!user) {
+        return ctx.reply('Не удалось загрузить данные пользователя.');
     }
 
     const noReferralUsed = !startPayload || isNaN(startPayload);
@@ -189,15 +199,15 @@ bot.start(async (ctx) => {
     const uiLang = rawLang === 'ru' ? 'ru' : (rawLang === 'tr' ? 'tr' : 'en');
     const welcomeTexts = {
         ru: {
-            text: `Привет, ${username}! 🚀\n\nЯ твой персональный менеджер по eSIM. Помогу выбрать лучший интернет для твоей поездки.\n\n${noReferralUsed && !user.referrer_id ? '🎁 Если у тебя есть промокод, можешь прислать его прямо сейчас (просто цифры без пробелов).\n\n' : ''}Куда летим? 🌍`,
+            text: `Привет, ${username}! 🚀\n\nЯ твой персональный менеджер по eSIM. Помогу выбрать лучший интернет для твоей поездки.\n\n${noReferralUsed && !user.referral_id ? '🎁 Если у тебя есть промокод, можешь прислать его прямо сейчас (просто цифры без пробелов).\n\n' : ''}Куда летим? 🌍`,
             btn: '📱 Открыть Дашборд'
         },
         tr: {
-            text: `Merhaba, ${username}! 🚀\n\nBen senin kişisel eSIM yöneticinim. Seyahatin için en iyi internet paketini seçmene yardımcı olacağım.\n\n${noReferralUsed && !user.referrer_id ? '🎁 Bir promosyon kodunuz varsa, şimdi gönderebilirsiniz (sadece numarayı yazın).\n\n' : ''}Nereye uçuyoruz? 🌍`,
+            text: `Merhaba, ${username}! 🚀\n\nBen senin kişisel eSIM yöneticinim. Seyahatin için en iyi internet paketini seçmene yardımcı olacağım.\n\n${noReferralUsed && !user.referral_id ? '🎁 Bir promosyon kodunuz varsa, теперь ты можешь прислать его прямо сейчас (просто цифры без пробелов).\n\n' : ''}Nereye uçuyoruz? 🌍`,
             btn: '📱 Paneli Aç'
         },
         en: {
-            text: `Hello, ${username}! 🚀\n\nI am your personal eSIM manager. I will help you choose the best internet package for your trip.\n\n${noReferralUsed && !user.referrer_id ? '🎁 If you have a promo code, you can send it right now (just the numbers).\n\n' : ''}Where are we flying? 🌍`,
+            text: `Hello, ${username}! 🚀\n\nI am your personal eSIM manager. I will help you choose the best internet package for your trip.\n\n${noReferralUsed && !user.referral_id ? '🎁 If you have a promo code, you can send it right now (just the numbers).\n\n' : ''}Where are we flying? 🌍`,
             btn: '📱 Dashboard'
         }
     };
