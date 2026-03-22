@@ -4,8 +4,12 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const openai = new OpenAI({
-    baseURL: 'https://polza.ai/api/v1',
+    baseURL: 'https://openrouter.ai/api/v1',
     apiKey: process.env.OPENAI_API_KEY,
+    defaultHeaders: {
+        'HTTP-Referer': 'https://esim-bot.com',
+        'X-Title': 'eSIM Bot',
+    }
 });
 
 
@@ -19,7 +23,7 @@ module.exports = {
             ];
 
             const response = await openai.chat.completions.create({
-                model: 'gpt-4o-mini',
+                model: 'openai/gpt-4o-mini',
                 messages,
                 temperature: 0.7,
             });
