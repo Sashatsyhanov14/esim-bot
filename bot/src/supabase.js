@@ -77,11 +77,14 @@ module.exports = {
   },
 
   async createOrder(userId, tariffId, priceUsd) {
+    const orderId = crypto.randomUUID();
     const { data, error } = await supabase
       .from('orders')
-      .insert([{ user_id: userId, tariff_id: tariffId, price_usd: priceUsd, status: 'pending' }])
+      .insert([{ id: orderId, user_id: userId, tariff_id: tariffId, price_usd: priceUsd, status: 'pending' }])
       .select()
       .single();
+
+    if (error) console.error("Supabase createOrder error:", error.message);
     return { data, error };
   }
 };
