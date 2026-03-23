@@ -1,7 +1,7 @@
 const { Telegraf, session, Markup } = require('telegraf');
 const dotenv = require('dotenv');
 const { supabase, getUser, createUser, getTariffs, saveMessage, getHistory, createOrder, getFaq, clearHistory } = require('./src/supabase');
-const { getChatResponse } = require('./src/openai');
+const { getChatResponse, getLocalizedText } = require('./src/openai');
 
 dotenv.config();
 
@@ -197,23 +197,14 @@ bot.start(async (ctx) => {
 
     const noReferralUsed = !startPayload || isNaN(startPayload);
 
-    const rawLang = lang;
-    const uiLang = rawLang === 'ru' ? 'ru' : (rawLang === 'tr' ? 'tr' : 'en');
-    const welcomeTexts = {
-        ru: {
-            text: `Привет, ${username}! 🚀\n\nЯ твой персональный менеджер по eSIM. Помогу выбрать лучший интернет для твоей поездки.\n\n${noReferralUsed && !user.referral_id ? '🎁 Если у тебя есть промокод, можешь прислать его прямо сейчас (просто цифры без пробелов).\n\n' : ''}Куда летим? 🌍`,
-            btn: '📱 Открыть Дашборд'
-        },
-        tr: {
-            text: `Merhaba, ${username}! 🚀\n\nBen senin kişisel eSIM yöneticinim. Seyahatin için en iyi internet paketini seçmene yardımcı olacağım.\n\n${noReferralUsed && !user.referral_id ? '🎁 Bir promosyon kodunuz varsa, теперь ты можешь прислать его прямо сейчас (просто цифры без пробелов).\n\n' : ''}Nereye uçuyoruz? 🌍`,
-            btn: '📱 Paneli Aç'
-        },
-        en: {
-            text: `Hello, ${username}! 🚀\n\nI am your personal eSIM manager. I will help you choose the best internet package for your trip.\n\n${noReferralUsed && !user.referral_id ? '🎁 If you have a promo code, you can send it right now (just the numbers).\n\n' : ''}Where are we flying? 🌍`,
-            btn: '📱 Dashboard'
-        }
-    };
-    const welcomeParams = welcomeTexts[uiLang];
+    const welcomeRu = `Привет, ${username}! 🚀
+
+Я твой персональный менеджер по eSIM. Помогу выбрать лучший интернет для твоей поездки.
+
+${noReferralUsed && !user.referral_id ? '🎁 Если у тебя есть промокод, можешь прислать его прямо сейчас (просто цифры без пробелов).\n\n' : ''}Куда летим? 🌍`;
+    const welcomeText = await getLocalizedText(lang, welcomeRu);
+    const dashboardBtnRu = '📱 Открыть Дашборд';
+    const dashboardBtn = await getLocalizedText(lang, dashboardBtnRu);
 
     // Remove any stuck reply keyboard silently
     try {
@@ -221,9 +212,9 @@ bot.start(async (ctx) => {
         await bot.telegram.deleteMessage(ctx.chat.id, killMsg.message_id);
     } catch (e) { }
 
-    await ctx.reply(welcomeParams.text,
+    await ctx.reply(welcomeText,
         Markup.keyboard([
-            [Markup.button.webApp(welcomeParams.btn, process.env.WEBAPP_URL || 'https://ticaretai.tr')]
+            [Markup.button.webApp(dashboardBtn, process.env.WEBAPP_URL || 'https://ticaretai.tr')]
         ]).resize()
     );
 });
@@ -377,15 +368,10 @@ bot.on('text', async (ctx) => {
                         finalQrUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
                     }
                 }
-                const captionTexts = {
-                    ru: `QR-код для оплаты тарифа ${tariff.country}`,
-                    tr: `${tariff.country} tarifesi için ödeme QR kodu`,
-                    en: `Payment QR code for the ${tariff.country} plan`
-                };
+                const captionRu = `QR-код для оплаты тарифа ${tariff.country}`;
+                const qrCaption = await getLocalizedText(userLangCache[telegramId] || 'ru', captionRu);
                 try {
-                    await ctx.replyWithPhoto(finalQrUrl, {
-                        caption: captionTexts[uiLang]
-                    });
+                    await ctx.replyWithPhoto(finalQrUrl, { caption: qrCaption });
                 } catch (err) {
                     console.error('Failed to send QR:', err.message);
                 }

@@ -1,6 +1,6 @@
 const OpenAI = require('openai');
 const dotenv = require('dotenv');
-const { ANALYZER_PROMPT, WRITER_PROMPT } = require('./prompts');
+const { ANALYZER_PROMPT, WRITER_PROMPT, LOCALIZER_PROMPT } = require('./prompts');
 
 dotenv.config();
 
@@ -67,6 +67,24 @@ module.exports = {
         } catch (error) {
             console.error('OpenAI Error:', error);
             return 'Извини, я приуныл. Попробуй позже.';
+        }
+    },
+    async getLocalizedText(langCode, russianText) {
+        // If Russian or unknown - return as-is to save API calls
+        if (!langCode || langCode === 'ru') return russianText;
+        try {
+            const response = await openai.chat.completions.create({
+                model: 'openai/gpt-4o-mini',
+                messages: [
+                    { role: 'system', content: LOCALIZER_PROMPT },
+                    { role: 'user', content: `Язык: ${langCode}\nТекст:\n${russianText}` }
+                ],
+                temperature: 0.2,
+            });
+            return response.choices[0].message.content.trim();
+        } catch (e) {
+            console.error('Localizer error:', e.message);
+            return russianText; // Fallback to Russian on error
         }
     }
 };
