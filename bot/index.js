@@ -27,7 +27,9 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
     }
 
     // 1. DB-based flow (using "Send QR" button → orders.status='awaiting_qr')
-    const { data: pendingOrder } = await supabase
+    // Try to find an order assigned to this manager first, then any awaiting_qr order
+    let pendingOrder = null;
+    const { data: assignedOrder } = await supabase
         .from('orders').select('*')
         .eq('assigned_manager', senderId)
         .eq('status', 'awaiting_qr')
@@ -35,18 +37,26 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
         .limit(1)
         .single();
 
+    if (assignedOrder) {
+        pendingOrder = assignedOrder;
+    } else {
+        // Fallback: any awaiting_qr order (for managers who may not have been assigned)
+        const { data: anyOrder } = await supabase
+            .from('orders').select('*')
+            .eq('status', 'awaiting_qr')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+        if (anyOrder) pendingOrder = anyOrder;
+    }
+
     if (pendingOrder) {
         const orderId = pendingOrder.id;
         const userId = pendingOrder.user_id;
 
-        const rawLang = userLangCache[userId] || 'en';
-        const uiLang = rawLang === 'ru' ? 'ru' : (rawLang === 'tr' ? 'tr' : 'en');
-        const captions = {
-            ru: `🎉 Твой eSIM готов! Вот информация для установки. Приятного путешествия! 🌍`,
-            tr: `🎉 eSIM'iniz hazır! İşte bağlantınız/kurulum bilgileriniz. İyi yolculuklar! 🌍`,
-            en: `🎉 Your eSIM is ready! Here is your installation info. Have a great trip! 🌍`
-        };
-        const caption = captions[uiLang];
+        const clientRawLang = userLangCache[userId] || 'en';
+        const captionRu = `🎉 Твой eSIM готов! Вот информация для установки. Приятного путешествия! 🌍`;
+        const caption = await getLocalizedText(clientRawLang, captionRu);
 
         let qrSent = false;
         try {
