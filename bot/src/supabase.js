@@ -47,7 +47,7 @@ module.exports = {
   async saveMessage(userId, role, content) {
     const { error } = await supabase
       .from('chat_history')
-      .insert([{ id: crypto.randomUUID(), user_id: userId, role, content }]);
+      .insert([{ id: crypto.randomUUID(), user_id: userId, role, content, created_at: new Date().toISOString() }]);
     if (error) console.error('Supabase saveMessage error:', error.message);
     return { error };
   },
@@ -80,7 +80,7 @@ module.exports = {
     const orderId = crypto.randomUUID();
     const { data, error } = await supabase
       .from('orders')
-      .insert([{ id: orderId, user_id: userId, tariff_id: tariffId, price_usd: priceUsd, status: 'pending' }])
+      .insert([{ id: orderId, user_id: userId, tariff_id: tariffId, price_usd: priceUsd, status: 'pending', created_at: new Date().toISOString() }])
       .select()
       .single();
 
