@@ -177,7 +177,8 @@ bot.start(async (ctx) => {
         const { data: newUser, error: createError } = await createUser({
             telegram_id: telegramId,
             username: username,
-            referral_id: (referrerId && referrerId !== telegramId) ? referrerId : null,
+            role: 'client',
+            referrer_id: (referrerId && referrerId !== telegramId) ? referrerId : null,
             balance: 0
         });
 
