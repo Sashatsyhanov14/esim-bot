@@ -151,7 +151,7 @@ bot.start(async (ctx) => {
     if (startPayload === 'getqr') {
         const rawLang = userLangCache[telegramId] || ctx.from.language_code || 'en';
         const lang = rawLang === 'ru' ? 'ru' : (rawLang === 'tr' ? 'tr' : 'en');
-        const refLink = `https://t.me/eesimtestbot?start=${telegramId}`;
+        const refLink = `https://t.me/emedeoesimworld_bot?start=${telegramId}`;
 
         const texts = {
             ru: `🎁 Вот твоя пригласительная ссылка и QR-код:\n\n${refLink}\n\nТвой промокод (для ввода вручную): \`${telegramId}\``,
@@ -232,7 +232,7 @@ bot.command('ref', async (ctx) => {
     const telegramId = ctx.from.id;
     const rawLang = userLangCache[telegramId] || ctx.from.language_code || 'en';
     const lang = rawLang === 'ru' ? 'ru' : (rawLang === 'tr' ? 'tr' : 'en');
-    const refLink = `https://t.me/eesimtestbot?start=${telegramId}`;
+    const refLink = `https://t.me/emedeoesimworld_bot?start=${telegramId}`;
 
     const texts = {
         ru: `🎁 Вот твоя пригласительная ссылка и QR-код:\n\n${refLink}\n\nТвой промокод (для ввода вручную): \`${telegramId}\``,
@@ -257,7 +257,7 @@ bot.on('message', async (ctx, next) => {
             const telegramId = ctx.from.id;
             const rawLang = userLangCache[telegramId] || ctx.from.language_code || 'en';
             const lang = rawLang === 'ru' ? 'ru' : (rawLang === 'tr' ? 'tr' : 'en');
-            const refLink = `https://t.me/eesimtestbot?start=${telegramId}`;
+            const refLink = `https://t.me/emedeoesimworld_bot?start=${telegramId}`;
 
             const texts = {
                 ru: `🎁 Вот твоя пригласительная ссылка и QR-код:\n\n${refLink}\n\nТвой промокод (для ввода вручную): \`${telegramId}\``,

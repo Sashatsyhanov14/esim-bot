@@ -27,6 +27,28 @@ app.post('/api/webhook', async (req, res) => {
     }
 });
 
+// API endpoint to send QR code via bot
+app.post('/api/send-qr', async (req, res) => {
+    try {
+        const { telegram_id } = req.body;
+        if (!telegram_id) return res.status(400).json({ error: 'Missing telegram_id' });
+
+        const refLink = `https://t.me/emedeoesimworld_bot?start=${telegram_id}`;
+
+        const texts = {
+            ru: `🎁 Вот твоя пригласительная ссылка и QR-код:\n\n${refLink}\n\nТвой промокод: \`${telegram_id}\``,
+        };
+
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(refLink)}`;
+        await bot.telegram.sendPhoto(telegram_id, qrUrl, { caption: texts.ru, parse_mode: 'Markdown' });
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('API Send QR Error:', err);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
 // Any other request serves the React app
 app.get('*', (req, res) => {
     res.sendFile(path.join(webappDistPath, 'index.html'));

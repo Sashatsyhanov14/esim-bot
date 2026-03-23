@@ -303,7 +303,7 @@ const App: React.FC = () => {
     }
   };
 
-  const refLink = user ? `https://t.me/eesimtestbot?start=${user.telegram_id}` : '';
+  const refLink = user ? `https://t.me/emedeoesimworld_bot?start=${user.telegram_id}` : '';
 
   const copyRefLink = () => {
     navigator.clipboard.writeText(refLink);
@@ -392,6 +392,21 @@ const App: React.FC = () => {
     return <AdminStats t={t} globalStats={globalStats} />;
   };
 
+  const handleSendQr = async () => {
+    if (!user?.telegram_id) return;
+    try {
+      tg?.showAlert("Отправляем QR в чат...");
+      await fetch('/api/send-qr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telegram_id: user.telegram_id })
+      });
+      tg?.close();
+    } catch (err) {
+      tg?.showAlert("Ошибка отправки QR");
+    }
+  };
+
   const renderUserContent = () => (
     <div className="space-y-6">
       <div className="bg-[#201f22] p-5 rounded-3xl relative overflow-hidden flex flex-col items-center text-center border border-white/5 mx-2">
@@ -477,7 +492,7 @@ const App: React.FC = () => {
             />
           </div>
           <button
-            onClick={() => tg?.sendData("/ref")}
+            onClick={handleSendQr}
             className="w-full bg-primary/20 text-primary border border-primary/30 py-3.5 rounded-xl font-bold active:scale-95 transition-transform flex items-center justify-center gap-2"
           >
             <span className="material-symbols-outlined text-[20px]">send_to_mobile</span>
