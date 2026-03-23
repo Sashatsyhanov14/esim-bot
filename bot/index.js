@@ -12,6 +12,9 @@ const userLangCache = {};
 
 bot.use(session());
 
+// In-memory state tracking for managers: { managerTelegramId: orderId }
+const managerStates = new Map();
+
 // --- MANAGER FLOW ---
 bot.on(['photo', 'document', 'text'], async (ctx, next) => {
     const senderId = ctx.from.id;
@@ -26,29 +29,41 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
         return next();
     }
 
-    // 1. DB-based flow (using "Send QR" button → orders.status='awaiting_qr')
-    // Try to find an order assigned to this manager first, then any awaiting_qr order
-    let pendingOrder = null;
-    const { data: assignedOrder } = await supabase
-        .from('orders').select('*')
-        .eq('assigned_manager', senderId)
-        .eq('status', 'awaiting_qr')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+    const activeOrderId = managerStates.get(senderId);
+    if (!activeOrderId) {
+        // Fallback to Legacy Flow if no order is actively awaiting QR
+        if (ctx.message.photo || ctx.message.document) {
+            const caption = ctx.message.caption || '';
+            const clientIdMatch = caption.match(/\d+/);
 
-    if (assignedOrder) {
-        pendingOrder = assignedOrder;
-    } else {
-        // Fallback: any awaiting_qr order (for managers who may not have been assigned)
-        const { data: anyOrder } = await supabase
-            .from('orders').select('*')
-            .eq('status', 'awaiting_qr')
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
-        if (anyOrder) pendingOrder = anyOrder;
+            if (clientIdMatch) {
+                const clientId = clientIdMatch[0];
+                try {
+                    if (ctx.message.photo) {
+                        const photo = ctx.message.photo[ctx.message.photo.length - 1].file_id;
+                        await bot.telegram.sendPhoto(clientId, photo, {
+                            caption: "🎉 Твой eSIM готов! Вот QR-код и инструкция по установке. Приятного путешествия! 🌍"
+                        });
+                    } else if (ctx.message.document) {
+                        await bot.telegram.sendDocument(clientId, ctx.message.document.file_id, {
+                            caption: "📄 Твой eSIM готов! Инструкция во вложении."
+                        });
+                    }
+                    await ctx.reply(`✅ Переслано клиенту ID: ${clientId}`);
+                } catch (err) {
+                    await ctx.reply(`❌ Ошибка пересылки: ${err.message}`);
+                }
+            }
+            return; // Handled
+        }
+        return next();
     }
+
+    // Fetch the order from DB using the ID we tracked in RAM
+    const { data: pendingOrder } = await supabase
+        .from('orders').select('*')
+        .eq('id', activeOrderId)
+        .single();
 
     if (pendingOrder) {
         const orderId = pendingOrder.id;
@@ -77,6 +92,7 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
         }
 
         if (qrSent) {
+            managerStates.delete(senderId); // Clear active tracking
             await supabase.from('orders').update({ status: 'paid', assigned_manager: null }).eq('id', orderId);
 
             // --- REFERRAL PAYOUT: 15% of tariff price ---
@@ -88,7 +104,10 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
                     const newBalance = Math.round(((refUser?.balance || 0) + reward) * 100) / 100;
                     await supabase.from('users').update({ balance: newBalance }).eq('telegram_id', buyer.referrer_id);
                     try {
-                        await bot.telegram.sendMessage(buyer.referrer_id, `💰 Вам начислено $${reward} (15% от продажи eSIM)! Ваш новый баланс: $${newBalance}`);
+                        const refLang = userLangCache[buyer.referrer_id] || 'ru';
+                        const refRu = `💰 Вам начислено $${reward} (15% от продажи eSIM)! Ваш новый баланс: $${newBalance}`;
+                        const refMsg = await getLocalizedText(refLang, refRu);
+                        await bot.telegram.sendMessage(buyer.referrer_id, refMsg);
                     } catch (e) { }
                 }
             } catch (e) {
@@ -120,33 +139,6 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
         }
     }
 
-    // 2. Legacy Flow (Manager sends photo with caption containing client ID)
-    if (ctx.message.photo || ctx.message.document) {
-        const caption = ctx.message.caption || '';
-        const clientIdMatch = caption.match(/\d+/);
-
-        if (clientIdMatch) {
-            const clientId = clientIdMatch[0];
-            try {
-                if (ctx.message.photo) {
-                    const photo = ctx.message.photo[ctx.message.photo.length - 1].file_id;
-                    await bot.telegram.sendPhoto(clientId, photo, {
-                        caption: "🎉 Твой eSIM готов! Вот QR-код и инструкция по установке. Приятного путешествия! 🌍"
-                    });
-                } else if (ctx.message.document) {
-                    await bot.telegram.sendDocument(clientId, ctx.message.document.file_id, {
-                        caption: "📄 Твой eSIM готов! Инструкция во вложении."
-                    });
-                }
-                await ctx.reply(`✅ Переслано клиенту ID: ${clientId}`);
-            } catch (err) {
-                await ctx.reply(`❌ Ошибка пересылки: ${err.message}`);
-            }
-        }
-        return; // Handled
-    }
-
-    return next();
 });
 
 // --- CLIENT FLOW ---
@@ -453,6 +445,7 @@ bot.action(/^sendqr_(.+)$/, async (ctx) => {
 
     // Persist awaiting state in DB (survives Vercel webhook restarts)
     await supabase.from('orders').update({ status: 'awaiting_qr', assigned_manager: telegramId }).eq('id', orderId);
+    managerStates.set(telegramId, orderId); // Link this manager strictly to this order in RAM
 
     try {
         await ctx.editMessageText(
@@ -475,7 +468,8 @@ bot.action(/^cancelqr_(.+)$/, async (ctx) => {
         return ctx.answerCbQuery('❌ У вас нет прав.', { show_alert: true });
     }
 
-    // Clear DB waiting state
+    // Clear DB waiting state and RAM state
+    managerStates.delete(telegramId);
     await supabase.from('orders').update({ status: 'pending', assigned_manager: null }).eq('id', orderId);
 
     try {
@@ -501,6 +495,9 @@ bot.action(/^cancel_(.+)$/, async (ctx) => {
     if (!user || (user.role !== 'founder' && user.role !== 'manager')) {
         return ctx.answerCbQuery('❌ У вас нет прав.', { show_alert: true });
     }
+
+    // Safety clear in case they cancel the order while waiting for QR
+    managerStates.delete(telegramId);
 
     await supabase.from('orders').update({ status: 'cancelled' }).eq('id', orderId);
 
