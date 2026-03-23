@@ -348,8 +348,8 @@ bot.on('text', async (ctx) => {
         userLangCache[telegramId] = langMatch[1].toLowerCase();
     }
 
-    // 1. Detect Sale Request [SALE_REQUEST: UUID]
-    const saleMatch = aiResponse.match(/\[SALE_REQUEST:\s*([a-f0-9-]+)\]/i);
+    // 1. Detect Sale Request [SALE_REQUEST: ID]
+    const saleMatch = aiResponse.match(/\[SALE_REQUEST:\s*([a-zA-Z0-9_-]+)\]/i);
     let finalResponse = aiResponse.replace(/\[SALE_REQUEST:.*?\]/gi, '').replace(/\[LANG:.*?\]/gi, '').trim();
 
     if (saleMatch) {
