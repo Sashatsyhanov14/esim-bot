@@ -35,12 +35,9 @@ app.post('/api/send-qr', async (req, res) => {
 
         const refLink = `https://t.me/emedeoesimworld_bot?start=${telegram_id}`;
 
-        const texts = {
-            ru: `🎁 Вот твоя пригласительная ссылка и QR-код:\n\n${refLink}\n\nТвой промокод: \`${telegram_id}\``,
-        };
-
+        const caption = `🔗 Link: ${refLink}\n🎁 Promo: \`${telegram_id}\``;
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(refLink)}`;
-        await bot.telegram.sendPhoto(telegram_id, qrUrl, { caption: texts.ru, parse_mode: 'Markdown' });
+        await bot.telegram.sendPhoto(telegram_id, qrUrl, { caption, parse_mode: 'Markdown' });
 
         res.json({ success: true });
     } catch (err) {
