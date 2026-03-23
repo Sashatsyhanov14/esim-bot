@@ -222,7 +222,7 @@ bot.start(async (ctx) => {
 
     await ctx.reply(welcomeParams.text,
         Markup.keyboard([
-            [Markup.button.webApp(welcomeParams.btn, 'https://esim-bot.vercel.app')]
+            [Markup.button.webApp(welcomeParams.btn, process.env.WEBAPP_URL || 'https://ticaretai.tr')]
         ]).resize()
     );
 });
