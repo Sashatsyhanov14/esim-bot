@@ -27,11 +27,16 @@ module.exports = {
   },
 
   async createUser(user) {
+    user.created_at = new Date().toISOString();
+    if (user.balance === undefined) user.balance = 0;
+
     const { data, error } = await supabase
       .from('users')
       .insert([user])
       .select()
       .single();
+
+    if (error) console.error("Supabase createUser error:", error.message);
     return { data, error };
   },
 
