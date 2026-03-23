@@ -29,8 +29,9 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
         return next();
     }
 
-    const activeOrderId = managerStates.get(senderId);
-    if (!activeOrderId) {
+    // 1. Check in-memory state first (Strict Assignment)
+    const activeState = managerStates.get(senderId);
+    if (!activeState || !activeState.orderId) {
         // Fallback to Legacy Flow if no order is actively awaiting QR
         if (ctx.message.photo || ctx.message.document) {
             const caption = ctx.message.caption || '';
@@ -62,7 +63,7 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
     // Fetch the order from DB using the ID we tracked in RAM
     const { data: pendingOrder } = await supabase
         .from('orders').select('*')
-        .eq('id', activeOrderId)
+        .eq('id', activeState.orderId)
         .single();
 
     if (pendingOrder) {
@@ -134,6 +135,18 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
                     try { await bot.telegram.sendMessage(userId, delayText, { disable_web_page_preview: true }); } catch (e) { }
                 }
             }, 2 * 60 * 1000);
+
+            // Visual reset for the Manager (remove buttons, mark as done)
+            if (activeState.messageId) {
+                try {
+                    await bot.telegram.editMessageText(
+                        senderId,
+                        activeState.messageId,
+                        undefined,
+                        `✅ ЗАКАЗ ВЫПОЛНЕН: QR успешно отправлен клиенту!`
+                    );
+                } catch (e) { console.error('Visual reset error:', e.message); }
+            }
 
             return ctx.reply('✅ Данные успешно отправлены клиенту! Покупка зачтена (paid) и рефералу зачислены бонусы.');
         }
@@ -445,7 +458,7 @@ bot.action(/^sendqr_(.+)$/, async (ctx) => {
 
     // Persist awaiting state in DB (survives Vercel webhook restarts)
     await supabase.from('orders').update({ status: 'awaiting_qr', assigned_manager: telegramId }).eq('id', orderId);
-    managerStates.set(telegramId, orderId); // Link this manager strictly to this order in RAM
+    managerStates.set(telegramId, { orderId: orderId, messageId: ctx.callbackQuery.message.message_id }); // Track msg to delete buttons later
 
     try {
         await ctx.editMessageText(
