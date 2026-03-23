@@ -329,10 +329,15 @@ bot.on('text', async (ctx) => {
 
     try { await ctx.sendChatAction('typing'); } catch (e) { }
 
-    const { data: faqRows } = await getFaq();
+    const { data: faqRows, error: faqError } = await getFaq();
     let faqText = '';
-    if (faqRows && faqRows.length > 0) {
+    if (faqError) {
+        console.error('[FAQ] Supabase error:', faqError.message);
+    } else if (faqRows && faqRows.length > 0) {
         faqText = faqRows.map(f => `- ${f.topic}: ${f.content_ru}`).join('\n');
+        console.log(`[FAQ] Loaded ${faqRows.length} rows: ${faqRows.map(f => f.topic).join(', ')}`);
+    } else {
+        console.log('[FAQ] Table is EMPTY — bot will answer from AI knowledge only');
     }
 
     // Get AI response with Multi-Agent System (Analyzer -> Writer)
