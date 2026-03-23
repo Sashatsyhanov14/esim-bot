@@ -116,15 +116,11 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
             }
 
             // Schedule delayed promo message (2 minutes)
-            const clientLang = rawLang;
+            const delayTextRu = `Благодарим за проявленный интерес и уделенное нам время. Желаю Вам Счастливого пути! ✈️ Ваша eSIM активна — интернет заработает по прилёту, а если вы уже за границей, связь уже доступна. Не забудьте включить роуминг данных для профиля eсим.\n\nРекомендуем установить приложение eMedeo — цифровую платформу с прозрачными ценами, отзывами и поддержкой 24/7. Получайте трансфер, аренду авто/жилья, экскурсии, покупки и юридические консультации напрямую, без посредников.\n\nМы рядом, если что-то пойдёт не так: чат поддержки 24/7\n\nНаше приложение:\nAndroid: https://play.google.com/store/apps/details?id=com.emedeo.codeware\nIOS: https://apps.apple.com/app/emedeo/id6738978452`;
+            const promoLang = clientRawLang; // clientRawLang comes from line 72
+
             setTimeout(async () => {
-                const dLang = clientLang === 'ru' ? 'ru' : (clientLang === 'tr' ? 'tr' : 'en');
-                const delayTexts = {
-                    ru: `Благодарим за проявленный интерес и уделенное нам время. Желаю Вам Счастливого пути! ✈️ Ваша eSIM активна — интернет заработает по прилёту, а если вы уже за границей, связь уже доступна. Не забудьте включить роуминг данных для профиля eсим.\n\nРекомендуем установить приложение eMedeo — цифровую платформу с прозрачными ценами, отзывами и поддержкой 24/7. Получайте трансфер, аренду авто/жилья, экскурсии, покупки и юридические консультации напрямую, без посредников.\n\nМы рядом, если что-то пойдёт не так: чат поддержки 24/7\n\nНаше приложение:\nAndroid: https://play.google.com/store/apps/details?id=com.emedeo.codeware\nIOS: https://apps.apple.com/app/emedeo/id6738978452`,
-                    tr: `Gösterdiğiniz ilgi ve ayırdığınız zaman için teşekkür ederiz. İyi yolculuklar dilerim! ✈️ eSIM'iniz aktif — internet vardığınızda çalışacaktır, eğer zaten yurtdışındaysanız bağlantı hazırdır. eSIM profili için veri dolaşımını açmayı unutmayın.\n\nŞeffaf fiyatlar, yorumlar ve 7/24 destek sunan dijital platformumuz eMedeo uygulamasını yüklemenizi öneririz. Transfer, araç/ev kiralama, turlar, alışveriş ve hukuki danışmanlık hizmetlerini doğrudan, aracısız alın.\n\nBir şeyler ters giderse yanınızdayız: 7/24 destek sohbeti.\n\nUygulamamız:\nAndroid: https://play.google.com/store/apps/details?id=com.emedeo.codeware\nIOS: https://apps.apple.com/app/emedeo/id6738978452`,
-                    en: `Thank you for your interest and your time. Have a great trip! ✈️ Your eSIM is active — the internet will work upon arrival, and if you are already abroad, the connection is ready. Don't forget to turn on data roaming for the eSIM profile.\n\nWe recommend installing the eMedeo app — a digital platform with transparent prices, reviews, and 24/7 support. Book transfers, car/home rentals, tours, shopping, and legal consultations directly, without intermediaries.\n\nWe are here if something goes wrong: 24/7 support chat.\n\nOur App:\nAndroid: https://play.google.com/store/apps/details?id=com.emedeo.codeware\nIOS: https://apps.apple.com/app/emedeo/id6738978452`
-                };
-                const delayText = delayTexts[dLang];
+                const delayText = await getLocalizedText(promoLang, delayTextRu);
                 try {
                     const res = await fetch('https://drive.google.com/uc?export=download&id=1zxDZ_QkKYu6VKFlS7nNlRktlLKLxSx47');
                     const arrayBuffer = await res.arrayBuffer();
