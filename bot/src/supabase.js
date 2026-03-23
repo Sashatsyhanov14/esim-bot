@@ -12,6 +12,8 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+const crypto = require('crypto');
+
 module.exports = {
   supabase,
 
@@ -45,7 +47,7 @@ module.exports = {
   async saveMessage(userId, role, content) {
     const { error } = await supabase
       .from('chat_history')
-      .insert([{ user_id: userId, role, content }]);
+      .insert([{ id: crypto.randomUUID(), user_id: userId, role, content }]);
     if (error) console.error('Supabase saveMessage error:', error.message);
     return { error };
   },
