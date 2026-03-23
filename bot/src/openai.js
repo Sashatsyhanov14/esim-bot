@@ -44,7 +44,7 @@ module.exports = {
 
             // === AGENT 2: THE WRITER ===
             const writerMessages = [
-                { role: 'system', content: WRITER_PROMPT(faqText) },
+                { role: 'system', content: WRITER_PROMPT(tariffs, faqText) },
                 { role: 'user', content: `Инструкции Главного Агента (Аналитика):\n\nОтвечай строго на языке: ${analysis.lang_code}\nКраткая суть: ${analysis.intent}\n\nСАМА ИНСТРУКЦИЯ (что именно сказать клиенту, какие цены и гигабайты назвать):\n${analysis.writer_instruction}\n\n${analysis.tariff_id ? 'SALE_ID для активации системы: ' + analysis.tariff_id : ''}` }
             ];
 
