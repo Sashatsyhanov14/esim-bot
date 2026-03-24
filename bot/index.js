@@ -225,7 +225,7 @@ ${noReferralUsed && !user.referral_id ? '🎁 Если у тебя есть пр
 
     await ctx.reply(welcomeText,
         Markup.keyboard([
-            [Markup.button.webApp(dashboardBtn, process.env.WEBAPP_URL || 'https://ticaretai.tr')]
+            [Markup.button.webApp(dashboardBtn, process.env.WEBAPP_URL || 'https://esim.ticaretai.tr')]
         ]).resize()
     );
 });
