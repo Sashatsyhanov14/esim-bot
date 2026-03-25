@@ -71,8 +71,8 @@ EOF"
 echo "✅ Nginx config updated. Validating..."
 sudo nginx -t && sudo systemctl reload nginx
 
-echo "🔒 2. Requesting SSL for all domains (this may take a minute)..."
-sudo certbot --nginx -d $D1 -d $D2 -d $D3 -d $D4 --non-interactive --agree-tos -m $EMAILS
+echo "🔒 2. Requesting SSL for all domains (expanding existing)..."
+sudo certbot --nginx -d $D1 -d $D2 -d $D3 -d $D4 --non-interactive --agree-tos -m $EMAILS --expand
 
 echo "---------------------------------------------------"
 echo "✅ MEGA SETUP COMPLETE!"
