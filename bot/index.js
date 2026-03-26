@@ -282,10 +282,14 @@ bot.on('text', async (ctx) => {
     const username = ctx.from.username || ctx.from.first_name;
     const userText = ctx.message.text.trim();
 
-    const systemLang = ctx.from.language_code || 'en';
-    if (!userLangCache[telegramId]) {
-        userLangCache[telegramId] = user?.lang_code || systemLang;
-    }
+    try {
+        await saveMessage(telegramId, 'user', userText);
+        let { data: user } = await getUser(telegramId);
+
+        const systemLang = ctx.from.language_code || 'en';
+        if (!userLangCache[telegramId]) {
+            userLangCache[telegramId] = user?.lang_code || systemLang;
+        }
     const uiLang = userLangCache[telegramId];
 
     if (!user) {
@@ -335,17 +339,19 @@ bot.on('text', async (ctx) => {
     // Get AI response with Multi-Agent System (Analyzer -> Writer)
     const aiResponse = await getChatResponse(tariffs, faqText, history, userText);
 
-    // AI Language detection tag extraction [LANG:code]
-    const langMatch = aiResponse.match(/\[LANG:\s*(ru|tr|en|fa|ar|de|pl)\]/i);
-    if (langMatch) {
-        const newLang = langMatch[1].toLowerCase();
-        if (newLang !== userLangCache[telegramId]) {
-            userLangCache[telegramId] = newLang;
-            // Persist to DB
-            const { updateUser } = require('./src/supabase'); 
-            await updateUser(telegramId, { lang_code: newLang });
+        const langMatch = aiResponse.match(/\[LANG:\s*(ru|tr|en|fa|ar|de|pl)\]/i);
+        if (langMatch) {
+            const newLang = langMatch[1].toLowerCase();
+            if (newLang !== userLangCache[telegramId]) {
+                userLangCache[telegramId] = newLang;
+                try {
+                    const { updateUser } = require('./src/supabase');
+                    await updateUser(telegramId, { lang_code: newLang });
+                } catch (e) {
+                    console.error('DB Lang Update Error:', e.message);
+                }
+            }
         }
-    }
 
     // 1. Detect and separate tags [SALE_REQUEST: ID]
     const saleMatch = aiResponse.match(/\[SALE_REQUEST:\s*([a-zA-Z0-9_-]+)\]/i);
@@ -438,8 +444,15 @@ bot.on('text', async (ctx) => {
         }
     }
 
-    await saveMessage(telegramId, 'assistant', finalResponse);
-    await ctx.reply(finalResponse, { parse_mode: 'Markdown' });
+        await saveMessage(telegramId, 'assistant', finalResponse);
+        await ctx.reply(finalResponse, { parse_mode: 'Markdown' });
+
+    } catch (err) {
+        console.error('CRITICAL BOT ERROR:', err);
+        try {
+            await ctx.reply('Извини, я приуныл. Попробуй позже (System Error).');
+        } catch (e) { }
+    }
 });
 
 bot.action(/^sendqr_(.+)$/, async (ctx) => {
