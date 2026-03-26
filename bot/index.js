@@ -180,7 +180,6 @@ bot.start(async (ctx) => {
         } catch (err) {
             await ctx.reply(text, { parse_mode: 'Markdown', disable_web_page_preview: true });
         }
-        return;
     }
 
     let { data: user } = await getUser(telegramId);
