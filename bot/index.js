@@ -22,10 +22,8 @@ async function scheduleFollowup(userId, lang) {
     setTimeout(async () => {
         const delayText = await getLocalizedText(lang, delayTextRu);
         try {
-            const res = await fetch('https://drive.google.com/uc?export=download&id=1zxDZ_QkKYu6VKFlS7nNlRktlLKLxSx47');
-            const arrayBuffer = await res.arrayBuffer();
-            const buffer = Buffer.from(arrayBuffer);
-            await bot.telegram.sendPhoto(userId, { source: buffer }, { caption: delayText });
+            const photoUrl = 'https://drive.google.com/uc?export=view&id=1zxDZ_QkKYu6VKFlS7nNlRktlLKLxSx47';
+            await bot.telegram.sendPhoto(userId, photoUrl, { caption: delayText });
         } catch (err) {
             console.error('Promo photo error:', err.message);
             try { await bot.telegram.sendMessage(userId, delayText, { disable_web_page_preview: true }); } catch (e) { }
