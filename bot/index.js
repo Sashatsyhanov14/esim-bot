@@ -162,77 +162,53 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
 
 bot.start(async (ctx) => {
     const telegramId = ctx.from.id;
-    const username = ctx.from.username || ctx.from.first_name;
+    const username = ctx.from.username || 'User';
     const startPayload = ctx.payload;
 
-    await clearHistory(telegramId);
-
-    if (startPayload === 'getqr') {
-        const lang = userLangCache[telegramId] || ctx.from.language_code || 'en';
-        const refLink = `https://t.me/emedeoesimworld_bot?start=${telegramId}`;
-
-        const textRu = `🎁 Вот твоя пригласительная ссылка и QR-код:\n\n${refLink}\n\nТвой промокод (для ввода вручную): \`${telegramId}\``;
-        const text = await getLocalizedText(lang, textRu);
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(refLink)}&margin=10`;
-
-        try {
-            await ctx.replyWithPhoto(qrUrl, { caption: text, parse_mode: 'Markdown' });
-        } catch (err) {
-            await ctx.reply(text, { parse_mode: 'Markdown', disable_web_page_preview: true });
-        }
-    }
-
-    let { data: user } = await getUser(telegramId);
-    if (!user) {
-        const referrerId = startPayload && !isNaN(startPayload) ? parseInt(startPayload) : null;
-        const { data: newUser, error: createError } = await createUser({
-            telegram_id: telegramId,
-            username: username,
-            role: 'client',
-            lang_code: ctx.from.language_code || 'en',
-            referrer_id: (referrerId && referrerId !== telegramId) ? referrerId : null,
-            balance: 0
-        });
-
-        if (createError) {
-            console.error('Error creating user:', createError);
-            return ctx.reply('Ошибка при регистрации. Пожалуйста, попробуйте позже.');
-        }
-
-        user = newUser;
-        console.log(`New user: ${username} (${telegramId})`);
-    }
-
-    const lang = ctx.from.language_code || user?.lang_code || 'en';
-    userLangCache[telegramId] = lang; // Reset cache to system/stored lang on /start
-
-    if (!user) {
-        const errorText = await getLocalizedText(lang, 'Не удалось загрузить данные пользователя.');
-        return ctx.reply(errorText);
-    }
-
-    const noReferralUsed = !startPayload || isNaN(startPayload);
-
-    const welcomeRu = `Привет, ${username}! 🚀
-
-Я твой персональный менеджер по eSIM. Помогу выбрать лучший интернет для твоей поездки.
-
-${noReferralUsed && !user.referral_id ? '🎁 Если у тебя есть промокод, можешь прислать его прямо сейчас (просто цифры без пробелов).\n\n' : ''}Куда летим? 🌍`;
-    const welcomeText = await getLocalizedText(lang, welcomeRu);
-    const dashboardBtnRu = '📱 Открыть Дашборд';
-    const dashboardBtn = await getLocalizedText(lang, dashboardBtnRu);
-
-    // Remove any stuck reply keyboard silently
     try {
-        const killMsg = await ctx.reply('…', Markup.removeKeyboard());
-        await bot.telegram.deleteMessage(ctx.chat.id, killMsg.message_id);
-    } catch (e) { }
+        console.log(`[START] Triggered for ${username} (${telegramId})`);
+        await clearHistory(telegramId);
 
-    await ctx.reply(welcomeText,
-        Markup.keyboard([
-            [Markup.button.webApp(dashboardBtn, process.env.WEBAPP_URL || 'https://esim.ticaretai.tr')]
-        ]).resize()
-    );
+        if (startPayload === 'getqr') {
+            const lang = userLangCache[telegramId] || ctx.from.language_code || 'en';
+            const refLink = `https://t.me/emedeoesimworld_bot?start=${telegramId}`;
+            const textRu = `🎁 Вот твоя пригласительная ссылка и QR-код:\n\n${refLink}\n\nТвой промокод (для ввода вручную): \`${telegramId}\``;
+            const text = await getLocalizedText(lang, textRu);
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(refLink)}&margin=10`;
+            try { await ctx.replyWithPhoto(qrUrl, { caption: text, parse_mode: 'Markdown' }); } catch (e) { }
+        }
+
+        let { data: user } = await getUser(telegramId);
+        if (!user) {
+            const rId = startPayload && !isNaN(startPayload) ? parseInt(startPayload) : null;
+            const { data: newUser } = await createUser({
+                telegram_id: telegramId, username, role: 'client',
+                lang_code: ctx.from.language_code || 'en',
+                referrer_id: (rId && rId !== telegramId) ? rId : null
+            });
+            user = newUser;
+        }
+
+        const lang = ctx.from.language_code || user?.lang_code || 'en';
+        userLangCache[telegramId] = lang;
+        console.log(`[START] Using lang: ${lang}`);
+
+        const welcomeRu = `Привет, ${username}! 🚀\n\nЯ твой персональный менеджер по eSIM. Помогу выбрать лучший интернет для твоей поездки.\n\nКуда летим? 🌍`;
+        const welcomeText = await getLocalizedText(lang, welcomeRu);
+        const dashboardBtn = await getLocalizedText(lang, '📱 Открыть Дашборд');
+
+        // Cleanup stale keyboards
+        try { const k = await ctx.reply('…', Markup.removeKeyboard()); await bot.telegram.deleteMessage(ctx.chat.id, k.message_id); } catch (e) { }
+
+        await ctx.reply(welcomeText,
+            Markup.keyboard([[Markup.button.webApp(dashboardBtn, process.env.WEBAPP_URL || 'https://esim.ticaretai.tr')]]).resize()
+        );
+        console.log(`[START] Welcome sent to ${username}`);
+
+    } catch (err) {
+        console.error('[START] Fatal Error:', err.message);
+        try { await ctx.reply('Привет! Я твой eSIM-менеджер. Открой дашборд или напиши страну, куда летишь!'); } catch (e) { }
+    }
 });
 
 bot.command('ref', async (ctx) => {
@@ -277,7 +253,12 @@ bot.on('message', async (ctx, next) => {
 
 bot.on('text', async (ctx) => {
     const telegramId = ctx.from.id;
-    if (telegramId === MANAGER_ID) return;
+    const activeState = managerStates.get(telegramId);
+    
+    // If the manager is ACTIVELY waiting for a QR/Code, we handle it in the manager flow (line 63)
+    // Here we handle GENERIC chat. If they are the manager, we allow them to chat too 
+    // unless they specifically should be in the order flow.
+    if (activeState && activeState.orderId) return; // Wait for the manager flow below...
 
     const username = ctx.from.username || ctx.from.first_name;
     const userText = ctx.message.text.trim();
