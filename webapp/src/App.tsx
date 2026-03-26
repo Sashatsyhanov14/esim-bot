@@ -205,27 +205,29 @@ const App: React.FC = () => {
   const tg = window.Telegram?.WebApp;
 
   useEffect(() => {
-    // Ждем немного, пока Telegram WebApp инициализируется
-    const init = () => {
-      if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
-        const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
+    const init = async () => {
+      // 1. Ждем инициализации Telegram SDK (до 5 попыток)
+      let tgUser: any = null;
+      for (let i = 0; i < 5; i++) {
+        tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+        if (tgUser?.id) break;
+        await new Promise(r => setTimeout(r, 200));
+      }
+
+      if (tgUser?.id) {
         if (tgUser.language_code === 'tr') setLang('tr');
         window.Telegram.WebApp.ready();
         window.Telegram.WebApp.expand();
-        fetchUserData(tgUser.id);
+        await fetchUserData(tgUser.id, tgUser.first_name, tgUser.username);
       } else {
-        // Если данных нет, подорждем полсекунды (бывает на медленных VPS)
-        setTimeout(() => {
-          if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
-            const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
-            if (tgUser.language_code === 'tr') setLang('tr');
-            window.Telegram.WebApp.ready();
-            window.Telegram.WebApp.expand();
-            fetchUserData(tgUser.id);
-          } else {
-            setLoading(false);
-          }
-        }, 500);
+        // Попытка получить uid из URL параметров (для тестов вне ТГ)
+        const params = new URLSearchParams(window.location.search);
+        const uid = params.get('uid');
+        if (uid && !isNaN(parseInt(uid))) {
+          await fetchUserData(parseInt(uid));
+        } else {
+          setLoading(false);
+        }
       }
     };
     init();
@@ -247,17 +249,38 @@ const App: React.FC = () => {
     </button>
   );
 
-  const fetchUserData = async (tgId: number) => {
+  const fetchUserData = async (tgId: number, firstName?: string, username?: string) => {
     try {
-      const { data: userData } = await supabase
+      setLoading(true);
+      const { data: userData, error: fetchErr } = await supabase
         .from('users')
         .select('*')
         .eq('telegram_id', tgId)
         .single();
 
-      if (userData) {
-        setUser(userData);
-        if (userData.role === 'founder' || userData.role === 'manager') {
+      let currentUser = userData;
+
+      // САМОРЕГ: Если пользователя нет в БД, но мы в Telegram — создаем его
+      if (!userData && (fetchErr?.code === 'PGRST116' || !fetchErr) && window.Telegram?.WebApp?.initDataUnsafe?.user) {
+        const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
+        const newUser = {
+          telegram_id: tgId,
+          username: username || firstName || tgUser.first_name || `user_${tgId}`,
+          role: 'client',
+          balance: 0
+        };
+        const { data: created, error: regError } = await supabase.from('users').insert(newUser).select().single();
+        if (created) {
+          currentUser = created;
+          console.log('Self-registration successful for:', tgId);
+        } else {
+          console.error('Self-registration failed:', regError);
+        }
+      }
+
+      if (currentUser) {
+        setUser(currentUser);
+        if (currentUser.role === 'founder' || currentUser.role === 'manager') {
           setActiveTab('stats');
         }
 
@@ -280,7 +303,7 @@ const App: React.FC = () => {
           setPurchasedRefsCount(uniqueBuyers.size);
         }
 
-        if (userData.role === 'founder' || userData.role === 'manager') {
+        if (currentUser.role === 'founder' || currentUser.role === 'manager') {
           const { count: uCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
           const { data: paidOrdersList, count: oCount } = await supabase.from('orders').select('price_usd', { count: 'exact' }).eq('status', 'paid');
 
