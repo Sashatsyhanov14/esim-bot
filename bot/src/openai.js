@@ -7,7 +7,7 @@ dotenv.config();
 const openai = new OpenAI({
     baseURL: 'https://openrouter.ai/api/v1',
     apiKey: process.env.OPENAI_API_KEY,
-    timeout: 10000, // 10 seconds timeout to prevent hanging
+    timeout: 120000, // 2 minutes timeout to allow slow models (like DeepSeek) to respond without crashing the bot
     defaultHeaders: {
         'HTTP-Referer': 'https://esim-bot.com',
         'X-Title': 'eSIM Bot',
