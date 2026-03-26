@@ -183,8 +183,6 @@ bot.start(async (ctx) => {
         return;
     }
 
-    const lang = ctx.from.language_code || 'en';
-
     let { data: user } = await getUser(telegramId);
     if (!user) {
         const referrerId = startPayload && !isNaN(startPayload) ? parseInt(startPayload) : null;
@@ -192,6 +190,7 @@ bot.start(async (ctx) => {
             telegram_id: telegramId,
             username: username,
             role: 'client',
+            lang_code: ctx.from.language_code || 'en',
             referrer_id: (referrerId && referrerId !== telegramId) ? referrerId : null,
             balance: 0
         });
@@ -204,6 +203,8 @@ bot.start(async (ctx) => {
         user = newUser;
         console.log(`New user: ${username} (${telegramId})`);
     }
+
+    const lang = user.lang_code || ctx.from.language_code || 'en';
 
     if (!user) {
         const errorText = await getLocalizedText(lang, 'Не удалось загрузить данные пользователя.');
@@ -283,9 +284,9 @@ bot.on('text', async (ctx) => {
 
     const systemLang = ctx.from.language_code || 'en';
     if (!userLangCache[telegramId]) {
-        userLangCache[telegramId] = systemLang;
+        userLangCache[telegramId] = user?.lang_code || systemLang;
     }
-    const uiLang = userLangCache[telegramId] || systemLang;
+    const uiLang = userLangCache[telegramId];
 
     if (!user) {
         const msgRu = 'Нажми /start для начала.';
@@ -337,7 +338,13 @@ bot.on('text', async (ctx) => {
     // AI Language detection tag extraction [LANG:code]
     const langMatch = aiResponse.match(/\[LANG:\s*(ru|tr|en|fa|ar|de|pl)\]/i);
     if (langMatch) {
-        userLangCache[telegramId] = langMatch[1].toLowerCase();
+        const newLang = langMatch[1].toLowerCase();
+        if (newLang !== userLangCache[telegramId]) {
+            userLangCache[telegramId] = newLang;
+            // Persist to DB
+            const { updateUser } = require('./src/supabase'); 
+            await updateUser(telegramId, { lang_code: newLang });
+        }
     }
 
     // 1. Detect and separate tags [SALE_REQUEST: ID]

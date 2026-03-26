@@ -40,6 +40,17 @@ module.exports = {
     return { data, error };
   },
 
+  async updateUser(telegramId, updates) {
+    const { data, error } = await supabase
+      .from('users')
+      .update(updates)
+      .eq('telegram_id', telegramId)
+      .select()
+      .single();
+    if (error) console.error("Supabase updateUser error:", error.message);
+    return { data, error };
+  },
+
   async getTariffs() {
     const { data, error } = await supabase
       .from('tariffs')
