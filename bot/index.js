@@ -343,7 +343,12 @@ bot.on('text', async (ctx) => {
             finalResponse += payText;
 
             await saveMessage(telegramId, 'assistant', finalResponse);
-            await ctx.reply(finalResponse, { parse_mode: 'Markdown' });
+            try {
+                await ctx.reply(finalResponse, { parse_mode: 'Markdown' });
+            } catch (mdError) {
+                console.warn('[SALE] Markdown fallback triggered:', mdError.message);
+                await ctx.reply(finalResponse);
+            }
 
             // Restore AI Payment QR Automated Reply
             if (tariff.payment_qr_url) {
@@ -418,7 +423,12 @@ bot.on('text', async (ctx) => {
         }
 
         await saveMessage(telegramId, 'assistant', finalResponse);
-        await ctx.reply(finalResponse, { parse_mode: 'Markdown' });
+        try {
+            await ctx.reply(finalResponse, { parse_mode: 'Markdown' });
+        } catch (mdError) {
+            console.warn('[GENERIC] Markdown fallback triggered:', mdError.message);
+            await ctx.reply(finalResponse);
+        }
 
     } catch (err) {
         console.error('CRITICAL BOT ERROR:', err);
