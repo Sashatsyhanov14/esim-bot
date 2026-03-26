@@ -139,12 +139,12 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
                         senderId,
                         activeState.messageId,
                         undefined,
-                        `✅ ЗАКАЗ ВЫПОЛНЕН: QR успешно отправлен клиенту!`
+                        `✅ ЗАКАЗ ВЫПОЛНЕН: Данные успешно отправлены пользователю!`
                     );
                 } catch (e) { console.error('Visual reset error:', e.message); }
             }
 
-            return ctx.reply('✅ Данные успешно отправлены клиенту! Покупка зачтена (paid) и рефералу зачислены бонусы.');
+            return ctx.reply('✅ Данные (ссылка/QR) успешно отправлены. Покупка зачтена (paid) и начислены бонусы.');
         }
     }
 
@@ -407,18 +407,18 @@ bot.on('text', async (ctx) => {
 
                         const managerTexts = {
                             ru: {
-                                alert: `🚀 **ЗАКАЗ!**\n\nЮзер: @${username} (ID: ${telegramId})\nТариф: ${tariff.country} | ${tariff.data_gb} на ${tariff.validity_period}\nЦена: $${tariff.price_usd}\n\n⚠️ ВАЖНО: Подтвердите оплату перед тем как скидывать QR!`,
-                                sendBtn: '📤 Отправить QR',
+                                alert: `🚀 **ЗАКАЗ!**\n\nЮзер: @${username} (ID: ${telegramId})\nТариф: ${tariff.country} | ${tariff.data_gb} на ${tariff.validity_period}\nЦена: $${tariff.price_usd}\n\n⚠️ ВАЖНО: Подтвердите оплату перед тем как скидывать eSIM!`,
+                                sendBtn: '📤 Отправить eSIM',
                                 cancelBtn: '❌ Отменить'
                             },
                             tr: {
-                                alert: `🚀 **SİPARİŞ!**\n\nKullanıcı: @${username} (ID: ${telegramId})\nTarife: ${tariff.country} | ${tariff.data_gb} - ${tariff.validity_period}\nFiyat: $${tariff.price_usd}\n\n⚠️ ÖNEMLİ: QR'ı göndermeden önce ödemeyi onaylayın!`,
-                                sendBtn: '📤 QR Gönder',
+                                alert: `🚀 **SİPARİŞ!**\n\nKullanıcı: @${username} (ID: ${telegramId})\nTarife: ${tariff.country} | ${tariff.data_gb} - ${tariff.validity_period}\nFiyat: $${tariff.price_usd}\n\n⚠️ ÖNEMLİ: Link veya QR'ı göndermeden önce ödemeyi onaylayın!`,
+                                sendBtn: '📤 eSIM Gönder',
                                 cancelBtn: '❌ İptal'
                             },
                             en: {
-                                alert: `🚀 **ORDER!**\n\nUser: @${username} (ID: ${telegramId})\nPlan: ${tariff.country} | ${tariff.data_gb} for ${tariff.validity_period}\nPrice: $${tariff.price_usd}\n\n⚠️ IMPORTANT: Verify payment before sending the QR!`,
-                                sendBtn: '📤 Send QR',
+                                alert: `🚀 **ORDER!**\n\nUser: @${username} (ID: ${telegramId})\nPlan: ${tariff.country} | ${tariff.data_gb} for ${tariff.validity_period}\nPrice: $${tariff.price_usd}\n\n⚠️ IMPORTANT: Verify payment before sending the Link/QR!`,
+                                sendBtn: '📤 Send eSIM',
                                 cancelBtn: '❌ Cancel'
                             }
                         };
@@ -463,14 +463,14 @@ bot.action(/^sendqr_(.+)$/, async (ctx) => {
 
     try {
         await ctx.editMessageText(
-            ctx.callbackQuery.message.text + '\n\n⏳ ОЖИДАНИЕ QR: Отправьте фото или текст в ответ на это сообщение!',
+            ctx.callbackQuery.message.text + '\n\n⏳ ОЖИДАНИЕ: Отправьте АКТИВАЦИОННУЮ ССЫЛКУ или QR-код в ответ на это сообщение!',
             Markup.inlineKeyboard([
                 [Markup.button.callback('❌ Отменить ожидание', `cancelqr_${orderId}`)]
             ])
         );
     } catch (e) { }
 
-    await ctx.answerCbQuery('⏳ Отправьте в чат фото или ссылку-приглашение для клиента.', { show_alert: true });
+    await ctx.answerCbQuery('⏳ Отправьте в чат ссылку или QR для клиента.', { show_alert: true });
 });
 
 bot.action(/^cancelqr_(.+)$/, async (ctx) => {
@@ -488,10 +488,10 @@ bot.action(/^cancelqr_(.+)$/, async (ctx) => {
 
     try {
         await ctx.editMessageText(
-            ctx.callbackQuery.message.text.replace('\n\n⏳ ОЖИДАНИЕ QR: Отправьте фото или текст в ответ на это сообщение!', '') + '\n\n🛑 Ожидание отменено оператором.',
+            ctx.callbackQuery.message.text.replace('\n\n⏳ ОЖИДАНИЕ: Отправьте АКТИВАЦИОННУЮ ССЫЛКУ или QR-код в ответ на это сообщение!', '') + '\n\n🛑 Ожидание отменено оператором.',
             Markup.inlineKeyboard([
                 [
-                    Markup.button.callback('📤 Отправить QR', `sendqr_${orderId}`),
+                    Markup.button.callback('📤 Отправить eSIM', `sendqr_${orderId}`),
                     Markup.button.callback('❌ Отменить', `cancel_${orderId}`)
                 ]
             ])
