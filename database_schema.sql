@@ -27,6 +27,7 @@ CREATE TABLE users (
     username TEXT,
     referrer_id BIGINT REFERENCES users(telegram_id),
     balance DECIMAL(10, 2) DEFAULT 0.00,
+    lang_code TEXT DEFAULT 'ru',
     role TEXT DEFAULT 'user' CHECK (role IN ('user', 'founder', 'manager')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );

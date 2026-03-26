@@ -294,28 +294,42 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const init = async () => {
-      // 1. Ждем инициализации Telegram SDK (до 5 попыток)
+      const tg = window.Telegram?.WebApp;
+      if (tg) {
+        tg.ready();
+        tg.expand();
+      }
+
+      // 1. Try URL Parameters (uid=) - most reliable for TG Desktop
+      const params = new URLSearchParams(window.location.search);
+      const uid = params.get('uid');
+      if (uid && !isNaN(parseInt(uid))) {
+        await fetchUserData(parseInt(uid));
+        return;
+      }
+
+      // 2. Try Telegram SDK Polling
       let tgUser: any = null;
       for (let i = 0; i < 5; i++) {
-        tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+        tgUser = tg?.initDataUnsafe?.user;
         if (tgUser?.id) break;
         await new Promise(r => setTimeout(r, 200));
       }
 
+      // 3. Try Raw initData Parsing
+      if (!tgUser?.id && tg?.initData) {
+        try {
+          const paramsRaw = new URLSearchParams(tg.initData);
+          const userStr = paramsRaw.get('user');
+          if (userStr) tgUser = JSON.parse(decodeURIComponent(userStr));
+        } catch {}
+      }
+
       if (tgUser?.id) {
         if (tgUser.language_code === 'tr') setLang('tr');
-        window.Telegram.WebApp.ready();
-        window.Telegram.WebApp.expand();
         await fetchUserData(tgUser.id, tgUser.first_name, tgUser.username);
       } else {
-        // Попытка получить uid из URL параметров (для тестов вне ТГ)
-        const params = new URLSearchParams(window.location.search);
-        const uid = params.get('uid');
-        if (uid && !isNaN(parseInt(uid))) {
-          await fetchUserData(parseInt(uid));
-        } else {
-          setLoading(false);
-        }
+        setLoading(false);
       }
     };
     init();
@@ -348,13 +362,13 @@ const App: React.FC = () => {
 
       let currentUser = userData;
 
-      // САМОРЕГ: Если пользователя нет в БД, но мы в Telegram — создаем его
-      if (!userData && (fetchErr?.code === 'PGRST116' || !fetchErr) && window.Telegram?.WebApp?.initDataUnsafe?.user) {
-        const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
+      // САМОРЕГ: Если пользователя нет в БД — создаем его
+      if (!userData && (fetchErr?.code === 'PGRST116' || !fetchErr)) {
+        const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
         const newUser = {
           telegram_id: tgId,
-          username: username || firstName || tgUser.first_name || `user_${tgId}`,
-          role: 'client',
+          username: username || firstName || tgUser?.first_name || `user_${tgId}`,
+          role: 'user',
           balance: 0
         };
         const { data: created, error: regError } = await supabase.from('users').insert(newUser).select().single();

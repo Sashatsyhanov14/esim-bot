@@ -180,7 +180,7 @@ bot.start(async (ctx) => {
         if (!user) {
             const rId = startPayload && !isNaN(startPayload) ? parseInt(startPayload) : null;
             const { data: newUser } = await createUser({
-                telegram_id: telegramId, username, role: 'client',
+                telegram_id: telegramId, username, role: 'user',
                 lang_code: ctx.from.language_code || 'en',
                 referrer_id: (rId && rId !== telegramId) ? rId : null
             });
@@ -199,7 +199,7 @@ bot.start(async (ctx) => {
         try { const k = await ctx.reply('…', Markup.removeKeyboard()); await bot.telegram.deleteMessage(ctx.chat.id, k.message_id); } catch (e) { }
 
         await ctx.reply(welcomeText,
-            Markup.keyboard([[Markup.button.webApp(dashboardBtn, process.env.WEBAPP_URL || 'https://esim.ticaretai.tr')]]).resize()
+            Markup.keyboard([[Markup.button.webApp(dashboardBtn, `${process.env.WEBAPP_URL || 'https://esim.ticaretai.tr'}?uid=${telegramId}`)]]).resize()
         );
         console.log(`[START] Welcome sent to ${username}`);
 
