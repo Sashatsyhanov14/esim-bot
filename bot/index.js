@@ -300,54 +300,42 @@ bot.on('text', async (ctx) => {
     }
 
     const { data: history } = await getHistory(telegramId);
-    const { data: tariffs } = await getTariffs();
-
-    await saveMessage(telegramId, 'user', userText);
+    let { data: tariffs } = await getTariffs();
+    if (!tariffs) tariffs = []; // Safe fallback
 
     try { await ctx.sendChatAction('typing'); } catch (e) { }
 
     const { data: faqRows, error: faqError } = await getFaq();
-    let faqText = '';
-    if (faqError) {
-        console.error('[FAQ] Supabase error:', faqError.message);
-    } else if (faqRows && faqRows.length > 0) {
-        faqText = faqRows.map(f => `- ${f.topic}: ${f.content_ru}`).join('\n');
-        console.log(`[FAQ] Loaded ${faqRows.length} rows: ${faqRows.map(f => f.topic).join(', ')}`);
-    } else {
-        console.log('[FAQ] Table is EMPTY — bot will answer from AI knowledge only');
+    let faqText = faqRows ? faqRows.map(f => `- ${f.topic}: ${f.content_ru}`).join('\n') : '';
+    if (faqError) console.error('[FAQ] Supabase error:', faqError.message);
+
+    // Get AI response
+    const aiResponse = await getChatResponse(tariffs, faqText, history || [], userText);
+
+    const langMatch = aiResponse.match(/\[LANG:\s*(ru|tr|en|fa|ar|de|pl)\]/i);
+    if (langMatch) {
+        const newLang = langMatch[1].toLowerCase();
+        if (newLang !== userLangCache[telegramId]) {
+            userLangCache[telegramId] = newLang;
+            try {
+                const { updateUser } = require('./src/supabase');
+                await updateUser(telegramId, { lang_code: newLang });
+            } catch (e) { console.error('Lang Update Error:', e.message); }
+        }
     }
 
-    // Get AI response with Multi-Agent System (Analyzer -> Writer)
-    const aiResponse = await getChatResponse(tariffs, faqText, history, userText);
-
-        const langMatch = aiResponse.match(/\[LANG:\s*(ru|tr|en|fa|ar|de|pl)\]/i);
-        if (langMatch) {
-            const newLang = langMatch[1].toLowerCase();
-            if (newLang !== userLangCache[telegramId]) {
-                userLangCache[telegramId] = newLang;
-                try {
-                    const { updateUser } = require('./src/supabase');
-                    await updateUser(telegramId, { lang_code: newLang });
-                } catch (e) {
-                    console.error('DB Lang Update Error:', e.message);
-                }
-            }
-        }
-
-    // 1. Detect and separate tags [SALE_REQUEST: ID]
     const saleMatch = aiResponse.match(/\[SALE_REQUEST:\s*([a-zA-Z0-9_-]+)\]/i);
     let rawText = aiResponse.replace(/\[SALE_REQUEST:.*?\]/gi, '').replace(/\[LANG:.*?\]/gi, '').trim();
-
-    // 2. Final Localization Pass (The "Translator Agent")
     const targetLang = userLangCache[telegramId] || 'ru';
-    const finalResponse = await getLocalizedText(targetLang, rawText);
+    let finalResponse = await getLocalizedText(targetLang, rawText);
 
     if (saleMatch) {
         const tariffId = saleMatch[1];
         const tariff = tariffs.find(t => t.id === tariffId);
 
         if (tariff) {
-            const { data: orderData } = await createOrder(telegramId, tariffId, tariff.price_usd);
+            try {
+                const { data: orderData } = await createOrder(telegramId, tariffId, tariff.price_usd);
 
             // Fetch dynamic uiLang strictly from userLangCache updated by AI
             const uiLang = userLangCache[telegramId] || ctx.from.language_code || 'en';
@@ -420,6 +408,7 @@ bot.on('text', async (ctx) => {
                 }
             }
             return; // Exit here since we replied
+            } catch (e) { console.error('Sale flow error:', e.message); }
         }
     }
 
