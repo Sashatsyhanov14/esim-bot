@@ -15,6 +15,24 @@ bot.use(session());
 // In-memory state tracking for managers: { managerTelegramId: orderId }
 const managerStates = new Map();
 
+// --- HELPER: Late Follow-up (2 min) ---
+async function scheduleFollowup(userId, lang) {
+    const delayTextRu = `Благодарим за проявленный интерес и уделенное нам время. Желаю Вам Счастливого пути! ✈️ Ваша eSIM активна — интернет заработает по прилёту, а если вы уже за границей, связь уже доступна. Не забудьте включить роуминг данных для профиля eсим.\n\nРекомендуем установить приложение eMedeo — цифровую платформу с прозрачными ценами, отзывами и поддержкой 24/7. Получайте трансфер, аренду авто/жилья, экскурсии, покупки и юридические консультации напрямую, без посредников.\n\nМы рядом, если что-то пойдёт не так: чат поддержки 24/7\n\nНаше приложение:\nAndroid: https://play.google.com/store/apps/details?id=com.emedeo.codeware\nIOS: https://apps.apple.com/app/emedeo/id6738978452`;
+    
+    setTimeout(async () => {
+        const delayText = await getLocalizedText(lang, delayTextRu);
+        try {
+            const res = await fetch('https://drive.google.com/uc?export=download&id=1zxDZ_QkKYu6VKFlS7nNlRktlLKLxSx47');
+            const arrayBuffer = await res.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            await bot.telegram.sendPhoto(userId, { source: buffer }, { caption: delayText });
+        } catch (err) {
+            console.error('Promo photo error:', err.message);
+            try { await bot.telegram.sendMessage(userId, delayText, { disable_web_page_preview: true }); } catch (e) { }
+        }
+    }, 2 * 60 * 1000);
+}
+
 // --- MANAGER FLOW ---
 bot.on(['photo', 'document', 'text'], async (ctx, next) => {
     const senderId = ctx.from.id;
@@ -42,15 +60,18 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
                 try {
                     if (ctx.message.photo) {
                         const photo = ctx.message.photo[ctx.message.photo.length - 1].file_id;
-                        await bot.telegram.sendPhoto(clientId, photo, {
-                            caption: "🎉 Твой eSIM готов! Вот QR-код и инструкция по установке. Приятного путешествия! 🌍"
-                        });
+                        const captionRu = "🎉 Твой eSIM готов! Вот QR-код и инструкция по установке. Приятного путешествия! 🌍";
+                        const caption = await getLocalizedText(userLangCache[clientId] || 'en', captionRu);
+                        await bot.telegram.sendPhoto(clientId, photo, { caption });
                     } else if (ctx.message.document) {
-                        await bot.telegram.sendDocument(clientId, ctx.message.document.file_id, {
-                            caption: "📄 Твой eSIM готов! Инструкция во вложении."
-                        });
+                        const captionRu = "📄 Твой eSIM готов! Инструкция во вложении.";
+                        const caption = await getLocalizedText(userLangCache[clientId] || 'en', captionRu);
+                        await bot.telegram.sendDocument(clientId, ctx.message.document.file_id, { caption });
                     }
                     await ctx.reply(`✅ Переслано клиенту ID: ${clientId}`);
+                    
+                    // Schedule follow-up for legacy flow too
+                    await scheduleFollowup(clientId, userLangCache[clientId] || 'en');
                 } catch (err) {
                     await ctx.reply(`❌ Ошибка пересылки: ${err.message}`);
                 }
@@ -84,7 +105,9 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
                 await bot.telegram.sendDocument(userId, ctx.message.document.file_id, { caption: ctx.message.caption ? `${caption}\n${ctx.message.caption}` : caption });
                 qrSent = true;
             } else if (ctx.message.text) {
-                await bot.telegram.sendMessage(userId, `${caption}\n\n${ctx.message.text}`);
+                const messageRu = "🎉 Твой eSIM готов! Вот данные для установки. Приятного путешествия! 🌍\n\n" + ctx.message.text;
+                const message = await getLocalizedText(userLangCache[userId] || 'en', messageRu);
+                await bot.telegram.sendMessage(userId, message);
                 qrSent = true;
             }
         } catch (err) {
@@ -116,21 +139,7 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
             }
 
             // Schedule delayed promo message (2 minutes)
-            const delayTextRu = `Благодарим за проявленный интерес и уделенное нам время. Желаю Вам Счастливого пути! ✈️ Ваша eSIM активна — интернет заработает по прилёту, а если вы уже за границей, связь уже доступна. Не забудьте включить роуминг данных для профиля eсим.\n\nРекомендуем установить приложение eMedeo — цифровую платформу с прозрачными ценами, отзывами и поддержкой 24/7. Получайте трансфер, аренду авто/жилья, экскурсии, покупки и юридические консультации напрямую, без посредников.\n\nМы рядом, если что-то пойдёт не так: чат поддержки 24/7\n\nНаше приложение:\nAndroid: https://play.google.com/store/apps/details?id=com.emedeo.codeware\nIOS: https://apps.apple.com/app/emedeo/id6738978452`;
-            const promoLang = clientRawLang; // clientRawLang comes from line 72
-
-            setTimeout(async () => {
-                const delayText = await getLocalizedText(promoLang, delayTextRu);
-                try {
-                    const res = await fetch('https://drive.google.com/uc?export=download&id=1zxDZ_QkKYu6VKFlS7nNlRktlLKLxSx47');
-                    const arrayBuffer = await res.arrayBuffer();
-                    const buffer = Buffer.from(arrayBuffer);
-                    await bot.telegram.sendPhoto(userId, { source: buffer }, { caption: delayText });
-                } catch (err) {
-                    console.error('Promo photo error:', err.message);
-                    try { await bot.telegram.sendMessage(userId, delayText, { disable_web_page_preview: true }); } catch (e) { }
-                }
-            }, 2 * 60 * 1000);
+            await scheduleFollowup(userId, clientRawLang);
 
             // Visual reset for the Manager (remove buttons, mark as done)
             if (activeState.messageId) {
@@ -147,7 +156,6 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
             return ctx.reply('✅ Данные (ссылка/QR) успешно отправлены. Покупка зачтена (paid) и начислены бонусы.');
         }
     }
-
 });
 
 // --- CLIENT FLOW ---
@@ -160,16 +168,11 @@ bot.start(async (ctx) => {
     await clearHistory(telegramId);
 
     if (startPayload === 'getqr') {
-        const rawLang = userLangCache[telegramId] || ctx.from.language_code || 'en';
-        const lang = rawLang === 'ru' ? 'ru' : (rawLang === 'tr' ? 'tr' : 'en');
+        const lang = userLangCache[telegramId] || ctx.from.language_code || 'en';
         const refLink = `https://t.me/emedeoesimworld_bot?start=${telegramId}`;
 
-        const texts = {
-            ru: `🎁 Вот твоя пригласительная ссылка и QR-код:\n\n${refLink}\n\nТвой промокод (для ввода вручную): \`${telegramId}\``,
-            tr: `🎁 İşte davet linkiniz ve QR kodunuz:\n\n${refLink}\n\nPromosyon kodunuz (linki açamayanlar için): \`${telegramId}\``,
-            en: `🎁 Here is your invitation link and QR code:\n\n${refLink}\n\nYour promo code (for manual entry): \`${telegramId}\``
-        };
-        const text = texts[lang];
+        const textRu = `🎁 Вот твоя пригласительная ссылка и QR-код:\n\n${refLink}\n\nТвой промокод (для ввода вручную): \`${telegramId}\``;
+        const text = await getLocalizedText(lang, textRu);
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(refLink)}&margin=10`;
 
         try {
@@ -203,7 +206,8 @@ bot.start(async (ctx) => {
     }
 
     if (!user) {
-        return ctx.reply('Не удалось загрузить данные пользователя.');
+        const errorText = await getLocalizedText(lang, 'Не удалось загрузить данные пользователя.');
+        return ctx.reply(errorText);
     }
 
     const noReferralUsed = !startPayload || isNaN(startPayload);
@@ -232,16 +236,11 @@ ${noReferralUsed && !user.referral_id ? '🎁 Если у тебя есть пр
 
 bot.command('ref', async (ctx) => {
     const telegramId = ctx.from.id;
-    const rawLang = userLangCache[telegramId] || ctx.from.language_code || 'en';
-    const lang = rawLang === 'ru' ? 'ru' : (rawLang === 'tr' ? 'tr' : 'en');
+    const lang = userLangCache[telegramId] || ctx.from.language_code || 'en';
     const refLink = `https://t.me/emedeoesimworld_bot?start=${telegramId}`;
 
-    const texts = {
-        ru: `🎁 Вот твоя пригласительная ссылка и QR-код:\n\n${refLink}\n\nТвой промокод (для ввода вручную): \`${telegramId}\``,
-        tr: `🎁 İşte davet linkiniz ve QR kodunuz:\n\n${refLink}\n\nPromosyon kodunuz (linki açamayanlar için): \`${telegramId}\``,
-        en: `🎁 Here is your invitation link and QR code:\n\n${refLink}\n\nYour promo code (for manual entry): \`${telegramId}\``
-    };
-    const text = texts[lang];
+    const textRu = `🎁 Вот твоя пригласительная ссылка и QR-код:\n\n${refLink}\n\nТвой промокод (для ввода вручную): \`${telegramId}\``;
+    const text = await getLocalizedText(lang, textRu);
 
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(refLink)}&margin=10`;
 
@@ -257,16 +256,11 @@ bot.on('message', async (ctx, next) => {
         const data = ctx.message.web_app_data.data;
         if (data === '/ref') {
             const telegramId = ctx.from.id;
-            const rawLang = userLangCache[telegramId] || ctx.from.language_code || 'en';
-            const lang = rawLang === 'ru' ? 'ru' : (rawLang === 'tr' ? 'tr' : 'en');
+            const lang = userLangCache[telegramId] || ctx.from.language_code || 'en';
             const refLink = `https://t.me/emedeoesimworld_bot?start=${telegramId}`;
 
-            const texts = {
-                ru: `🎁 Вот твоя пригласительная ссылка и QR-код:\n\n${refLink}\n\nТвой промокод (для ввода вручную): \`${telegramId}\``,
-                tr: `🎁 İşte davet linkiniz ve QR kodunuz:\n\n${refLink}\n\nPromosyon kodunuz (linki açamayanlar için): \`${telegramId}\``,
-                en: `🎁 Here is your invitation link and QR code:\n\n${refLink}\n\nYour promo code (for manual entry): \`${telegramId}\``
-            };
-            const text = texts[lang];
+            const textRu = `🎁 Вот твоя пригласительная ссылка и QR-код:\n\n${refLink}\n\nТвой промокод (для ввода вручную): \`${telegramId}\``;
+            const text = await getLocalizedText(lang, textRu);
             const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(refLink)}&margin=10`;
 
             try {
@@ -291,13 +285,12 @@ bot.on('text', async (ctx) => {
     if (!userLangCache[telegramId]) {
         userLangCache[telegramId] = systemLang;
     }
-    const currentLang = userLangCache[telegramId];
-    const uiLang = currentLang === 'ru' ? 'ru' : (currentLang === 'tr' ? 'tr' : 'en');
+    const uiLang = userLangCache[telegramId] || systemLang;
 
-    let { data: user } = await getUser(telegramId);
     if (!user) {
-        const msg = { ru: 'Нажми /start для начала.', tr: 'Başlamak için /start\'a basın.', en: 'Press /start to begin.' };
-        return ctx.reply(msg[uiLang], Markup.removeKeyboard());
+        const msgRu = 'Нажми /start для начала.';
+        const msg = await getLocalizedText(systemLang, msgRu);
+        return ctx.reply(msg, Markup.removeKeyboard());
     }
 
     // --- PROMO CODE LOGIC ---
@@ -309,17 +302,15 @@ bot.on('text', async (ctx) => {
                 await supabase.from('users').update({ referrer_id: promoId }).eq('telegram_id', telegramId);
                 user.referrer_id = promoId;
 
-                const successTexts = {
-                    ru: '✅ Промокод успешно применен! Спасибо.\n\nА теперь подскажи, куда летим? 🌍',
-                    tr: '✅ Promosyon kodu başarıyla uygulandı! Teşekkürler.\n\nŞimdi nereye uçtuğumuzu söyle? 🌍',
-                    en: '✅ Promo code applied successfully! Thank you.\n\nNow, tell me, where are we flying? 🌍'
-                };
-                return ctx.reply(successTexts[uiLang]);
+                const successRu = '✅ Промокод успешно применен! Спасибо.\n\nА теперь подскажи, куда летим? 🌍';
+                const successText = await getLocalizedText(uiLang, successRu);
+                return ctx.reply(successText);
             }
         }
 
-        const failTexts = { ru: '❌ Неверный или недействительный промокод.', tr: '❌ Geçersiz promosyon kodu.', en: '❌ Invalid promo code.' };
-        return ctx.reply(failTexts[uiLang]);
+        const failRu = '❌ Неверный или недействительный промокод.';
+        const failText = await getLocalizedText(uiLang, failRu);
+        return ctx.reply(failText);
     }
 
     const { data: history } = await getHistory(telegramId);
@@ -344,14 +335,18 @@ bot.on('text', async (ctx) => {
     const aiResponse = await getChatResponse(tariffs, faqText, history, userText);
 
     // AI Language detection tag extraction [LANG:code]
-    const langMatch = aiResponse.match(/\[LANG:\s*(ru|tr|en)\]/i);
+    const langMatch = aiResponse.match(/\[LANG:\s*(ru|tr|en|fa|ar|de|pl)\]/i);
     if (langMatch) {
         userLangCache[telegramId] = langMatch[1].toLowerCase();
     }
 
-    // 1. Detect Sale Request [SALE_REQUEST: ID]
+    // 1. Detect and separate tags [SALE_REQUEST: ID]
     const saleMatch = aiResponse.match(/\[SALE_REQUEST:\s*([a-zA-Z0-9_-]+)\]/i);
-    let finalResponse = aiResponse.replace(/\[SALE_REQUEST:.*?\]/gi, '').replace(/\[LANG:.*?\]/gi, '').trim();
+    let rawText = aiResponse.replace(/\[SALE_REQUEST:.*?\]/gi, '').replace(/\[LANG:.*?\]/gi, '').trim();
+
+    // 2. Final Localization Pass (The "Translator Agent")
+    const targetLang = userLangCache[telegramId] || 'ru';
+    const finalResponse = await getLocalizedText(targetLang, rawText);
 
     if (saleMatch) {
         const tariffId = saleMatch[1];
@@ -361,14 +356,9 @@ bot.on('text', async (ctx) => {
             const { data: orderData } = await createOrder(telegramId, tariffId, tariff.price_usd);
 
             // Fetch dynamic uiLang strictly from userLangCache updated by AI
-            const rawLang = userLangCache[telegramId] || ctx.from.language_code || 'en';
-            const uiLang = rawLang === 'ru' ? 'ru' : (rawLang === 'tr' ? 'tr' : 'en');
-            const payTexts = {
-                ru: `\n\n👇 **Оплатить онлайн:**\n${tariff.payment_link || 'Обратись к менеджеру'}\n\n✅ *Сразу после успешной оплаты мы вышлем твой тариф!*`,
-                tr: `\n\n👇 **Online Öde:**\n${tariff.payment_link || 'Yöneticiye başvurun'}\n\n✅ *Başarılı ödemeden hemen sonra tarifenizi göndereceğiz!*`,
-                en: `\n\n👇 **Pay Online:**\n${tariff.payment_link || 'Contact a manager'}\n\n✅ *We will send your eSIM immediately after successful payment!*`
-            };
-            const payText = payTexts[uiLang];
+            const uiLang = userLangCache[telegramId] || ctx.from.language_code || 'en';
+            const payTextRu = `\n\n👇 **Оплатить онлайн:**\n${tariff.payment_link || 'Обратись к менеджеру'}\n\n✅ *Сразу после успешной оплаты мы вышлем твой тариф!*`;
+            const payText = await getLocalizedText(uiLang, payTextRu);
 
             finalResponse += payText;
 
@@ -407,8 +397,8 @@ bot.on('text', async (ctx) => {
 
                         const managerTexts = {
                             ru: {
-                                alert: `🚀 **ЗАКАЗ!**\n\nЮзер: @${username} (ID: ${telegramId})\nТариф: ${tariff.country} | ${tariff.data_gb} на ${tariff.validity_period}\nЦена: $${tariff.price_usd}\n\n⚠️ ВАЖНО: Подтвердите оплату перед тем как скидывать eSIM!`,
-                                sendBtn: '📤 Отправить eSIM',
+                                alert: `🚀 **ЗАКАЗ!**\n\nЮзер: @${username} (ID: ${telegramId})\nТариф: ${tariff.country} | ${tariff.data_gb} на ${tariff.validity_period}\nЦена: $${tariff.price_usd}\n\n⚠️ ВАЖНО: Подтвердите оплату перед тем как скидывать eSIM-код!`,
+                                sendBtn: '📤 Отправить eSIM (Код/Ссылка)',
                                 cancelBtn: '❌ Отменить'
                             },
                             tr: {
@@ -417,8 +407,8 @@ bot.on('text', async (ctx) => {
                                 cancelBtn: '❌ İptal'
                             },
                             en: {
-                                alert: `🚀 **ORDER!**\n\nUser: @${username} (ID: ${telegramId})\nPlan: ${tariff.country} | ${tariff.data_gb} for ${tariff.validity_period}\nPrice: $${tariff.price_usd}\n\n⚠️ IMPORTANT: Verify payment before sending the Link/QR!`,
-                                sendBtn: '📤 Send eSIM',
+                                alert: `🚀 **ORDER!**\n\nUser: @${username} (ID: ${telegramId})\nPlan: ${tariff.country} | ${tariff.data_gb} for ${tariff.validity_period}\nPrice: $${tariff.price_usd}\n\n⚠️ IMPORTANT: Verify payment before sending the Link/Code!`,
+                                sendBtn: '📤 Send eSIM (Code/Link)',
                                 cancelBtn: '❌ Cancel'
                             }
                         };
@@ -463,14 +453,14 @@ bot.action(/^sendqr_(.+)$/, async (ctx) => {
 
     try {
         await ctx.editMessageText(
-            ctx.callbackQuery.message.text + '\n\n⏳ ОЖИДАНИЕ: Отправьте АКТИВАЦИОННУЮ ССЫЛКУ или QR-код в ответ на это сообщение!',
+            ctx.callbackQuery.message.text + '\n\n⏳ ОЖИДАНИЕ: Отправьте АКТИВАЦИОННУЮ ССЫЛКУ или eSIM-КОД в ответ на это сообщение!',
             Markup.inlineKeyboard([
                 [Markup.button.callback('❌ Отменить ожидание', `cancelqr_${orderId}`)]
             ])
         );
     } catch (e) { }
 
-    await ctx.answerCbQuery('⏳ Отправьте в чат ссылку или QR для клиента.', { show_alert: true });
+    await ctx.answerCbQuery('⏳ Отправьте в чат ссылку или eSIM-код для клиента.', { show_alert: true });
 });
 
 bot.action(/^cancelqr_(.+)$/, async (ctx) => {
