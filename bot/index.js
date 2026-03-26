@@ -408,17 +408,15 @@ bot.on('text', async (ctx) => {
                         };
                         const mt = managerTexts[mLang];
 
-                        await bot.telegram.sendMessage(manager.telegram_id, mt.alert,
-                            orderData ? Markup.inlineKeyboard([
-                                [
-                                    Markup.button.callback(mt.sendBtn, `sendqr_${orderData.id}`),
-                                    Markup.button.callback(mt.cancelBtn, `cancel_${orderData.id}`)
-                                ]
-                            ]) : {}
-                        );
-                    } catch (err) {
-                        console.error('Failed to notify manager:', err.message);
-                    }
+                                // Safely handle orderData.id null check
+                                const buttons = (orderData && orderData.id) 
+                                    ? Markup.inlineKeyboard([[Markup.button.callback(mt.sendBtn, `sendqr_${orderData.id}`)]]) 
+                                    : {};
+
+                                await bot.telegram.sendMessage(manager.telegram_id, mt.alert, buttons);
+                            } catch (e) {
+                                console.error('Manager notify error:', e.message);
+                            }
                 }
             }
             return; // Exit here since we replied
