@@ -409,8 +409,15 @@ bot.on('text', async (ctx) => {
             }
             return; // Exit here since we replied
             } catch (e) { console.error('Sale flow error:', e.message); }
+        } else {
+            console.log(`[SALE] Tariff ${tariffId} not found in DB!`);
+            finalResponse += `\n❌ Ошибка: Тариф "${tariffId}" не найден в базе. Менеджер скоро подключится.`;
         }
     }
+
+        if (!finalResponse || finalResponse.trim() === '') {
+            finalResponse = 'Пожалуйста, подожди минуту или напиши менеджеру.';
+        }
 
         await saveMessage(telegramId, 'assistant', finalResponse);
         await ctx.reply(finalResponse, { parse_mode: 'Markdown' });
