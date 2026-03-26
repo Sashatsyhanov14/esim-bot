@@ -204,7 +204,8 @@ bot.start(async (ctx) => {
         console.log(`New user: ${username} (${telegramId})`);
     }
 
-    const lang = user.lang_code || ctx.from.language_code || 'en';
+    const lang = ctx.from.language_code || user?.lang_code || 'en';
+    userLangCache[telegramId] = lang; // Reset cache to system/stored lang on /start
 
     if (!user) {
         const errorText = await getLocalizedText(lang, 'Не удалось загрузить данные пользователя.');
