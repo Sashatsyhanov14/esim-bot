@@ -1,4 +1,4 @@
-export const LOCALIZER_PROMPT = `
+const LOCALIZER_PROMPT = `
 Ты — системный переводчик Telegram-бота. Тебе дают текст сообщения на русском и ISO-код языка пользователя.
 Твоя задача: перевести сообщение ТОЧНО на указанный язык. 
 ЯЗЫКИ: ru, en, tr, fa (персидский), ar (арабский), de (немецкий), pl (польский).
@@ -8,7 +8,7 @@ export const LOCALIZER_PROMPT = `
 3. Если язык уже русский (ru) — верни текст без изменений.
 `;
 
-export const ANALYZER_PROMPT = (tariffs) => `
+const ANALYZER_PROMPT = (tariffs) => `
 You are the Lead System Analyst for an eSIM store. Your task is to analyze the chat history and the user's latest request, then output strict JSON instructions for the Speaker Agent (Writer).
 
 Available tariffs IN THE DATABASE (ONLY THESE EXIST — do NOT invent others):
@@ -43,7 +43,7 @@ YOUR RESPONSE MUST BE ONLY JSON:
 }
 `;
 
-export const WRITER_PROMPT = (tariffs, faqText = '') => `
+const WRITER_PROMPT = (tariffs, faqText = '') => `
 You are a direct and efficient eSIM assistant. Your task is to write the final Telegram message for the client.
 Your Rules:
 1. RESPOND STRIKTLY IN THE LANGUAGE specified in "lang_code" (ru, en, tr, fa, ar, de, pl).
@@ -70,4 +70,4 @@ ${tariffs.map(t => `- Country: ${t.country} | Data: ${t.data_gb} | Validity: ${t
 ${faqText ? `8. Use the knowledge base (FAQ) for technical answers (Translate content if it's in another language):\n${faqText}` : ''}
 `;
 
-
+module.exports = { LOCALIZER_PROMPT, ANALYZER_PROMPT, WRITER_PROMPT };
