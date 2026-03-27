@@ -221,7 +221,7 @@ bot.start(async (ctx) => {
 
         const lang = ctx.from.language_code || user?.lang_code || 'en';
         userLangCache[telegramId] = lang;
-        console.log(`[START] Using lang: ${lang}`);
+        console.log(`[START] Detected lang from Telegram API: '${ctx.from.language_code}', using: '${lang}'`);
 
         const welcomeRuPart1 = `Привет! 🚀
 Я — Ваш персональный ИИ-менеджер от eMedeo 🤖

@@ -70,11 +70,15 @@ module.exports = {
             return 'Извини, я приуныл. Попробуй позже.';
         }
     },
-    async getLocalizedText(langCode, russianText) {
+    async getLocalizedText(langCode, russianText, retries = 2) {
         // If Russian or unknown - return as-is to save API calls
         if (!langCode || langCode === 'ru') return russianText;
-        try {
-            const response = await openai.chat.completions.create({
+
+        const attempt = async () => {
+            const timeout = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Localizer timeout')), 8000)
+            );
+            const translate = openai.chat.completions.create({
                 model: 'openai/gpt-4o-mini',
                 messages: [
                     { role: 'system', content: LOCALIZER_PROMPT },
@@ -82,10 +86,22 @@ module.exports = {
                 ],
                 temperature: 0.2,
             });
+            const response = await Promise.race([translate, timeout]);
             return response.choices[0].message.content.trim();
-        } catch (e) {
-            console.error('Localizer error:', e.message);
-            return russianText; // Fallback to Russian on error
+        };
+
+        for (let i = 0; i < retries; i++) {
+            try {
+                const result = await attempt();
+                console.log(`[LOCALIZER] Success (attempt ${i + 1}) lang=${langCode}`);
+                return result;
+            } catch (e) {
+                console.warn(`[LOCALIZER] Attempt ${i + 1} failed: ${e.message}`);
+                if (i < retries - 1) await new Promise(r => setTimeout(r, 1000));
+            }
         }
+
+        console.error('[LOCALIZER] All attempts failed, falling back to Russian.');
+        return russianText;
     }
 };
