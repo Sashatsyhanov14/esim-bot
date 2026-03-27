@@ -72,7 +72,8 @@ module.exports = {
     const { error } = await supabase
       .from('chat_history')
       .delete()
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .in('role', ['user', 'assistant']);
     return { error };
   },
 

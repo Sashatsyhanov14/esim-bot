@@ -33,12 +33,22 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
         if (ordersData) setOrders(ordersData);
 
         const { data: allUsers } = await supabase.from('users').select('telegram_id, username, referrer_id, balance');
+        const { data: allPayouts } = await supabase.from('chat_history').select('user_id, content, created_at').eq('role', 'payout').order('created_at', { ascending: false });
 
         if (allUsers && ordersData) {
             const uMap: Record<string, any> = {};
             allUsers.forEach((u: any) => {
-                uMap[u.telegram_id] = { ...u, invitedCount: 0, ordersCount: 0, totalSpend: 0, refOrdersCount: 0, earnedBonuses: 0 };
+                uMap[u.telegram_id] = { ...u, invitedCount: 0, ordersCount: 0, totalSpend: 0, refOrdersCount: 0, earnedBonuses: 0, payouts: [] };
             });
+
+            if (allPayouts) {
+                allPayouts.forEach((p: any) => {
+                    const pkId = p.user_id;
+                    if (uMap[pkId]) {
+                        uMap[pkId].payouts.push(p);
+                    }
+                });
+            }
 
             allUsers.forEach((u: any) => {
                 if (u.referrer_id && uMap[u.referrer_id]) {
@@ -57,7 +67,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                     const refId = uMap[uId].referrer_id;
                     if (refId && uMap[refId]) {
                         uMap[refId].refOrdersCount++;
-                        uMap[refId].earnedBonuses += (Number(o.price_usd) * 0.15 || 0);
+                        uMap[refId].earnedBonuses += (Number(o.price_usd) * 0.20 || 0);
                     }
                 }
             });
@@ -104,6 +114,32 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
         if (!error) {
             setManagersList(prev => prev.filter(m => m.telegram_id !== tgId));
             tg?.showAlert(t.managerRemoveSuccess?.replace('{id}', String(tgId)) || `Removed`);
+        }
+    };
+
+    const handleMarkPaid = async (tgId: number, currentBalance: number) => {
+        if (!window.confirm(`Выплатить $${currentBalance.toFixed(2)} пользователю?\nБаланс будет обнулен, а в историю будет добавлена запись о выплате.`)) return;
+        
+        const { error: insErr } = await supabase.from('chat_history').insert({
+            id: window.crypto.randomUUID(),
+            user_id: tgId,
+            role: 'payout',
+            content: `${currentBalance.toFixed(2)}`,
+            created_at: new Date().toISOString()
+        });
+
+        if (insErr) {
+            alert("Ошибка сохранения истории: " + insErr.message);
+            return;
+        }
+
+        const { error: upErr } = await supabase.from('users').update({ balance: 0 }).eq('telegram_id', tgId);
+        
+        if (upErr) {
+            alert("Ошибка обнуления баланса: " + upErr.message);
+        } else {
+            alert("Выплата успешно зафиксирована!");
+            fetchData(); // reload
         }
     };
 
@@ -253,28 +289,59 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
             ) : (
                 <div className="flex flex-col gap-3">
                     {usersInfo.slice(0, isUsersExpanded ? undefined : 6).map(u => (
-                        <div key={u.telegram_id} className="glass-card p-4 rounded-xl flex items-center justify-between">
-                            <div className="flex-1">
-                                <p className="font-headline font-semibold text-on-surface text-sm">{u.username ? `@${u.username}` : u.telegram_id}</p>
-                                <div className="text-[10px] text-on-surface-variant uppercase mt-1 flex flex-col gap-1">
-                                    <div className="flex gap-3">
-                                        <span>{t.invitedLabelStats || 'ПРИГЛАСИЛ:'} <b className="text-primary">{u.invitedCount}</b></span>
-                                        <span>ПОКУПОК ПО РЕФКЕ: <b className="text-secondary">{u.refOrdersCount}</b></span>
+                        <div key={u.telegram_id} className="glass-card p-4 rounded-xl flex flex-col gap-3">
+                            <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                    <p className="font-headline font-semibold text-on-surface text-sm">{u.username ? `@${u.username}` : u.telegram_id}</p>
+                                    <div className="text-[10px] text-on-surface-variant uppercase mt-1 flex flex-col gap-1">
+                                        <div className="flex gap-3">
+                                            <span>{t.invitedLabelStats || 'ПРИГЛАСИЛ:'} <b className="text-primary">{u.invitedCount}</b></span>
+                                            <span>ПОКУПОК ПО РЕФКЕ: <b className="text-secondary">{u.refOrdersCount}</b></span>
+                                        </div>
+                                        <div className="flex gap-3 mt-1 pt-1 border-t border-white/5">
+                                            <span>{t.purchasesLabel || 'СВОИ ПОКУПКИ:'} <b className="text-on-surface">{u.ordersCount}</b></span>
+                                        </div>
                                     </div>
-                                    <div className="flex gap-3 mt-1 pt-1 border-t border-white/5">
-                                        <span>{t.purchasesLabel || 'СВОИ ПОКУПКИ:'} <b className="text-on-surface">{u.ordersCount}</b></span>
+                                </div>
+                                <div className="text-right flex flex-col items-end pl-2">
+                                    <div className="mb-2">
+                                        <p className="text-[10px] text-on-surface-variant uppercase">{t.spentLabel || 'ПОТРАТИЛ'}</p>
+                                        <p className="font-headline font-bold text-red-400 mt-[-2px]">${u.totalSpend.toFixed(2)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] text-on-surface-variant uppercase">ЗАРАБОТАЛ</p>
+                                        <p className="font-headline font-bold text-green-400 mt-[-2px]">${u.earnedBonuses.toFixed(2)}</p>
                                     </div>
                                 </div>
                             </div>
-                            <div className="text-right flex flex-col items-end pl-2">
-                                <div className="mb-2">
-                                    <p className="text-[10px] text-on-surface-variant uppercase">{t.spentLabel || 'ПОТРАТИЛ'}</p>
-                                    <p className="font-headline font-bold text-red-400 mt-[-2px]">${u.totalSpend.toFixed(2)}</p>
+
+                            {/* Payouts Section */}
+                            <div className="bg-surface-container-low rounded-lg p-3 border border-white/5">
+                                <div className="flex justify-between items-center mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-[14px] text-tertiary">account_balance_wallet</span>
+                                        <span className="text-xs font-bold text-on-surface uppercase tracking-widest">Баланс: <span className="text-tertiary">${(u.balance || 0).toFixed(2)}</span></span>
+                                    </div>
+                                    {(u.balance || 0) > 0 && (
+                                        <button onClick={() => handleMarkPaid(u.telegram_id, u.balance)} className="bg-tertiary/20 text-tertiary border border-tertiary/30 px-3 py-1 text-[10px] rounded-md font-bold uppercase tracking-wider hover:bg-tertiary/30 active:scale-95 transition-all">
+                                            Выплатить
+                                        </button>
+                                    )}
                                 </div>
-                                <div>
-                                    <p className="text-[10px] text-on-surface-variant uppercase">ЗАРАБОТАЛ</p>
-                                    <p className="font-headline font-bold text-green-400 mt-[-2px]">${u.earnedBonuses.toFixed(2)}</p>
-                                </div>
+                                
+                                {u.payouts && u.payouts.length > 0 && (
+                                    <div className="mt-2 pt-2 border-t border-outline-variant/10">
+                                        <p className="text-[9px] text-on-surface-variant font-bold uppercase mb-1">История выплат:</p>
+                                        <div className="flex flex-col gap-1 max-h-24 overflow-y-auto clean-scrollbar pr-1">
+                                            {u.payouts.map((p: any, idx: number) => (
+                                                <div key={idx} className="flex justify-between text-[10px] items-center bg-surface-container-lowest px-2 py-1 rounded">
+                                                    <span className="text-on-surface-variant">{new Date(p.created_at).toLocaleDateString()} {new Date(p.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                                    <span className="font-bold text-error">-${Number(p.content).toFixed(2)}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ))}

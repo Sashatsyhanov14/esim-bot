@@ -283,6 +283,7 @@ const App: React.FC = () => {
   const [loginInputId, setLoginInputId] = useState('');
   const [referrals, setReferrals] = useState<any[]>([]);
   const [purchasedRefsCount, setPurchasedRefsCount] = useState(0);
+  const [payoutsHistory, setPayoutsHistory] = useState<any[]>([]);
   const [globalStats, setGlobalStats] = useState({ totalUsers: 0, totalOrders: 0, totalSales: 0 });
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -404,6 +405,9 @@ const App: React.FC = () => {
           const uniqueBuyers = new Set((orderedRefs || []).map((o: any) => o.user_id));
           setPurchasedRefsCount(uniqueBuyers.size);
         }
+
+        const { data: userPayouts } = await supabase.from('chat_history').select('content, created_at').eq('user_id', tgId).eq('role', 'payout').order('created_at', { ascending: false });
+        setPayoutsHistory(userPayouts || []);
 
         if (currentUser.role === 'founder' || currentUser.role === 'manager') {
           const { count: uCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
@@ -563,6 +567,23 @@ const App: React.FC = () => {
           <span className="text-2xl font-headline font-extrabold text-slate-200">{purchasedRefsCount}</span>
         </div>
       </div>
+
+      {payoutsHistory.length > 0 && (
+        <div className="glass-card p-5 rounded-3xl mx-2 border border-white/5">
+            <h3 className="text-sm font-headline font-bold text-on-surface mb-3 flex items-center gap-2">
+              <span className="material-symbols-outlined text-tertiary text-[18px]">history</span>
+              {lang === 'ru' ? 'История выплат' : lang === 'tr' ? 'Ödeme Geçmişi' : 'Payout History'}
+            </h3>
+            <div className="flex flex-col gap-2 max-h-40 overflow-y-auto clean-scrollbar pr-1">
+              {payoutsHistory.map((p, idx) => (
+                   <div key={idx} className="flex justify-between items-center bg-surface-container-lowest p-3 rounded-xl border border-outline-variant/10">
+                       <span className="text-xs text-on-surface-variant">{new Date(p.created_at).toLocaleDateString()} {new Date(p.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                       <span className="font-bold text-green-400 text-sm">+${Number(p.content).toFixed(2)}</span>
+                   </div>
+              ))}
+            </div>
+        </div>
+      )}
 
       <div className="glass-card p-5 rounded-3xl mx-2 border border-primary/20 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-[40px] -z-10 translate-x-1/2 -translate-y-1/2"></div>

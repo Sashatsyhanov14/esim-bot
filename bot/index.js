@@ -172,17 +172,17 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
         if (qrSent) {
             managerStates.delete(senderId); // Clear active tracking
 
-            // --- REFERRAL PAYOUT: 15% of tariff price ---
+            // --- REFERRAL PAYOUT: 20% of tariff price ---
             try {
                 const { data: buyer } = await supabase.from('users').select('referrer_id').eq('telegram_id', userId).single();
                 if (buyer?.referrer_id && pendingOrder.price_usd) {
-                    const reward = Math.round(pendingOrder.price_usd * 0.15 * 100) / 100;
+                    const reward = Math.round(pendingOrder.price_usd * 0.20 * 100) / 100;
                     const { data: refUser } = await supabase.from('users').select('balance').eq('telegram_id', buyer.referrer_id).single();
                     const newBalance = Math.round(((refUser?.balance || 0) + reward) * 100) / 100;
                     await supabase.from('users').update({ balance: newBalance }).eq('telegram_id', buyer.referrer_id);
                     try {
                         const refLang = userLangCache[buyer.referrer_id] || 'ru';
-                        const refRu = `💰 Вам начислено $${reward} (15% от продажи eSIM)! Ваш новый баланс: $${newBalance}`;
+                        const refRu = `💰 Вам начислено $${reward} (20% от продажи eSIM)! Ваш новый баланс: $${newBalance}`;
                         const refMsg = await getLocalizedText(refLang, refRu);
                         await bot.telegram.sendMessage(buyer.referrer_id, refMsg);
                     } catch (e) { }
