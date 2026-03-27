@@ -77,33 +77,8 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
     // 1. Check in-memory state first (Strict Assignment)
     const activeState = managerStates.get(senderId);
     if (!activeState || !activeState.orderId) {
-        // Fallback to Legacy Flow if no order is actively awaiting QR
         if (ctx.message.photo || ctx.message.document) {
-            const caption = ctx.message.caption || '';
-            const clientIdMatch = caption.match(/\d+/);
-
-            if (clientIdMatch) {
-                const clientId = clientIdMatch[0];
-                try {
-                    if (ctx.message.photo) {
-                        const photo = ctx.message.photo[ctx.message.photo.length - 1].file_id;
-                        const captionRu = "🎉 Твой eSIM готов! Вот QR-код и инструкция по установке. Приятного путешествия! 🌍";
-                        const caption = await getLocalizedText(userLangCache[clientId] || 'en', captionRu);
-                        await bot.telegram.sendPhoto(clientId, photo, { caption });
-                    } else if (ctx.message.document) {
-                        const captionRu = "📄 Твой eSIM готов! Инструкция во вложении.";
-                        const caption = await getLocalizedText(userLangCache[clientId] || 'en', captionRu);
-                        await bot.telegram.sendDocument(clientId, ctx.message.document.file_id, { caption });
-                    }
-                    await ctx.reply(`✅ Переслано клиенту ID: ${clientId}`);
-                    
-                    // Schedule follow-up for legacy flow too
-                    await scheduleFollowup(clientId, userLangCache[clientId] || 'en');
-                } catch (err) {
-                    await ctx.reply(`❌ Ошибка пересылки: ${err.message}`);
-                }
-            }
-            return; // Handled
+            return ctx.reply("❌ Ошибка: вы не выбрали заказ.\nСначала нажмите кнопку «Отправить eSIM» под нужным заказом в ленте, чтобы закрепить его за собой.");
         }
         return next();
     }
@@ -508,8 +483,30 @@ bot.action(/^sendqr_(.+)$/, async (ctx) => {
     const { data: order } = await supabase.from('orders').select('*').eq('id', orderId).single();
     if (!order) return ctx.answerCbQuery('❌ Заказ не найден.', { show_alert: true });
 
-    // Persist awaiting state in DB (survives Vercel webhook restarts)
-    await supabase.from('orders').update({ status: 'awaiting_qr', assigned_manager: telegramId }).eq('id', orderId);
+    if (order.status === 'paid') {
+        return ctx.answerCbQuery('❌ Заказ уже был оплачен и отправлен!', { show_alert: true });
+    }
+    if (order.status === 'awaiting_qr' && order.assigned_manager !== telegramId) {
+        return ctx.answerCbQuery('❌ Этот заказ прямо сейчас обрабатывает другой менеджер.', { show_alert: true });
+    }
+    if (order.status === 'cancelled') {
+        return ctx.answerCbQuery('❌ Этот заказ был отменен.', { show_alert: true });
+    }
+
+    // Persist awaiting state strictly from pending state
+    const { data: updated, error: updateErr } = await supabase.from('orders')
+        .update({ status: 'awaiting_qr', assigned_manager: telegramId })
+        .eq('id', orderId)
+        .eq('status', 'pending')
+        .select();
+
+    if (updateErr || !updated || updated.length === 0) {
+        // Double check if we already own it
+        if (order.assigned_manager !== telegramId) {
+            return ctx.answerCbQuery('❌ Заказ недоступен для взятия в работу.', { show_alert: true });
+        }
+    }
+
     managerStates.set(telegramId, { 
         orderId: orderId, 
         messageId: ctx.callbackQuery.message.message_id,
