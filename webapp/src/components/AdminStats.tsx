@@ -33,7 +33,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
         if (ordersData) setOrders(ordersData);
 
         const { data: allUsers } = await supabase.from('users').select('telegram_id, username, referrer_id, balance');
-        const { data: allPayouts } = await supabase.from('chat_history').select('user_id, content, created_at').eq('role', 'payout').order('created_at', { ascending: false });
+        const { data: allPayouts } = await supabase.from('chat_history').select('user_id, content, created_at').eq('role', 'assistant').like('content', 'PAYOUT_RECORD:%').order('created_at', { ascending: false });
 
         if (allUsers && ordersData) {
             const uMap: Record<string, any> = {};
@@ -123,8 +123,8 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
         const { error: insErr } = await supabase.from('chat_history').insert({
             id: window.crypto.randomUUID(),
             user_id: tgId,
-            role: 'payout',
-            content: `${currentBalance.toFixed(2)}`,
+            role: 'assistant',
+            content: `PAYOUT_RECORD:${currentBalance.toFixed(2)}`,
             created_at: new Date().toISOString()
         });
 
@@ -336,7 +336,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                                             {u.payouts.map((p: any, idx: number) => (
                                                 <div key={idx} className="flex justify-between text-[10px] items-center bg-surface-container-lowest px-2 py-1 rounded">
                                                     <span className="text-on-surface-variant">{new Date(p.created_at).toLocaleDateString()} {new Date(p.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                                                    <span className="font-bold text-error">-${Number(p.content).toFixed(2)}</span>
+                                                    <span className="font-bold text-error">-${Number(p.content.split(':')[1]).toFixed(2)}</span>
                                                 </div>
                                             ))}
                                         </div>

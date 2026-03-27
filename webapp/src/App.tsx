@@ -406,7 +406,7 @@ const App: React.FC = () => {
           setPurchasedRefsCount(uniqueBuyers.size);
         }
 
-        const { data: userPayouts } = await supabase.from('chat_history').select('content, created_at').eq('user_id', tgId).eq('role', 'payout').order('created_at', { ascending: false });
+        const { data: userPayouts } = await supabase.from('chat_history').select('content, created_at').eq('user_id', tgId).eq('role', 'assistant').like('content', 'PAYOUT_RECORD:%').order('created_at', { ascending: false });
         setPayoutsHistory(userPayouts || []);
 
         if (currentUser.role === 'founder' || currentUser.role === 'manager') {
@@ -578,7 +578,7 @@ const App: React.FC = () => {
               {payoutsHistory.map((p, idx) => (
                    <div key={idx} className="flex justify-between items-center bg-surface-container-lowest p-3 rounded-xl border border-outline-variant/10">
                        <span className="text-xs text-on-surface-variant">{new Date(p.created_at).toLocaleDateString()} {new Date(p.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                       <span className="font-bold text-green-400 text-sm">+${Number(p.content).toFixed(2)}</span>
+                       <span className="font-bold text-green-400 text-sm">+${Number(p.content.split(':')[1]).toFixed(2)}</span>
                    </div>
               ))}
             </div>

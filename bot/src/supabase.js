@@ -73,7 +73,8 @@ module.exports = {
       .from('chat_history')
       .delete()
       .eq('user_id', userId)
-      .in('role', ['user', 'assistant']);
+      .in('role', ['user', 'assistant'])
+      .not('content', 'like', 'PAYOUT_RECORD:%');
     return { error };
   },
 
@@ -82,6 +83,8 @@ module.exports = {
       .from('chat_history')
       .select('role, content')
       .eq('user_id', userId)
+      .in('role', ['user', 'assistant'])
+      .not('content', 'like', 'PAYOUT_RECORD:%')
       .order('created_at', { ascending: false })
       .limit(limit);
 
