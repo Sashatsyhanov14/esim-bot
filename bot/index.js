@@ -237,7 +237,7 @@ bot.start(async (ctx) => {
         if (!user) {
             const rId = startPayload && !isNaN(startPayload) ? parseInt(startPayload) : null;
             const { data: newUser } = await createUser({
-                telegram_id: telegramId, username, role: 'user',
+                telegram_id: telegramId, username, role: 'client',
                 lang_code: ctx.from.language_code || 'en',
                 referrer_id: (rId && rId !== telegramId) ? rId : null
             });

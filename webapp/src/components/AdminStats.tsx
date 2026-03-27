@@ -110,7 +110,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
     };
 
     const handleRemoveManager = async (tgId: number) => {
-        const { error } = await supabase.from('users').update({ role: 'user' }).eq('telegram_id', tgId);
+        const { error } = await supabase.from('users').update({ role: 'client' }).eq('telegram_id', tgId);
         if (!error) {
             setManagersList(prev => prev.filter(m => m.telegram_id !== tgId));
             tg?.showAlert(t.managerRemoveSuccess?.replace('{id}', String(tgId)) || `Removed`);

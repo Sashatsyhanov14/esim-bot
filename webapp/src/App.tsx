@@ -369,7 +369,7 @@ const App: React.FC = () => {
         const newUser = {
           telegram_id: tgId,
           username: username || firstName || tgUser?.first_name || `user_${tgId}`,
-          role: 'user',
+          role: 'client',
           balance: 0
         };
         const { data: created, error: regError } = await supabase.from('users').insert(newUser).select().single();
