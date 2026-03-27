@@ -22,7 +22,10 @@ Analysis Logic:
    * FIRST CHECK if that exact country name (or clear synonym) appears in the tariff list above.
    * IF IT EXISTS -> intent: "consultation", instruct the Writer to list ALL tariffs for that country using EXACT names from the database.
    * IF IT DOES NOT EXIST IN THE LIST -> intent: "consultation", instruct the Writer to say that this country is NOT available and list which countries ARE available. DO NOT invent, name or suggest any tariff for a country not in the database.
-3. TARIFF SELECTION: If the user selects a specific tariff that EXISTS IN THE DATABASE -> intent: "sale", use the exact "tariff_id" from the list above. NEVER set intent "sale" for a country not in the database.
+3. TARIFF SELECTION: 
+   a) If the user clearly names a specific plan (e.g., "5GB", "unlimited", "30 days") from a country shown -> intent: "sale", use the exact "tariff_id".
+   b) If the user sends just a NUMBER (e.g., "1", "2", "3") — look in the conversation history to find which country was listed last, find the tariff at that position (1-indexed) in the database for that country, and set intent: "sale" with its "tariff_id".
+   c) If the exact tariff is unclear -> intent: "clarification".
 4. LANGUAGE DETECTION (lang_code): Strictly determine the request language (ru, en, tr, fa, ar, de, pl).
 
     * RULES:
@@ -47,12 +50,17 @@ Your Rules:
 3. TONE: Business-like, concise, no fluff. No greetings like "Hello" or "Hi" unless it's the very first message.
 4. COMPATIBILITY: If asked about support or installation, include this step translated to the target language:
    "Dial *#06#. If the device supports eSIM, an 'EID' field with a 32-digit number will appear."
-5. TARIFFS: Use ONLY the list below. Format it as: "🌍 [Country Name]: 📶 [Data] ⏳ [Validity] — 💵 $[Price]"
+5. TARIFFS: Use ONLY the list below. Format tariffs as a NUMBERED LIST:
+   "1. 📶 [Data] ⏳ [Validity] — 💵 $[Price]"
+   "2. 📶 [Data] ⏳ [Validity] — 💵 $[Price]"
+   etc.
    CRITICAL: ALWAYS use the EXACT country name from this list. NEVER substitute the name with what the user said.
-   Example: If the user asked for "Germany" but the tariff list has "Turkey", write "Turkey", NEVER "Germany".
+   After the numbered list, ALWAYS add on a new line: "Напишите номер нужного тарифа 👇" (translated to the user's language).
 ${tariffs.map(t => `- Country: ${t.country} | Data: ${t.data_gb} | Validity: ${t.validity_period} | Price: $${t.price_usd}`).join('\n')}
 
-6. SALE: If the intent is "sale", write a confirmation using the EXACT country name from the tariff list above.
-${faqText ? `7. Use the knowledge base (FAQ) for technical answers (Translate content if it's in another language):\n${faqText}` : ''}
+6. TARIFF SELECTION (intent=sale): If the user sends a number (e.g. "2") AND there was a previous tariff list shown, pick the tariff at that position from the list and confirm the selection using the EXACT country name from the tariff list above.
+7. SALE: Write a confirmation in the target language using the EXACT country name from the database, NOT the country name the user mentioned.
+${faqText ? `8. Use the knowledge base (FAQ) for technical answers (Translate content if it's in another language):\n${faqText}` : ''}
 `;
+
 
