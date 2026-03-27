@@ -37,7 +37,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
         if (allUsers && ordersData) {
             const uMap: Record<string, any> = {};
             allUsers.forEach((u: any) => {
-                uMap[u.telegram_id] = { ...u, invitedCount: 0, ordersCount: 0, totalSpend: 0 };
+                uMap[u.telegram_id] = { ...u, invitedCount: 0, ordersCount: 0, totalSpend: 0, refOrdersCount: 0, earnedBonuses: 0 };
             });
 
             allUsers.forEach((u: any) => {
@@ -53,6 +53,12 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                 if (uId && uMap[uId] && o.status === 'paid') {
                     uMap[uId].ordersCount++;
                     uMap[uId].totalSpend += (Number(o.price_usd) || 0);
+
+                    const refId = uMap[uId].referrer_id;
+                    if (refId && uMap[refId]) {
+                        uMap[refId].refOrdersCount++;
+                        uMap[refId].earnedBonuses += (Number(o.price_usd) * 0.15 || 0);
+                    }
                 }
             });
 
@@ -248,16 +254,27 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                 <div className="flex flex-col gap-3">
                     {usersInfo.slice(0, isUsersExpanded ? undefined : 6).map(u => (
                         <div key={u.telegram_id} className="glass-card p-4 rounded-xl flex items-center justify-between">
-                            <div>
+                            <div className="flex-1">
                                 <p className="font-headline font-semibold text-on-surface text-sm">{u.username ? `@${u.username}` : u.telegram_id}</p>
-                                <div className="text-[10px] text-on-surface-variant uppercase mt-1 flex gap-3">
-                                    <span>{t.invitedLabelStats} <b className="text-primary">{u.invitedCount}</b></span>
-                                    <span>{t.purchasesLabel} <b className="text-secondary">{u.ordersCount}</b></span>
+                                <div className="text-[10px] text-on-surface-variant uppercase mt-1 flex flex-col gap-1">
+                                    <div className="flex gap-3">
+                                        <span>{t.invitedLabelStats || 'ПРИГЛАСИЛ:'} <b className="text-primary">{u.invitedCount}</b></span>
+                                        <span>ПОКУПОК ПО РЕФКЕ: <b className="text-secondary">{u.refOrdersCount}</b></span>
+                                    </div>
+                                    <div className="flex gap-3 mt-1 pt-1 border-t border-white/5">
+                                        <span>{t.purchasesLabel || 'СВОИ ПОКУПКИ:'} <b className="text-on-surface">{u.ordersCount}</b></span>
+                                    </div>
                                 </div>
                             </div>
-                            <div className="text-right">
-                                <p className="text-xs text-on-surface-variant">{t.spentLabel}</p>
-                                <p className="font-headline font-bold text-green-400">${u.totalSpend.toFixed(2)}</p>
+                            <div className="text-right flex flex-col items-end pl-2">
+                                <div className="mb-2">
+                                    <p className="text-[10px] text-on-surface-variant uppercase">{t.spentLabel || 'ПОТРАТИЛ'}</p>
+                                    <p className="font-headline font-bold text-red-400 mt-[-2px]">${u.totalSpend.toFixed(2)}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] text-on-surface-variant uppercase">ЗАРАБОТАЛ</p>
+                                    <p className="font-headline font-bold text-green-400 mt-[-2px]">${u.earnedBonuses.toFixed(2)}</p>
+                                </div>
                             </div>
                         </div>
                     ))}

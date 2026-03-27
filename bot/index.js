@@ -17,7 +17,26 @@ const managerStates = new Map();
 
 // --- HELPER: Late Follow-up (2 min) ---
 async function scheduleFollowup(userId, lang) {
-    const delayTextRu = `Благодарим за проявленный интерес и уделенное нам время. Желаю Вам Счастливого пути! ✈️ Ваша eSIM активна — интернет заработает по прилёту, а если вы уже за границей, связь уже доступна. Не забудьте включить роуминг данных для профиля eсим.\n\nРекомендуем установить приложение eMedeo — цифровую платформу с прозрачными ценами, отзывами и поддержкой 24/7. Получайте трансфер, аренду авто/жилья, экскурсии, покупки и юридические консультации напрямую, без посредников.\n\nМы рядом, если что-то пойдёт не так: чат поддержки 24/7\n\nНаше приложение:\nAndroid: https://play.google.com/store/apps/details?id=com.emedeo.codeware\nIOS: https://apps.apple.com/app/emedeo/id6738978452`;
+    const delayTextRu = `Благодарим Вас за проявленный интерес и уделенное время! 🙏
+Желаем Вам приятного путешествия! ✈️
+
+Ваша eSIM уже активна — интернет заработает сразу по прилёту. Если Вы уже за границей, связь доступна прямо сейчас 🌍
+Не забудьте включить роуминг данных для профиля eSIM.
+
+Рекомендуем установить приложение eMedeo — цифровую платформу с прозрачными ценами, отзывами и поддержкой 24/7 🤖
+ИИ от eMedeo поможет Вам:
+• Подобрать трансфер 🚗
+• Арендовать авто или жильё 🏡
+• Забронировать экскурсии 🗺️
+• Совершать покупки 🛍️
+• Получить юридические и консультационные услуги ⚖️
+— Мир без посредников —
+
+Мы всегда рядом, если что-то пойдёт не так — чат поддержки 24/7 💬
+
+Наше приложение:
+Android: https://play.google.com/store/apps/details?id=com.emedeo.codeware
+IOS: https://apps.apple.com/app/emedeo/id6738978452`;
     
     setTimeout(async () => {
         const delayText = await getLocalizedText(lang, delayTextRu);
@@ -113,7 +132,13 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
         }
 
         const clientRawLang = userLangCache[userId] || 'en';
-        const captionRu = `🎉 Твой eSIM готов! Вот информация для установки. Приятного путешествия! 🌍`;
+        const captionRu = `🎉 Ваш eSIM готов!
+
+Вот данные для установки — приятного путешествия! 🌍
+
+Перейдите по ссылке, введите код доступа и следуйте простой инструкции на экране.
+
+Если возникнут вопросы, я всегда помогу Вам быстро разобраться и подключиться 🚀`;
         const caption = await getLocalizedText(clientRawLang, captionRu);
 
         let qrSent = false;
@@ -126,7 +151,15 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
                 await bot.telegram.sendDocument(userId, ctx.message.document.file_id, { caption: ctx.message.caption ? `${caption}\n${ctx.message.caption}` : caption });
                 qrSent = true;
             } else if (ctx.message.text) {
-                const messageRu = "🎉 Твой eSIM готов! Вот данные для установки. Приятного путешествия! 🌍\n\n" + ctx.message.text;
+                const messageRu = `🎉 Ваш eSIM готов!
+
+Вот данные для установки — приятного путешествия! 🌍
+
+Перейдите по ссылке, введите код доступа и следуйте простой инструкции на экране.
+
+Если возникнут вопросы, я всегда помогу Вам быстро разобраться и подключиться 🚀
+
+` + ctx.message.text;
                 const message = await getLocalizedText(userLangCache[userId] || 'en', messageRu);
                 await bot.telegram.sendMessage(userId, message);
                 qrSent = true;
@@ -164,11 +197,13 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
             // Visual reset for the Manager (remove buttons, mark as done)
             if (activeState.messageId) {
                 try {
+                    const originalText = activeState.originalText || "Данные отправлены пользователю!";
+                    const cleanText = originalText.replace(/\n\n⏳ ОЖИДАНИЕ.*/g, '');
                     await bot.telegram.editMessageText(
                         senderId,
                         activeState.messageId,
                         undefined,
-                        `✅ ЗАКАЗ ВЫПОЛНЕН: Данные успешно отправлены пользователю!`
+                        `✅ **ОТПРАВЛЕН (Завершено)**\n\n${cleanText}`
                     );
                 } catch (e) { console.error('Visual reset error:', e.message); }
             }
@@ -213,7 +248,7 @@ bot.start(async (ctx) => {
         userLangCache[telegramId] = lang;
         console.log(`[START] Using lang: ${lang}`);
 
-        const welcomeRu = `Привет, ${username}! 🚀\n\nЯ твой персональный менеджер по eSIM. Помогу выбрать лучший интернет для твоей поездки.\n\nКуда летим? 🌍`;
+        const welcomeRu = `Привет! 🚀\nЯ — Ваш персональный ИИ-менеджер от eMedeo 🤖\nПомогу Вам:\n✔️ подобрать лучший тариф eSIM под Вашу поездку\n✔️ сэкономить на дорогом роуминге и местных SIM-картах\n✔️ оставаться на связи сразу после прилёта\n📲 Быстро, удобно и без лишних затрат — всё онлайн за пару минут.`;
         const welcomeText = await getLocalizedText(lang, welcomeRu);
         const dashboardBtn = await getLocalizedText(lang, '📱 Открыть Дашборд');
 
@@ -475,7 +510,11 @@ bot.action(/^sendqr_(.+)$/, async (ctx) => {
 
     // Persist awaiting state in DB (survives Vercel webhook restarts)
     await supabase.from('orders').update({ status: 'awaiting_qr', assigned_manager: telegramId }).eq('id', orderId);
-    managerStates.set(telegramId, { orderId: orderId, messageId: ctx.callbackQuery.message.message_id }); // Track msg to delete buttons later
+    managerStates.set(telegramId, { 
+        orderId: orderId, 
+        messageId: ctx.callbackQuery.message.message_id,
+        originalText: ctx.callbackQuery.message.text
+    }); // Track msg to delete buttons later
 
     try {
         await ctx.editMessageText(
