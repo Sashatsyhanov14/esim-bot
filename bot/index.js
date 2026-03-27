@@ -223,16 +223,15 @@ bot.start(async (ctx) => {
         userLangCache[telegramId] = lang;
         console.log(`[START] Using lang: ${lang}`);
 
-        const welcomeRu = `Привет! 🚀
+        const welcomeRuPart1 = `Привет! 🚀
 Я — Ваш персональный ИИ-менеджер от eMedeo 🤖
 Помогу Вам:
 ✔️ подобрать лучший тариф eSIM под Вашу поездку
 ✔️ сэкономить на дорогом роуминге и местных SIM-картах
 ✔️ оставаться на связи сразу после прилёта
-📲 Быстро, удобно и без лишних затрат — всё онлайн за пару минут.
+📲 Быстро, удобно и без лишних затрат — всё онлайн за пару минут.`;
 
-
-Рекомендую перед покупкой eSIM проверить, поддерживает ли Ваш телефон
+        const welcomeRuPart2 = `Рекомендую перед покупкой eSIM проверить, поддерживает ли Ваш телефон
 технологию eSIM 📱
 Это важно, потому что не все устройства работают с eSIM, и Вы сможете
 избежать лишних затрат и проблем с подключением.
@@ -241,16 +240,27 @@ bot.start(async (ctx) => {
 Если устройство поддерживает eSIM, в появившемся окне отобразится
 строка «EID» и его номер.
 Так куда планируете  лететь? 🌍 — подберу идеальный для Вас вариант 👇`;
-        const welcomeText = await getLocalizedText(lang, welcomeRu);
+
+        const welcomeText1 = await getLocalizedText(lang, welcomeRuPart1);
         const dashboardBtn = await getLocalizedText(lang, '📱 Открыть Дашборд');
 
         // Cleanup stale keyboards
         try { const k = await ctx.reply('…', Markup.removeKeyboard()); await bot.telegram.deleteMessage(ctx.chat.id, k.message_id); } catch (e) { }
 
-        await ctx.reply(welcomeText,
+        await ctx.reply(welcomeText1,
             Markup.keyboard([[Markup.button.webApp(dashboardBtn, `${process.env.WEBAPP_URL || 'https://esim.ticaretai.tr'}?uid=${telegramId}`)]]).resize()
         );
-        console.log(`[START] Welcome sent to ${username}`);
+        console.log(`[START] Welcome Part 1 sent to ${username}`);
+
+        setTimeout(async () => {
+            try {
+                const welcomeText2 = await getLocalizedText(lang, welcomeRuPart2);
+                await bot.telegram.sendMessage(telegramId, welcomeText2);
+                console.log(`[START] Welcome Part 2 sent to ${username}`);
+            } catch (err) {
+                console.error('[START Part 2] Error:', err.message);
+            }
+        }, 5000);
 
     } catch (err) {
         console.error('[START] Fatal Error:', err.message);
