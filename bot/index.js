@@ -22,8 +22,18 @@ async function scheduleFollowup(userId, lang) {
     setTimeout(async () => {
         const delayText = await getLocalizedText(lang, delayTextRu);
         try {
-            const photoUrl = 'https://drive.google.com/uc?export=view&id=1zxDZ_QkKYu6VKFlS7nNlRktlLKLxSx47';
-            await bot.telegram.sendPhoto(userId, photoUrl, { caption: delayText });
+            const photoUrl = 'https://drive.google.com/uc?export=download&id=1zxDZ_QkKYu6VKFlS7nNlRktlLKLxSx47';
+            // Use axios with headers to bypass potential blocks
+            const response = await axios({
+                url: photoUrl,
+                method: 'GET',
+                responseType: 'arraybuffer',
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                }
+            });
+            const buffer = Buffer.from(response.data);
+            await bot.telegram.sendPhoto(userId, { source: buffer }, { caption: delayText });
         } catch (err) {
             console.error('Promo photo error:', err.message);
             try { await bot.telegram.sendMessage(userId, delayText, { disable_web_page_preview: true }); } catch (e) { }
