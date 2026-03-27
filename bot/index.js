@@ -89,6 +89,19 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
         const orderId = pendingOrder.id;
         const userId = pendingOrder.user_id;
 
+        // Atomic check: Only proceed if status is STILL 'awaiting_qr'
+        const { data: updated, error: updateError } = await supabase
+            .from('orders')
+            .update({ status: 'paid', assigned_manager: null })
+            .eq('id', orderId)
+            .eq('status', 'awaiting_qr')
+            .select();
+
+        if (updateError || !updated || updated.length === 0) {
+            managerStates.delete(senderId); // Clean up state regardless
+            return ctx.reply('❌ Ошибка: Заказ уже был выполнен другим менеджером или отменен.');
+        }
+
         const clientRawLang = userLangCache[userId] || 'en';
         const captionRu = `🎉 Твой eSIM готов! Вот информация для установки. Приятного путешествия! 🌍`;
         const caption = await getLocalizedText(clientRawLang, captionRu);
@@ -110,12 +123,11 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
             }
         } catch (err) {
             console.error('Failed to send payload to client:', err.message);
-            return ctx.reply('❌ Ошибка отправки клиенту.');
+            return ctx.reply('❌ Ошибка отправки клиенту. Сообщите разработчику.');
         }
 
         if (qrSent) {
             managerStates.delete(senderId); // Clear active tracking
-            await supabase.from('orders').update({ status: 'paid', assigned_manager: null }).eq('id', orderId);
 
             // --- REFERRAL PAYOUT: 15% of tariff price ---
             try {
