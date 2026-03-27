@@ -219,9 +219,19 @@ bot.start(async (ctx) => {
             user = newUser;
         }
 
-        const lang = user?.lang_code || ctx.from.language_code || 'en';
+        // Telegram API lang_code reflects current user settings — use as priority
+        const lang = ctx.from.language_code || user?.lang_code || 'en';
         userLangCache[telegramId] = lang;
         console.log(`[START] Detected lang from Telegram API: '${ctx.from.language_code}', using: '${lang}'`);
+
+        // Sync DB lang_code if it changed (so next /start is always correct)
+        if (user && user.lang_code !== lang) {
+            try {
+                const { updateUser } = require('./src/supabase');
+                await updateUser(telegramId, { lang_code: lang });
+                console.log(`[START] Updated DB lang_code to '${lang}'`);
+            } catch (e) { console.error('Lang sync error:', e.message); }
+        }
 
         const welcomeRuPart1 = `Привет! 🚀
 Я — Ваш персональный ИИ-менеджер от eMedeo 🤖
@@ -260,7 +270,7 @@ bot.start(async (ctx) => {
             } catch (err) {
                 console.error('[START Part 2] Error:', err.message);
             }
-        }, 5000);
+        }, 2000);
 
     } catch (err) {
         console.error('[START] Fatal Error:', err.message);
