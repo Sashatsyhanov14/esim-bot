@@ -414,7 +414,8 @@ bot.on('text', async (ctx) => {
             } catch (e) { console.error('Sale flow error:', e.message); }
         } else {
             console.log(`[SALE] Tariff ${tariffId} not found in DB!`);
-            finalResponse += `\n❌ Ошибка: Тариф "${tariffId}" не найден в базе. Менеджер скоро подключится.`;
+            const errRu = `\n❌ Ошибка: Тариф "${tariffId}" не найден в базе. Менеджер скоро подключится.`;
+            finalResponse += await getLocalizedText(targetLang, errRu);
         }
     }
 
