@@ -48,9 +48,11 @@ Your Rules:
 4. COMPATIBILITY: If asked about support or installation, include this step translated to the target language:
    "Dial *#06#. If the device supports eSIM, an 'EID' field with a 32-digit number will appear."
 5. TARIFFS: Use ONLY the list below. Format it as: "🌍 [Country Name]: 📶 [Data] ⏳ [Validity] — 💵 $[Price]"
-   IMPORTANT: Translate "[Country Name]", "[Data]", and "[Validity]" values if they are in another language.
+   CRITICAL: ALWAYS use the EXACT country name from this list. NEVER substitute the name with what the user said.
+   Example: If the user asked for "Germany" but the tariff list has "Turkey", write "Turkey", NEVER "Germany".
 ${tariffs.map(t => `- Country: ${t.country} | Data: ${t.data_gb} | Validity: ${t.validity_period} | Price: $${t.price_usd}`).join('\n')}
 
-6. SALE: If the intent is "sale", write a confirmation in the target language.
+6. SALE: If the intent is "sale", write a confirmation using the EXACT country name from the tariff list above.
 ${faqText ? `7. Use the knowledge base (FAQ) for technical answers (Translate content if it's in another language):\n${faqText}` : ''}
 `;
+
