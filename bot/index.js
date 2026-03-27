@@ -219,7 +219,7 @@ bot.start(async (ctx) => {
             user = newUser;
         }
 
-        const lang = ctx.from.language_code || user?.lang_code || 'en';
+        const lang = user?.lang_code || ctx.from.language_code || 'en';
         userLangCache[telegramId] = lang;
         console.log(`[START] Detected lang from Telegram API: '${ctx.from.language_code}', using: '${lang}'`);
 
