@@ -1,4 +1,5 @@
 const OpenAI = require('openai');
+const axios = require('axios');
 const dotenv = require('dotenv');
 const { ANALYZER_PROMPT, WRITER_PROMPT, LOCALIZER_PROMPT } = require('./prompts');
 
@@ -71,9 +72,9 @@ module.exports = {
         }
     },
     async getLocalizedText(langCode, russianText, retries = 2) {
-        // If Russian or unknown - return as-is to save API calls
         if (!langCode || langCode === 'ru') return russianText;
 
+        // Try OpenRouter first (with 8 second timeout)
         const attempt = async () => {
             const timeout = new Promise((_, reject) =>
                 setTimeout(() => reject(new Error('Localizer timeout')), 8000)
@@ -93,15 +94,34 @@ module.exports = {
         for (let i = 0; i < retries; i++) {
             try {
                 const result = await attempt();
-                console.log(`[LOCALIZER] Success (attempt ${i + 1}) lang=${langCode}`);
+                console.log(`[LOCALIZER] OpenRouter OK (attempt ${i + 1}) lang=${langCode}`);
                 return result;
             } catch (e) {
-                console.warn(`[LOCALIZER] Attempt ${i + 1} failed: ${e.message}`);
+                console.warn(`[LOCALIZER] OpenRouter attempt ${i + 1} failed: ${e.message}`);
                 if (i < retries - 1) await new Promise(r => setTimeout(r, 1000));
             }
         }
 
-        console.error('[LOCALIZER] All attempts failed, falling back to Russian.');
-        return russianText;
+        // Fallback: MyMemory free translation API (no key required)
+        try {
+            console.log(`[LOCALIZER] Falling back to MyMemory for lang=${langCode}`);
+            // MyMemory supports max ~500 chars per request, split if needed
+            const chunks = russianText.match(/[\s\S]{1,400}/g) || [russianText];
+            const translated = [];
+
+            for (const chunk of chunks) {
+                const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk)}&langpair=ru|${langCode}`;
+                const res = await axios.get(url, { timeout: 5000 });
+                const translatedChunk = res.data?.responseData?.translatedText || chunk;
+                translated.push(translatedChunk);
+            }
+
+            const result = translated.join('');
+            console.log(`[LOCALIZER] MyMemory OK for lang=${langCode}`);
+            return result;
+        } catch (e) {
+            console.error(`[LOCALIZER] MyMemory also failed: ${e.message}. Returning Russian.`);
+            return russianText;
+        }
     }
 };
