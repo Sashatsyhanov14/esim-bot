@@ -9,6 +9,9 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
     const [usersInfo, setUsersInfo] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState<string>('all');
+    const [selectedUser, setSelectedUser] = useState<any>(null);
+    const [refOrders, setRefOrders] = useState<any[]>([]);
+    const [refOrdersLoading, setRefOrdersLoading] = useState(false);
 
     const [newManagerId, setNewManagerId] = useState('');
     const [managersList, setManagersList] = useState<any[]>([]);
@@ -38,7 +41,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
         if (allUsers && ordersData) {
             const uMap: Record<string, any> = {};
             allUsers.forEach((u: any) => {
-                uMap[u.telegram_id] = { ...u, invitedCount: 0, ordersCount: 0, totalSpend: 0, refOrdersCount: 0, earnedBonuses: 0, payouts: [] };
+                uMap[u.telegram_id] = { ...u, invitedCount: 0, invitedUserIds: [], ordersCount: 0, totalSpend: 0, refOrdersCount: 0, refTotalVolume: 0, earnedBonuses: 0, payouts: [] };
             });
 
             if (allPayouts) {
@@ -53,6 +56,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
             allUsers.forEach((u: any) => {
                 if (u.referrer_id && uMap[u.referrer_id]) {
                     uMap[u.referrer_id].invitedCount++;
+                    uMap[u.referrer_id].invitedUserIds.push(u.telegram_id);
                 }
             });
 
@@ -67,6 +71,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                     const refId = uMap[uId].referrer_id;
                     if (refId && uMap[refId]) {
                         uMap[refId].refOrdersCount++;
+                        uMap[refId].refTotalVolume += (Number(o.price_usd) || 0);
                         uMap[refId].earnedBonuses += (Number(o.price_usd) * 0.20 || 0);
                     }
                 }
@@ -74,7 +79,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
 
             const sortedUsers = Object.values(uMap)
                 .filter((u: any) => u.invitedCount > 0 || u.ordersCount > 0 || u.balance > 0)
-                .sort((a: any, b: any) => b.totalSpend - a.totalSpend);
+                .sort((a: any, b: any) => b.earnedBonuses - a.earnedBonuses);
 
             setUsersInfo(sortedUsers);
         }
@@ -144,6 +149,27 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
     };
 
     const filteredOrders = orders.filter((o: any) => statusFilter === 'all' || o.status === statusFilter);
+
+    const openRefDrilldown = async (user: any) => {
+        setSelectedUser(user);
+        if (!user.invitedUserIds || user.invitedUserIds.length === 0) {
+            setRefOrders([]);
+            return;
+        }
+        setRefOrdersLoading(true);
+        const { data } = await supabase
+            .from('orders')
+            .select(`id, created_at, status, price_usd, users:user_id (telegram_id, username), tariffs:tariff_id (country, data_gb, validity_period)`)
+            .in('user_id', user.invitedUserIds)
+            .order('created_at', { ascending: false });
+        setRefOrders(data || []);
+        setRefOrdersLoading(false);
+    };
+
+    const closeRefDrilldown = () => {
+        setSelectedUser(null);
+        setRefOrders([]);
+    };
 
     return (
         <div className="space-y-6">
@@ -288,7 +314,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                 </div>
             ) : (
                 <div className="flex flex-col gap-3">
-                    {usersInfo.slice(0, isUsersExpanded ? undefined : 6).map(u => (
+                {usersInfo.slice(0, isUsersExpanded ? undefined : 6).map(u => (
                         <div key={u.telegram_id} className="glass-card p-4 rounded-xl flex flex-col gap-3">
                             <div className="flex items-center justify-between">
                                 <div className="flex-1">
@@ -296,24 +322,34 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                                     <div className="text-[10px] text-on-surface-variant uppercase mt-1 flex flex-col gap-1">
                                         <div className="flex gap-3">
                                             <span>{t.invitedLabelStats || 'ПРИГЛАСИЛ:'} <b className="text-primary">{u.invitedCount}</b></span>
-                                            <span>ПОКУПОК ПО РЕФКЕ: <b className="text-secondary">{u.refOrdersCount}</b></span>
+                                            <span>СДЕЛОК ПО РЕФКЕ: <b className="text-secondary">{u.refOrdersCount}</b></span>
                                         </div>
                                         <div className="flex gap-3 mt-1 pt-1 border-t border-white/5">
-                                            <span>{t.purchasesLabel || 'СВОИ ПОКУПКИ:'} <b className="text-on-surface">{u.ordersCount}</b></span>
+                                            <span>СВОИ ПОКУПКИ: <b className="text-on-surface">{u.ordersCount}</b></span>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="text-right flex flex-col items-end pl-2">
-                                    <div className="mb-2">
-                                        <p className="text-[10px] text-on-surface-variant uppercase">{t.spentLabel || 'ПОТРАТИЛ'}</p>
-                                        <p className="font-headline font-bold text-red-400 mt-[-2px]">${u.totalSpend.toFixed(2)}</p>
+                                <div className="text-right flex flex-col items-end pl-2 gap-2">
+                                    <div>
+                                        <p className="text-[10px] text-on-surface-variant uppercase">ОБЪ. РЕФЕРАЛОВ</p>
+                                        <p className="font-headline font-bold text-blue-400 mt-[-2px]">${(u.refTotalVolume || 0).toFixed(2)}</p>
                                     </div>
                                     <div>
-                                        <p className="text-[10px] text-on-surface-variant uppercase">ЗАРАБОТАЛ</p>
+                                        <p className="text-[10px] text-on-surface-variant uppercase">КОМИССИЯ</p>
                                         <p className="font-headline font-bold text-green-400 mt-[-2px]">${u.earnedBonuses.toFixed(2)}</p>
                                     </div>
                                 </div>
                             </div>
+
+                            {u.invitedCount > 0 && (
+                                <button
+                                    onClick={() => openRefDrilldown(u)}
+                                    className="w-full py-2 text-[11px] font-bold uppercase tracking-wider bg-secondary/10 text-secondary border border-secondary/20 rounded-lg flex items-center justify-center gap-1.5 hover:bg-secondary/20 active:scale-95 transition-all"
+                                >
+                                    <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+                                    Смотреть сделки рефералов
+                                </button>
+                            )}
 
                             {/* Payouts Section */}
                             <div className="bg-surface-container-low rounded-lg p-3 border border-white/5">
@@ -356,6 +392,59 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                     )}
                 </div>
             )}
+        {/* Referral Drilldown Modal */}
+        {selectedUser && (
+            <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm" onClick={closeRefDrilldown}>
+                <div className="bg-[#1a1a1f] w-full max-w-lg max-h-[82vh] rounded-t-2xl p-4 overflow-y-auto flex flex-col gap-3" onClick={e => e.stopPropagation()}>
+                    <div className="flex justify-between items-center pb-2 border-b border-white/10">
+                        <div>
+                            <p className="font-headline font-bold text-on-surface text-base">
+                                🔗 Сделки рефералов @{selectedUser.username || selectedUser.telegram_id}
+                            </p>
+                            <p className="text-[11px] text-on-surface-variant mt-0.5">
+                                Приглашено: <b className="text-primary">{selectedUser.invitedCount}</b>
+                                &nbsp;·&nbsp; Сделок: <b className="text-secondary">{selectedUser.refOrdersCount}</b>
+                                &nbsp;·&nbsp; Объём: <b className="text-green-400">${(selectedUser.refTotalVolume || 0).toFixed(2)}</b>
+                            </p>
+                        </div>
+                        <button onClick={closeRefDrilldown} className="text-on-surface-variant hover:text-on-surface p-1">
+                            <span className="material-symbols-outlined">close</span>
+                        </button>
+                    </div>
+
+                    {refOrdersLoading ? (
+                        <div className="text-center text-on-surface-variant text-sm py-4 animate-pulse">Загрузка...</div>
+                    ) : refOrders.length === 0 ? (
+                        <div className="text-center text-on-surface-variant text-sm py-4">Нет сделок у приглашённых</div>
+                    ) : refOrders.map((o: any) => {
+                        const u = o.users as any;
+                        const uObj = Array.isArray(u) ? u[0] : u;
+                        return (
+                            <div key={o.id} className="glass-card p-3 rounded-xl border-l-4 border-l-secondary/30 text-sm">
+                                <div className="flex justify-between items-start mb-1">
+                                    <span className="font-bold text-on-surface">{uObj?.username ? `@${uObj.username}` : uObj?.telegram_id || '?'}</span>
+                                    <div className="text-right">
+                                        <b className="text-green-400">${o.price_usd}</b>
+                                        <p className="text-[10px] text-yellow-400 font-bold">+${(Number(o.price_usd) * 0.20).toFixed(2)} комиссия</p>
+                                    </div>
+                                </div>
+                                <div className="text-xs text-on-surface-variant space-y-0.5">
+                                    <div>{o.tariffs ? `${o.tariffs.country} | ${o.tariffs.data_gb} | ${o.tariffs.validity_period}` : '—'}</div>
+                                    <div className="flex justify-between items-center">
+                                        <span>{new Date(o.created_at).toLocaleString()}</span>
+                                        <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${
+                                            o.status === 'paid' ? 'bg-green-500/20 text-green-400' :
+                                            o.status === 'pending' ? 'bg-orange-500/20 text-orange-400' :
+                                            'bg-red-500/20 text-red-400'
+                                        }`}>{o.status}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        )}
         </div>
     );
 }
