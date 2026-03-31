@@ -41,35 +41,35 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
         if (allUsers && ordersData) {
             const uMap: Record<string, any> = {};
             allUsers.forEach((u: any) => {
-                uMap[u.telegram_id] = { ...u, invitedCount: 0, invitedUserIds: [], ordersCount: 0, totalSpend: 0, refOrdersCount: 0, refTotalVolume: 0, earnedBonuses: 0, payouts: [] };
+                uMap[String(u.telegram_id)] = { ...u, invitedCount: 0, invitedUserIds: [], ordersCount: 0, totalSpend: 0, refOrdersCount: 0, refTotalVolume: 0, earnedBonuses: 0, payouts: [] };
             });
 
             if (allPayouts) {
                 allPayouts.forEach((p: any) => {
-                    const pkId = p.user_id;
-                    if (uMap[pkId]) {
-                        uMap[pkId].payouts.push(p);
-                    }
+                    const pkId = String(p.user_id);
+                    if (uMap[pkId]) uMap[pkId].payouts.push(p);
                 });
             }
 
             allUsers.forEach((u: any) => {
-                if (u.referrer_id && uMap[u.referrer_id]) {
-                    uMap[u.referrer_id].invitedCount++;
-                    uMap[u.referrer_id].invitedUserIds.push(u.telegram_id);
+                const refId = String(u.referrer_id);
+                if (u.referrer_id && uMap[refId]) {
+                    uMap[refId].invitedCount++;
+                    uMap[refId].invitedUserIds.push(String(u.telegram_id));
                 }
             });
 
             ordersData.forEach((o: any) => {
                 const userObj = o.users as any;
-                const uId = userObj?.telegram_id ? userObj.telegram_id : (Array.isArray(userObj) ? userObj[0]?.telegram_id : null);
+                const rawId = userObj?.telegram_id ?? (Array.isArray(userObj) ? userObj[0]?.telegram_id : null);
+                const uId = rawId ? String(rawId) : null;
 
                 if (uId && uMap[uId] && o.status === 'paid') {
                     uMap[uId].ordersCount++;
                     uMap[uId].totalSpend += (Number(o.price_usd) || 0);
 
-                    const refId = uMap[uId].referrer_id;
-                    if (refId && uMap[refId]) {
+                    const refId = String(uMap[uId].referrer_id);
+                    if (uMap[uId].referrer_id && uMap[refId]) {
                         uMap[refId].refOrdersCount++;
                         uMap[refId].refTotalVolume += (Number(o.price_usd) || 0);
                         uMap[refId].earnedBonuses += (Number(o.price_usd) * 0.20 || 0);
