@@ -166,7 +166,8 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
                     }).then(({ error }) => { if (error) console.error('Commission log error:', error.message); });
 
                     try {
-                        const refLang = userLangCache[buyer.referrer_id] || 'ru';
+                        const { data: refUserLang } = await supabase.from('users').select('lang_code').eq('telegram_id', buyer.referrer_id).single();
+                        const refLang = refUserLang?.lang_code || userLangCache[buyer.referrer_id] || 'ru';
                         const refRu = `💰 Вам начислено $${reward} (20% от продажи eSIM)! Ваш новый баланс: $${newBalance}`;
                         const refMsg = await getLocalizedText(refLang, refRu);
                         await bot.telegram.sendMessage(buyer.referrer_id, refMsg);
@@ -237,18 +238,21 @@ bot.start(async (ctx) => {
             }
         }
 
-        // Telegram API lang_code reflects current user settings — use as priority
-        const lang = ctx.from.language_code || user?.lang_code || 'en';
-        userLangCache[telegramId] = lang;
-        console.log(`[START] Detected lang from Telegram API: '${ctx.from.language_code}', using: '${lang}'`);
+        // welcomeLang: Priority on TG settings (for the first message)
+        // sessionLang: Priority on DB settings (for the rest of the chat)
+        const welcomeLang = ctx.from.language_code || user?.lang_code || 'en';
+        const sessionLang = user?.lang_code || ctx.from.language_code || 'en';
 
-        // Sync DB lang_code if it changed (so next /start is always correct)
-        if (user && user.lang_code !== lang) {
+        // Set cache to sessionLang (DB priority)
+        userLangCache[telegramId] = sessionLang;
+        console.log(`[START] Greet: '${welcomeLang}', Cache: '${sessionLang}'`);
+
+        // Sync DB if new user
+        if (user && !user.lang_code) {
             try {
                 const { updateUser } = require('./src/supabase');
-                await updateUser(telegramId, { lang_code: lang });
-                console.log(`[START] Updated DB lang_code to '${lang}'`);
-            } catch (e) { console.error('Lang sync error:', e.message); }
+                await updateUser(telegramId, { lang_code: sessionLang });
+            } catch (e) { }
         }
 
         const welcomeRuPart1 = `Привет! 🚀
@@ -269,8 +273,8 @@ bot.start(async (ctx) => {
 строка «EID» и его номер.
 Так куда планируете  лететь? 🌍 — подберу идеальный для Вас вариант 👇`;
 
-        const welcomeText1 = await getLocalizedText(lang, welcomeRuPart1);
-        const dashboardBtn = await getLocalizedText(lang, '📱 Открыть Дашборд');
+        const welcomeText1 = await getLocalizedText(welcomeLang, welcomeRuPart1);
+        const dashboardBtn = await getLocalizedText(welcomeLang, '📱 Открыть Дашборд');
 
         // Cleanup stale keyboards
         try { const k = await ctx.reply('…', Markup.removeKeyboard()); await bot.telegram.deleteMessage(ctx.chat.id, k.message_id); } catch (e) { }
@@ -282,7 +286,7 @@ bot.start(async (ctx) => {
 
         setTimeout(async () => {
             try {
-                const welcomeText2 = await getLocalizedText(lang, welcomeRuPart2);
+                const welcomeText2 = await getLocalizedText(welcomeLang, welcomeRuPart2);
                 await bot.telegram.sendMessage(telegramId, welcomeText2);
                 console.log(`[START] Welcome Part 2 sent to ${username}`);
             } catch (err) {
@@ -356,7 +360,7 @@ bot.on('text', async (ctx) => {
         if (!userLangCache[telegramId]) {
             userLangCache[telegramId] = user?.lang_code || systemLang;
         }
-    const uiLang = userLangCache[telegramId];
+        const uiLang = userLangCache[telegramId];
 
     if (!user) {
         const msgRu = 'Нажми /start для начала.';
