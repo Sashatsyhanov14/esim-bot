@@ -74,7 +74,8 @@ module.exports = {
       .delete()
       .eq('user_id', userId)
       .in('role', ['user', 'assistant'])
-      .not('content', 'like', 'PAYOUT_RECORD:%');
+      .not('content', 'like', 'PAYOUT_RECORD:%')
+      .not('content', 'like', 'COMMISSION_RECORD:%');
     return { error };
   },
 
@@ -85,6 +86,7 @@ module.exports = {
       .eq('user_id', userId)
       .in('role', ['user', 'assistant'])
       .not('content', 'like', 'PAYOUT_RECORD:%')
+      .not('content', 'like', 'COMMISSION_RECORD:%')
       .order('created_at', { ascending: false })
       .limit(limit);
 

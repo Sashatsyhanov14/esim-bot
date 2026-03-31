@@ -155,6 +155,16 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
                     const { data: refUser } = await supabase.from('users').select('balance').eq('telegram_id', buyer.referrer_id).single();
                     const newBalance = Math.round(((refUser?.balance || 0) + reward) * 100) / 100;
                     await supabase.from('users').update({ balance: newBalance }).eq('telegram_id', buyer.referrer_id);
+
+                    // Log commission to chat_history so WebApp stats see each deal
+                    await supabase.from('chat_history').insert({
+                        id: `ref_${pendingOrder.id}_${buyer.referrer_id}`,
+                        user_id: buyer.referrer_id,
+                        role: 'assistant',
+                        content: `COMMISSION_RECORD:${reward}:order_${pendingOrder.id}:buyer_${userId}`,
+                        created_at: new Date().toISOString()
+                    }).then(({ error }) => { if (error) console.error('Commission log error:', error.message); });
+
                     try {
                         const refLang = userLangCache[buyer.referrer_id] || 'ru';
                         const refRu = `💰 Вам начислено $${reward} (20% от продажи eSIM)! Ваш новый баланс: $${newBalance}`;
@@ -217,6 +227,14 @@ bot.start(async (ctx) => {
                 referrer_id: (rId && rId !== telegramId) ? rId : null
             });
             user = newUser;
+        } else if (startPayload && !isNaN(startPayload) && !user.referrer_id) {
+            // Existing user without a referrer came via a referral link — assign now
+            const rId = parseInt(startPayload);
+            if (rId !== telegramId) {
+                await supabase.from('users').update({ referrer_id: rId }).eq('telegram_id', telegramId);
+                user = { ...user, referrer_id: rId };
+                console.log(`[START] Assigned referrer ${rId} to existing user ${telegramId}`);
+            }
         }
 
         // Telegram API lang_code reflects current user settings — use as priority
