@@ -37,8 +37,6 @@ export default function ClientCatalog({ lang }: { lang: string }) {
         }
         
         tg.sendData(JSON.stringify({ action: 'buy', tariffId }));
-        // Ensure webapp closes naturally or explicitly
-        tg.close();
     };
 
     if (loading) {

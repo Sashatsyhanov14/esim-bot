@@ -320,6 +320,7 @@ bot.command('ref', async (ctx) => {
 bot.on('message', async (ctx, next) => {
     if (ctx.message?.web_app_data) {
         const data = ctx.message.web_app_data.data;
+        console.log('[WEB APP DATA RECEIVED]', data);
         if (data === '/ref') {
             const telegramId = ctx.from.id;
             const lang = userLangCache[telegramId] || ctx.from.language_code || 'en';
