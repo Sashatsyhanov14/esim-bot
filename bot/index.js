@@ -412,8 +412,15 @@ bot.on('message', async (ctx, next) => {
                                 } catch (e) {}
                             }
                         }
-                    } catch (e) { console.error('Sale flow error:', e.message); }
+                    } catch (e) { 
+                        console.error('Sale flow error:', e.message); 
+                        await ctx.reply('❌ System error during checkout.');
+                    }
+                } else {
+                    await ctx.reply('❌ Tariff not found in database: ' + tariffId);
                 }
+            } else {
+                await ctx.reply('❌ Invalid action received: ' + data);
             }
         }
         return;
