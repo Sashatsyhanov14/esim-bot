@@ -11,7 +11,7 @@ interface Tariff {
     is_active: boolean;
 }
 
-export default function ClientCatalog({ t, lang }: { t: any, lang: string }) {
+export default function ClientCatalog({ lang }: { lang: string }) {
     const [tariffs, setTariffs] = useState<Tariff[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');

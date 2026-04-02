@@ -542,7 +542,7 @@ const App: React.FC = () => {
 
   const renderUserContent = () => {
     if (activeTab === 'catalog') {
-        return <ClientCatalog t={t} lang={lang} />;
+        return <ClientCatalog lang={lang} />;
     }
 
     return (
