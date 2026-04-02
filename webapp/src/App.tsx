@@ -4,6 +4,7 @@ import WithdrawModal from './components/WithdrawModal';
 import AdminStats from './components/AdminStats';
 import AdminTariffs from './components/AdminTariffs';
 import AdminFaq from './components/AdminFaq';
+import ClientCatalog from './components/ClientCatalog';
 
 declare global {
   interface Window {
@@ -38,6 +39,7 @@ const translations = {
     boughtEsimLabel: "Активаций",
     inviteFriend: "Пригласить друга",
     tabReferral: "Бонусы",
+    tabCatalog: "Каталог",
     tabStats: "Статистика",
     tabTariffs: "Тарифы",
     tabFaq: "FAQ",
@@ -126,6 +128,7 @@ const translations = {
     boughtEsimLabel: "Aktivasyonlar",
     inviteFriend: "Arkadaş Davet Et",
     tabReferral: "Bonuslar",
+    tabCatalog: "Katalog",
     tabStats: "İstatistik",
     tabTariffs: "Tarifeler",
     tabFaq: "SSS",
@@ -214,6 +217,7 @@ const translations = {
     boughtEsimLabel: "Activations",
     inviteFriend: "Invite a Friend",
     tabReferral: "Bonuses",
+    tabCatalog: "Catalog",
     tabStats: "Stats",
     tabTariffs: "Tariffs",
     tabFaq: "FAQ",
@@ -289,7 +293,7 @@ const App: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [lang, setLang] = useState<'ru' | 'tr'>('ru');
 
-  const [activeTab, setActiveTab] = useState<'referral' | 'stats' | 'tariffs' | 'faq'>('referral');
+  const [activeTab, setActiveTab] = useState<'referral' | 'catalog' | 'stats' | 'tariffs' | 'faq'>('catalog');
 
   const tg = window.Telegram?.WebApp;
 
@@ -536,7 +540,12 @@ const App: React.FC = () => {
     }
   };
 
-  const renderUserContent = () => (
+  const renderUserContent = () => {
+    if (activeTab === 'catalog') {
+        return <ClientCatalog t={t} lang={lang} />;
+    }
+
+    return (
     <div className="space-y-6">
       <div className="bg-[#201f22] p-5 rounded-3xl relative overflow-hidden flex flex-col items-center text-center border border-white/5 mx-2">
         <div className="w-14 h-14 bg-secondary-container/20 border border-secondary/20 rounded-full flex items-center justify-center mb-4">
@@ -647,7 +656,8 @@ const App: React.FC = () => {
         </div>
       </div>
     </div>
-  );
+    );
+  };
 
   return (
     <>
@@ -658,8 +668,16 @@ const App: React.FC = () => {
 
       <nav className="fixed bottom-0 w-full z-50 flex justify-around items-center px-2 pb-6 pt-3 bg-[#131315]/80 backdrop-blur-2xl rounded-t-[1.5rem] shadow-[0_-10px_30px_rgba(0,0,0,0.5)] border-t border-white/5">
         <button
+          onClick={() => setActiveTab('catalog')}
+          className={`flex flex-col items-center p-2 rounded-xl transition-all w-full max-w-[80px] ${activeTab === 'catalog' ? 'text-primary scale-110' : 'text-on-surface-variant hover:text-on-surface'}`}
+        >
+          <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'catalog' ? "\'FILL\' 1" : "\'FILL\' 0" }}>storefront</span>
+          <span className="font-['Inter'] text-[9px] font-extrabold uppercase tracking-widest mt-1">{t.tabCatalog}</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('referral')}
-          className={`flex flex-col items-center p-2 rounded-xl transition-all ${activeTab === 'referral' ? 'text-secondary scale-110' : 'text-on-surface-variant hover:text-on-surface'}`}
+          className={`flex flex-col items-center p-2 rounded-xl transition-all w-full max-w-[80px] ${activeTab === 'referral' ? 'text-secondary scale-110' : 'text-on-surface-variant hover:text-on-surface'}`}
         >
           <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'referral' ? "\'FILL\' 1" : "\'FILL\' 0" }}>group</span>
           <span className="font-['Inter'] text-[9px] font-extrabold uppercase tracking-widest mt-1">{t.tabReferral}</span>
@@ -669,21 +687,22 @@ const App: React.FC = () => {
           <>
             <button
               onClick={() => setActiveTab('stats')}
-              className={`flex flex-col items-center p-2 rounded-xl transition-all ${activeTab === 'stats' ? 'text-primary scale-110' : 'text-on-surface-variant hover:text-on-surface'}`}
+              className={`flex flex-col items-center p-2 rounded-xl transition-all w-full max-w-[80px] ${activeTab === 'stats' ? 'text-primary scale-110' : 'text-on-surface-variant hover:text-on-surface'}`}
             >
               <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'stats' ? "\'FILL\' 1" : "\'FILL\' 0" }}>bar_chart</span>
               <span className="font-['Inter'] text-[9px] font-extrabold uppercase tracking-widest mt-1">{t.tabStats}</span>
             </button>
             <button
               onClick={() => setActiveTab('tariffs')}
-              className={`flex flex-col items-center p-2 rounded-xl transition-all ${activeTab === 'tariffs' ? 'text-primary scale-110' : 'text-on-surface-variant hover:text-on-surface'}`}
+              className={`flex flex-col items-center p-2 rounded-xl transition-all w-full max-w-[80px] ${activeTab === 'tariffs' ? 'text-primary scale-110' : 'text-on-surface-variant hover:text-on-surface'}`}
             >
               <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'tariffs' ? "\'FILL\' 1" : "\'FILL\' 0" }}>sell</span>
               <span className="font-['Inter'] text-[9px] font-extrabold uppercase tracking-widest mt-1">{t.tabTariffs}</span>
             </button>
+            {/* Make FAQ take less space or remove it to fit 5 items comfortably? Let's give buttons a max width */}
             <button
               onClick={() => setActiveTab('faq')}
-              className={`flex flex-col items-center p-2 rounded-xl transition-all ${activeTab === 'faq' ? 'text-primary scale-110' : 'text-on-surface-variant hover:text-on-surface'}`}
+              className={`flex flex-col items-center p-2 rounded-xl transition-all w-full max-w-[80px] ${activeTab === 'faq' ? 'text-primary scale-110' : 'text-on-surface-variant hover:text-on-surface'}`}
             >
               <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'faq' ? "\'FILL\' 1" : "\'FILL\' 0" }}>help</span>
               <span className="font-['Inter'] text-[9px] font-extrabold uppercase tracking-widest mt-1">{t.tabFaq}</span>

@@ -334,6 +334,86 @@ bot.on('message', async (ctx, next) => {
             } catch (err) {
                 await ctx.reply(text, { parse_mode: 'Markdown', disable_web_page_preview: true });
             }
+        } else {
+            let parsed = null;
+            try { parsed = JSON.parse(data); } catch(e) {}
+            if (parsed && parsed.action === 'buy') {
+                const tariffId = parsed.tariffId;
+                const telegramId = ctx.from.id;
+                const username = ctx.from.username || ctx.from.first_name;
+                
+                let { data: tariffs } = await getTariffs();
+                tariffs = tariffs || [];
+                const tariff = tariffs.find(t => t.id === tariffId);
+
+                if (tariff) {
+                    try {
+                        const { data: orderData } = await createOrder(telegramId, tariffId, tariff.price_usd);
+                        
+                        const uiLang = userLangCache[telegramId] || ctx.from.language_code || 'en';
+                        
+                        const successRu = `Выбранный тариф: ${tariff.country} | ${tariff.data_gb} на ${tariff.validity_period}`;
+                        let finalResponse = await getLocalizedText(uiLang, successRu);
+                        
+                        const payTextRu = `\n\n👇 **Оплатить онлайн:**\n${tariff.payment_link || 'Обратись к менеджеру'}\n\n✅ *Сразу после успешной оплаты мы вышлем твой тариф!*`;
+                        const payText = await getLocalizedText(uiLang, payTextRu);
+                        finalResponse += payText;
+                        
+                        await saveMessage(telegramId, 'assistant', finalResponse);
+                        
+                        try {
+                            await ctx.reply(finalResponse, { parse_mode: 'Markdown' });
+                        } catch (mdError) {
+                            await ctx.reply(finalResponse);
+                        }
+
+                        if (tariff.payment_qr_url) {
+                            let finalQrUrl = tariff.payment_qr_url;
+                            if (finalQrUrl.includes('drive.google.com')) {
+                                const match = finalQrUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                                if (match && match[1]) {
+                                    finalQrUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+                                }
+                            }
+                            const captionRu = `QR-код для оплаты тарифа ${tariff.country}`;
+                            const qrCaption = await getLocalizedText(uiLang, captionRu);
+                            try {
+                                await ctx.replyWithPhoto(finalQrUrl, { caption: qrCaption });
+                            } catch (err) {}
+                        }
+
+                        const { data: managers } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'manager']);
+                        if (managers && managers.length > 0) {
+                            for (const manager of managers) {
+                                try {
+                                    const mLangRaw = userLangCache[manager.telegram_id] || 'ru';
+                                    const mLang = mLangRaw === 'ru' ? 'ru' : (mLangRaw === 'tr' ? 'tr' : 'en');
+            
+                                    const managerTexts = {
+                                        ru: {
+                                            alert: `🚀 **ЗАКАЗ (КАТАЛОГ)!**\n\nЮзер: @${username} (ID: ${telegramId})\nТариф: ${tariff.country} | ${tariff.data_gb} на ${tariff.validity_period}\nЦена: $${tariff.price_usd}\n\n⚠️ ВАЖНО: Подтвердите оплату перед тем как скидывать eSIM-код!`,
+                                            sendBtn: '📤 Отправить eSIM (Код/Ссылка)'
+                                        },
+                                        tr: {
+                                            alert: `🚀 **SİPARİŞ (KATALOG)!**\n\nKullanıcı: @${username} (ID: ${telegramId})\nTarife: ${tariff.country} | ${tariff.data_gb} - ${tariff.validity_period}\nFiyat: $${tariff.price_usd}\n\n⚠️ ÖNEMLİ: Link veya QR'ı göndermeden önce ödemeyi onaylayın!`,
+                                            sendBtn: '📤 eSIM Gönder'
+                                        },
+                                        en: {
+                                            alert: `🚀 **ORDER (CATALOG)!**\n\nUser: @${username} (ID: ${telegramId})\nPlan: ${tariff.country} | ${tariff.data_gb} for ${tariff.validity_period}\nPrice: $${tariff.price_usd}\n\n⚠️ IMPORTANT: Verify payment before sending the Link/Code!`,
+                                            sendBtn: '📤 Send eSIM (Code/Link)'
+                                        }
+                                    };
+                                    const mt = managerTexts[mLang];
+                                    const buttons = (orderData && orderData.id) 
+                                        ? Markup.inlineKeyboard([[Markup.button.callback(mt.sendBtn, `sendqr_${orderData.id}`)]]) 
+                                        : {};
+                                    await bot.telegram.sendMessage(manager.telegram_id, mt.alert, buttons);
+                                } catch (e) {}
+                            }
+                        }
+                    } catch (e) { console.error('Sale flow error:', e.message); }
+                }
+            }
         }
         return;
     }
