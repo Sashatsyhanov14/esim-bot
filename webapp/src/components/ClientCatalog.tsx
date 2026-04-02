@@ -35,8 +35,15 @@ export default function ClientCatalog({ lang }: { lang: string }) {
             alert(lang === 'ru' ? 'Откройте WebApp через Telegram' : 'Open WebApp via Telegram');
             return;
         }
-        
-        tg.sendData(JSON.stringify({ action: 'buy', tariffId }));
+
+        try {
+            tg.sendData(JSON.stringify({ action: 'buy', tariffId }));
+            tg.close();
+        } catch (e) {
+            // Fallback to deeplink if sendData not supported (e.g., inline button context)
+            tg.openTelegramLink(`https://t.me/emedeoesimworld_bot?start=buy_${tariffId}`);
+            tg.close();
+        }
     };
 
     if (loading) {
@@ -57,11 +64,14 @@ export default function ClientCatalog({ lang }: { lang: string }) {
 
     const countries = Object.keys(grouped).filter(c => c.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    // Translations fallback explicitly (since t might not have all keys yet)
+    // Translations
     const lblSearch = lang === 'ru' ? 'Поиск страны...' : (lang === 'tr' ? 'Ülke ara...' : 'Search country...');
     const lblCatalog = lang === 'ru' ? 'Каталог eSIM' : (lang === 'tr' ? 'eSIM Kataloğu' : 'eSIM Catalog');
     const lblBack = lang === 'ru' ? 'Назад' : (lang === 'tr' ? 'Geri' : 'Back');
     const lblBuy = lang === 'ru' ? 'КУПИТЬ' : (lang === 'tr' ? 'SATIN AL' : 'BUY NOW');
+    const lblTraffic = lang === 'ru' ? 'Трафик' : (lang === 'tr' ? 'İnternet' : 'Data');
+    const lblValidity = lang === 'ru' ? 'Срок' : (lang === 'tr' ? 'Süre' : 'Validity');
+    const lblEmpty = lang === 'ru' ? 'Ничего не найдено' : (lang === 'tr' ? 'Bulunamadı' : 'Nothing found');
 
     if (selectedCountry) {
         const countryTariffs = grouped[selectedCountry] || [];
@@ -83,7 +93,7 @@ export default function ClientCatalog({ lang }: { lang: string }) {
                 <div className="grid grid-cols-1 gap-4">
                     {countryTariffs.map(tData => (
                         <div key={tData.id} className="glass-card p-5 rounded-2xl relative overflow-hidden group shadow-[0_10px_30px_rgba(0,0,0,0.2)]">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-[40px] -z-10 translate-x-1/3 -translate-y-1/3 transition-all group-hover:bg-primary/20"></div>
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-[40px] -z-10 translate-x-1/3 -translate-y-1/3 transition-all group-hover:bg-primary/20 pointer-events-none"></div>
                             
                             <div className="flex justify-between items-start mb-4">
                                 <h3 className="font-headline font-bold text-slate-100 text-lg">{selectedCountry}</h3>
@@ -96,7 +106,7 @@ export default function ClientCatalog({ lang }: { lang: string }) {
                                         <span className="material-symbols-outlined text-primary text-[18px]">wifi</span>
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="text-[9px] text-on-surface-variant font-extrabold tracking-wider uppercase">Трафик</span>
+                                        <span className="text-[9px] text-on-surface-variant font-extrabold tracking-wider uppercase">{lblTraffic}</span>
                                         <span className="text-slate-100 font-bold">{tData.data_gb}</span>
                                     </div>
                                 </div>
@@ -105,7 +115,7 @@ export default function ClientCatalog({ lang }: { lang: string }) {
                                         <span className="material-symbols-outlined text-secondary text-[18px]">schedule</span>
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="text-[9px] text-on-surface-variant font-extrabold tracking-wider uppercase">Срок</span>
+                                        <span className="text-[9px] text-on-surface-variant font-extrabold tracking-wider uppercase">{lblValidity}</span>
                                         <span className="text-slate-100 font-bold">{tData.validity_period}</span>
                                     </div>
                                 </div>
@@ -113,7 +123,7 @@ export default function ClientCatalog({ lang }: { lang: string }) {
 
                             <button 
                                 onClick={() => handleBuy(tData.id)}
-                                className="w-full bg-primary text-on-primary py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(208,188,255,0.2)] hover:bg-primary/90 active:scale-95 transition-all"
+                                className="w-full bg-primary text-on-primary py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(208,188,255,0.2)] hover:bg-primary/90 active:scale-95 transition-all outline-none"
                             >
                                 <span className="material-symbols-outlined text-[18px]">shopping_cart_checkout</span>
                                 {lblBuy}
@@ -160,7 +170,7 @@ export default function ClientCatalog({ lang }: { lang: string }) {
                 
                 {countries.length === 0 && (
                     <div className="col-span-2 text-center p-8 text-on-surface-variant border border-dashed border-outline-variant/20 rounded-2xl">
-                        Ничего не найдено
+                        {lblEmpty}
                     </div>
                 )}
             </div>
