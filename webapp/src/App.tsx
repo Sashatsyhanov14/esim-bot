@@ -658,12 +658,13 @@ const App: React.FC = () => {
     </div>
     );
   };
+  const isManagerTab = ['stats', 'tariffs', 'faq'].includes(activeTab);
 
   return (
     <>
-      {isFounder && activeTab !== 'referral' ? renderAdminHeader() : renderUserHeader()}
+      {isFounder && isManagerTab ? renderAdminHeader() : renderUserHeader()}
       <main className="px-4 pt-2 space-y-8 max-w-2xl mx-auto pb-24">
-        {isFounder && activeTab !== 'referral' ? renderAdminContent() : renderUserContent()}
+        {isFounder && isManagerTab ? renderAdminContent() : renderUserContent()}
       </main>
 
       <nav className="fixed bottom-0 w-full z-50 flex justify-around items-center px-2 pb-6 pt-3 bg-[#131315]/80 backdrop-blur-2xl rounded-t-[1.5rem] shadow-[0_-10px_30px_rgba(0,0,0,0.5)] border-t border-white/5">
