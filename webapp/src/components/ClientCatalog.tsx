@@ -38,7 +38,6 @@ export default function ClientCatalog({ lang }: { lang: string }) {
 
         try {
             tg.sendData(JSON.stringify({ action: 'buy', tariffId }));
-            tg.close();
         } catch (e) {
             // Fallback to deeplink if sendData not supported (e.g., inline button context)
             tg.openTelegramLink(`https://t.me/emedeoesimworld_bot?start=buy_${tariffId}`);
