@@ -132,6 +132,12 @@ app.post('/api/translate', async (req, res) => {
         const translatedText = await getLocalizedText(targetLang, text);
         
         res.json({ translatedText });
+    } catch (err) {
+        console.error('API Translate Error:', err);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
 app.post('/api/withdraw-request', async (req, res) => {
     try {
         const { telegram_id, amount, method } = req.body;
