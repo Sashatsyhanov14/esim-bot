@@ -54,7 +54,7 @@ module.exports = {
   async getTariffs() {
     const { data, error } = await supabase
       .from('tariffs')
-      .select('id, sort_number, country, data_gb, validity_period, price_usd, payment_link, payment_qr_url')
+      .select('*, country, data_gb, validity_period') // Selection * ensures we get all new columns like country_ru, etc.
       .eq('is_active', true)
       .order('sort_number', { ascending: true }); // Отвечаем в отсортированном порядке, если есть
     return { data, error };

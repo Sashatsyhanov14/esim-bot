@@ -78,10 +78,12 @@ export default function ClientCatalog({ lang, telegramId }: { lang: string, tele
 
     // DB localization helper
     const loc = (field: string, tData: any) => {
-        if (lang !== 'en' && tData[`${field}_${lang}`]) {
-            return tData[`${field}_${lang}`];
+        if (!lang || lang === 'en') return tData[field];
+        if (field === 'country') {
+            const localized = tData[`country_${lang}`];
+            return localized && localized.trim() !== '' ? localized : tData.country;
         }
-        return tData[field] || '';
+        return tData[field]; // data_gb and validity_period are now English-only
     };
 
     // Group by localized country

@@ -45,8 +45,14 @@ module.exports = {
             }
 
             // === AGENT 2: THE WRITER ===
+            const localizedTariffs = tariffs.map(t => {
+                const l = analysis.lang_code || 'en';
+                const country = (l !== 'en' && t[`country_${l}`]) ? t[`country_${l}`] : t.country;
+                return { ...t, country, data_gb: t.data_gb, validity_period: t.validity_period };
+            });
+
             const writerMessages = [
-                { role: 'system', content: WRITER_PROMPT(tariffs, faqText) },
+                { role: 'system', content: WRITER_PROMPT(localizedTariffs, faqText) },
                 { role: 'user', content: `Инструкции Главного Агента (Аналитика):\n\nОтвечай строго на языке: ${analysis.lang_code}\nКраткая суть: ${analysis.intent}\n\nСАМА ИНСТРУКЦИЯ (что именно сказать клиенту, какие цены и гигабайты назвать):\n${analysis.writer_instruction}` }
             ];
 

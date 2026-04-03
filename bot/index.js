@@ -15,6 +15,13 @@ bot.use(session());
 // In-memory state tracking for managers: { managerTelegramId: orderId }
 const managerStates = new Map();
 
+// --- HELPER: Localization for Tariffs (Simplified: Country Only) ---
+const locTariff = (tariff, lang) => {
+    const l = lang || 'en';
+    const country = (l !== 'en' && tariff[`country_${l}`]) ? tariff[`country_${l}`] : tariff.country;
+    return { country, data_gb: tariff.data_gb, validity: tariff.validity_period };
+};
+
 // --- HELPER: Late Follow-up (2 min) ---
 async function scheduleFollowup(userId, lang) {
     const delayTextRu = `Благодарим Вас за проявленный интерес и уделенное время! 🙏
@@ -352,8 +359,9 @@ bot.on('message', async (ctx, next) => {
                         const { data: orderData } = await createOrder(telegramId, tariffId, tariff.price_usd);
                         
                         const uiLang = userLangCache[telegramId] || ctx.from.language_code || 'en';
+                        const lt = locTariff(tariff, uiLang);
                         
-                        const successRu = `Выбранный тариф: ${tariff.country} | ${tariff.data_gb} на ${tariff.validity_period}`;
+                        const successRu = `Выбранный тариф: ${lt.country} | ${lt.data_gb} на ${lt.validity}`;
                         let finalResponse = await getLocalizedText(uiLang, successRu);
                         
                         const payTextRu = `\n\n👇 **Оплатить онлайн:**\n${tariff.payment_link || 'Обратись к менеджеру'}\n\n✅ *Сразу после успешной оплаты мы вышлем твой тариф!*`;
@@ -376,7 +384,8 @@ bot.on('message', async (ctx, next) => {
                                     finalQrUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
                                 }
                             }
-                            const captionRu = `QR-код для оплаты тарифа ${tariff.country}`;
+                            const lt = locTariff(tariff, uiLang);
+                            const captionRu = `QR-код для оплаты тарифа ${lt.country}`;
                             const qrCaption = await getLocalizedText(uiLang, captionRu);
                             try {
                                 await ctx.replyWithPhoto(finalQrUrl, { caption: qrCaption });
@@ -390,25 +399,27 @@ bot.on('message', async (ctx, next) => {
                                     const mLangRaw = userLangCache[manager.telegram_id] || 'ru';
                                     const mLang = mLangRaw === 'ru' ? 'ru' : (mLangRaw === 'tr' ? 'tr' : 'en');
             
-                                    const managerTexts = {
+                                    const mlt = locTariff(tariff, mLang);
+
+                                    const managerTextsLocalized = {
                                         ru: {
-                                            alert: `🚀 **ЗАКАЗ (КАТАЛОГ)!**\n\nЮзер: @${username} (ID: ${telegramId})\nТариф: ${tariff.country} | ${tariff.data_gb} на ${tariff.validity_period}\nЦена: $${tariff.price_usd}\n\n⚠️ ВАЖНО: Подтвердите оплату перед тем как скидывать eSIM-код!`,
+                                            alert: `🚀 **ЗАКАЗ (КАТАЛОГ)!**\n\nЮзер: @${username} (ID: ${telegramId})\nТариф: ${mlt.country} | ${mlt.data_gb} на ${mlt.validity}\nЦена: $${tariff.price_usd}\n\n⚠️ ВАЖНО: Подтвердите оплату перед тем как скидывать eSIM-код!`,
                                             sendBtn: '📤 Отправить eSIM (Код/Ссылка)'
                                         },
                                         tr: {
-                                            alert: `🚀 **SİPARİŞ (KATALOG)!**\n\nKullanıcı: @${username} (ID: ${telegramId})\nTarife: ${tariff.country} | ${tariff.data_gb} - ${tariff.validity_period}\nFiyat: $${tariff.price_usd}\n\n⚠️ ÖNEMLİ: Link veya QR'ı göndermeden önce ödemeyi onaylayın!`,
+                                            alert: `🚀 **SİPARİŞ (KATALOG)!**\n\nKullanıcı: @${username} (ID: ${telegramId})\nTarife: ${mlt.country} | ${mlt.data_gb} - ${mlt.validity}\nFiyat: $${tariff.price_usd}\n\n⚠️ ÖNEMLİ: Link veya QR'ı göndermeden önce ödemeyi onaylayın!`,
                                             sendBtn: '📤 eSIM Gönder'
                                         },
                                         en: {
-                                            alert: `🚀 **ORDER (CATALOG)!**\n\nUser: @${username} (ID: ${telegramId})\nPlan: ${tariff.country} | ${tariff.data_gb} for ${tariff.validity_period}\nPrice: $${tariff.price_usd}\n\n⚠️ IMPORTANT: Verify payment before sending the Link/Code!`,
+                                            alert: `🚀 **ORDER (CATALOG)!**\n\nUser: @${username} (ID: ${telegramId})\nPlan: ${mlt.country} | ${mlt.data_gb} for ${mlt.validity}\nPrice: $${tariff.price_usd}\n\n⚠️ IMPORTANT: Verify payment before sending the Link/Code!`,
                                             sendBtn: '📤 Send eSIM (Code/Link)'
                                         }
                                     };
-                                    const mt = managerTexts[mLang];
+                                    const mtFinal = managerTextsLocalized[mLang] || managerTextsLocalized['en'];
                                     const buttons = (orderData && orderData.id) 
-                                        ? Markup.inlineKeyboard([[Markup.button.callback(mt.sendBtn, `sendqr_${orderData.id}`)]]) 
+                                        ? Markup.inlineKeyboard([[Markup.button.callback(mtFinal.sendBtn, `sendqr_${orderData.id}`)]]) 
                                         : {};
-                                    await bot.telegram.sendMessage(manager.telegram_id, mt.alert, buttons);
+                                    await bot.telegram.sendMessage(manager.telegram_id, mtFinal.alert, buttons);
                                 } catch (e) {}
                             }
                         }
@@ -516,7 +527,9 @@ bot.on('text', async (ctx) => {
 
             // Fetch dynamic uiLang strictly from userLangCache updated by AI
             const uiLang = userLangCache[telegramId] || ctx.from.language_code || 'en';
-            const payTextRu = `\n\n👇 **Оплатить онлайн:**\n${tariff.payment_link || 'Обратись к менеджеру'}\n\n✅ *Сразу после успешной оплаты мы вышлем твой тариф!*`;
+            const ltAI = locTariff(tariff, uiLang);
+
+            const payTextRu = `\n\nВыбранный тариф: ${ltAI.country} | ${ltAI.data_gb} на ${ltAI.validity}\n\n👇 **Оплатить онлайн:**\n${tariff.payment_link || 'Обратись к менеджеру'}\n\n✅ *Сразу после успешной оплаты мы вышлем твой тариф!*`;
             const payText = await getLocalizedText(uiLang, payTextRu);
 
             finalResponse += payText;
@@ -538,7 +551,8 @@ bot.on('text', async (ctx) => {
                         finalQrUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
                     }
                 }
-                const captionRu = `QR-код для оплаты тарифа ${tariff.country}`;
+                const ltAI_qr = locTariff(tariff, userLangCache[telegramId] || 'ru');
+                const captionRu = `QR-код для оплаты тарифа ${ltAI_qr.country}`;
                 const qrCaption = await getLocalizedText(userLangCache[telegramId] || 'ru', captionRu);
                 try {
                     await ctx.replyWithPhoto(finalQrUrl, { caption: qrCaption });
@@ -558,32 +572,33 @@ bot.on('text', async (ctx) => {
                     try {
                         const mLangRaw = userLangCache[manager.telegram_id] || 'ru';
                         const mLang = mLangRaw === 'ru' ? 'ru' : (mLangRaw === 'tr' ? 'tr' : 'en');
+                        const mltAI = locTariff(tariff, mLang);
 
-                        const managerTexts = {
+                        const managerTextsLocalizedAI = {
                             ru: {
-                                alert: `🚀 **ЗАКАЗ!**\n\nЮзер: @${username} (ID: ${telegramId})\nТариф: ${tariff.country} | ${tariff.data_gb} на ${tariff.validity_period}\nЦена: $${tariff.price_usd}\n\n⚠️ ВАЖНО: Подтвердите оплату перед тем как скидывать eSIM-код!`,
+                                alert: `🚀 **ЗАКАЗ!**\n\nЮзер: @${username} (ID: ${telegramId})\nТариф: ${mltAI.country} | ${mltAI.data_gb} на ${mltAI.validity}\nЦена: $${tariff.price_usd}\n\n⚠️ ВАЖНО: Подтвердите оплату перед тем как скидывать eSIM-код!`,
                                 sendBtn: '📤 Отправить eSIM (Код/Ссылка)',
                                 cancelBtn: '❌ Отменить'
                             },
                             tr: {
-                                alert: `🚀 **SİPARİŞ!**\n\nKullanıcı: @${username} (ID: ${telegramId})\nTarife: ${tariff.country} | ${tariff.data_gb} - ${tariff.validity_period}\nFiyat: $${tariff.price_usd}\n\n⚠️ ÖNEMLİ: Link veya QR'ı göndermeden önce ödemeyi onaylayın!`,
+                                alert: `🚀 **SİPARİŞ!**\n\nKullanıcı: @${username} (ID: ${telegramId})\nTarife: ${mltAI.country} | ${mltAI.data_gb} - ${mltAI.validity}\nFiyat: $${tariff.price_usd}\n\n⚠️ ÖNEMLİ: Link veya QR'ı göndermeden önce ödemeyi onaylayın!`,
                                 sendBtn: '📤 eSIM Gönder',
                                 cancelBtn: '❌ İptal'
                             },
                             en: {
-                                alert: `🚀 **ORDER!**\n\nUser: @${username} (ID: ${telegramId})\nPlan: ${tariff.country} | ${tariff.data_gb} for ${tariff.validity_period}\nPrice: $${tariff.price_usd}\n\n⚠️ IMPORTANT: Verify payment before sending the Link/Code!`,
+                                alert: `🚀 **ORDER!**\n\nUser: @${username} (ID: ${telegramId})\nPlan: ${mltAI.country} | ${mltAI.data_gb} for ${mltAI.validity}\nPrice: $${tariff.price_usd}\n\n⚠️ IMPORTANT: Verify payment before sending the Link/Code!`,
                                 sendBtn: '📤 Send eSIM (Code/Link)',
                                 cancelBtn: '❌ Cancel'
                             }
                         };
-                        const mt = managerTexts[mLang];
+                        const mtFinalAI = managerTextsLocalizedAI[mLang] || managerTextsLocalizedAI['en'];
 
                                 // Safely handle orderData.id null check
                                 const buttons = (orderData && orderData.id) 
-                                    ? Markup.inlineKeyboard([[Markup.button.callback(mt.sendBtn, `sendqr_${orderData.id}`)]]) 
+                                    ? Markup.inlineKeyboard([[Markup.button.callback(mtFinalAI.sendBtn, `sendqr_${orderData.id}`)]]) 
                                     : {};
 
-                                await bot.telegram.sendMessage(manager.telegram_id, mt.alert, buttons);
+                                await bot.telegram.sendMessage(manager.telegram_id, mtFinalAI.alert, buttons);
                             } catch (e) {
                                 console.error('Manager notify error:', e.message);
                             }

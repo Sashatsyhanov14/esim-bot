@@ -12,6 +12,13 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+// --- HELPER: Localization for Tariffs (Simplified: Country Only) ---
+const locTariff = (tariff, lang) => {
+    const l = lang || 'en';
+    const country = (l !== 'en' && tariff[`country_${l}`]) ? tariff[`country_${l}`] : tariff.country;
+    return { country, data_gb: tariff.data_gb, validity: tariff.validity_period };
+};
+
 // Serve static files from the React app
 const webappDistPath = path.join(__dirname, '../webapp/dist');
 app.use(express.static(webappDistPath));
@@ -74,12 +81,36 @@ app.post('/api/catalog-buy', async (req, res) => {
 
             for (const manager of managers) {
                 try {
-                    const alert = `🚀 **ЗАКАЗ (КАТАЛОГ WebApp)!**\n\nЮзер: @${username} (ID: ${telegramId})\nТариф: ${tariff.country} | ${tariff.data_gb} на ${tariff.validity_period}\nЦена: $${tariff.price_usd}\n\n⚠️ ВАЖНО: Подтвердите оплату перед тем как скидывать eSIM-код!`;
-                    
+                    // Try to get manager's language from DB or default to 'ru' for managers
+                    let mLang = 'ru';
+                    try {
+                        const { data: mUser } = await supabase.from('users').select('lang_code').eq('telegram_id', manager.telegram_id).single();
+                        if (mUser && mUser.lang_code) mLang = mUser.lang_code;
+                    } catch (e) {}
+
+                    const mlt = locTariff(tariff, mLang);
+
+                    const alertTexts = {
+                        ru: {
+                            text: `🚀 **ЗАКАЗ (КАТАЛОГ WebApp)!**\n\nЮзер: @${username} (ID: ${telegramId})\nТариф: ${mlt.country} | ${mlt.data_gb} на ${mlt.validity}\nЦена: $${tariff.price_usd}\n\n⚠️ ВАЖНО: Подтвердите оплату перед тем как скидывать eSIM-код!`,
+                            btn: '📤 Отправить eSIM (Код/Ссылка)'
+                        },
+                        tr: {
+                            text: `🚀 **SİPARİŞ (KATALOG WebApp)!**\n\nKullanıcı: @${username} (ID: ${telegramId})\nTarife: ${mlt.country} | ${mlt.data_gb} - ${mlt.validity}\nFiyat: $${tariff.price_usd}\n\n⚠️ ÖNEMLİ: Ödeme onayından sonra gönderin!`,
+                            btn: '📤 eSIM Gönder'
+                        },
+                        en: {
+                            text: `🚀 **ORDER (CATALOG WebApp)!**\n\nUser: @${username} (ID: ${telegramId})\nPlan: ${mlt.country} | ${mlt.data_gb} for ${mlt.validity}\nPrice: $${tariff.price_usd}\n\n⚠️ IMPORTANT: Verify payment before sending!`,
+                            btn: '📤 Send eSIM (Code/Link)'
+                        }
+                    };
+
+                    const mt = alertTexts[mLang] || alertTexts['en'];
+
                     const buttons = (orderData && orderData.id) 
-                        ? Markup.inlineKeyboard([[Markup.button.callback('📤 Отправить eSIM (Код/Ссылка)', `sendqr_${orderData.id}`)]]) 
+                        ? Markup.inlineKeyboard([[Markup.button.callback(mt.btn, `sendqr_${orderData.id}`)]]) 
                         : {};
-                    await bot.telegram.sendMessage(manager.telegram_id, alert, buttons);
+                    await bot.telegram.sendMessage(manager.telegram_id, mt.text, buttons);
                 } catch (e) {}
             }
         }
@@ -87,6 +118,22 @@ app.post('/api/catalog-buy', async (req, res) => {
         res.json({ success: true, orderId: orderData?.id });
     } catch (err) {
         console.error('Catalog Buy API Error:', err);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+// API endpoint to translate text (for Admin Panel Auto-translate)
+app.post('/api/translate', async (req, res) => {
+    try {
+        const { text, targetLang } = req.body;
+        if (!text || !targetLang) return res.status(400).json({ error: 'Missing parameters' });
+
+        const { getLocalizedText } = require('./src/openai');
+        const translatedText = await getLocalizedText(targetLang, text);
+        
+        res.json({ translatedText });
+    } catch (err) {
+        console.error('API Translate Error:', err);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
