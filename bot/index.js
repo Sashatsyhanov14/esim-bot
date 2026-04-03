@@ -1,4 +1,5 @@
 const { Telegraf, session, Markup } = require('telegraf');
+const axios = require('axios');
 const dotenv = require('dotenv');
 const { supabase, getUser, createUser, getTariffs, saveMessage, getHistory, createOrder, getFaq, clearHistory } = require('./src/supabase');
 const { getChatResponse, getLocalizedText } = require('./src/openai');
@@ -165,7 +166,6 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
 
                     // Log commission to chat_history so WebApp stats see each deal
                     await supabase.from('chat_history').insert({
-                        id: `ref_${pendingOrder.id}_${buyer.referrer_id}`,
                         user_id: buyer.referrer_id,
                         role: 'assistant',
                         content: `COMMISSION_RECORD:${reward}:order_${pendingOrder.id}:buyer_${userId}`,
