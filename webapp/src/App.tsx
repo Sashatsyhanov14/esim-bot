@@ -703,17 +703,27 @@ const App: React.FC = () => {
   const renderLangSwitcher = () => (
     <div className="relative">
       <button
+        id="lang-selector-btn"
         onClick={() => setShowLangDropdown(!showLangDropdown)}
-        className="bg-surface-container-high hover:bg-surface-container-highest px-3 py-1.5 rounded-full text-[10px] font-extrabold text-on-surface flex items-center gap-1 transition-colors border border-white/5 active:scale-95"
+        className="bg-[#2a2a2f] hover:bg-[#323238] px-3 py-1.5 rounded-full text-[10px] font-extrabold text-slate-100 flex items-center gap-1.5 transition-all border border-white/10 active:scale-95 shadow-lg"
       >
-        <span className="material-symbols-outlined text-[14px]">language</span>
+        <span className="material-symbols-outlined text-[14px] text-primary">language</span>
         {lang.toUpperCase()}
       </button>
 
       {showLangDropdown && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setShowLangDropdown(false)} />
-          <div className="absolute right-0 mt-2 w-32 bg-surface-container-highest border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden py-1 animate-in fade-in zoom-in duration-200 origin-top-right">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-[2px]" 
+            onClick={() => setShowLangDropdown(false)} 
+          />
+          
+          {/* Dropdown Menu */}
+          <div className="fixed top-12 right-6 w-40 bg-[#1a1a1f] border border-white/10 rounded-2xl shadow-2xl z-[101] overflow-hidden py-1.5 animate-in fade-in zoom-in duration-200 origin-top-right">
+            <div className="px-4 py-2 border-b border-white/5 mb-1">
+              <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Select Language</p>
+            </div>
             {['ru', 'en', 'tr', 'de', 'pl', 'ar', 'fa'].map((l) => (
               <button
                 key={l}
@@ -721,10 +731,10 @@ const App: React.FC = () => {
                   setLang(l);
                   setShowLangDropdown(false);
                 }}
-                className={`w-full text-left px-4 py-2 text-xs font-bold hover:bg-primary/20 transition-colors flex items-center justify-between ${lang === l ? 'text-primary bg-primary/10' : 'text-on-surface'}`}
+                className={`w-full text-left px-4 py-3 text-xs font-bold transition-all flex items-center justify-between border-l-4 ${lang === l ? 'text-primary bg-primary/10 border-primary' : 'text-slate-300 border-transparent hover:bg-white/5'}`}
               >
-                <span>{l.toUpperCase()}</span>
-                {lang === l && <span className="material-symbols-outlined text-xs">check</span>}
+                <span>{l === 'ru' ? 'Русский' : l === 'en' ? 'English' : l === 'tr' ? 'Türkçe' : l === 'de' ? 'Deutsch' : l === 'pl' ? 'Polski' : l === 'ar' ? 'العربية' : 'فارسی'}</span>
+                {lang === l && <span className="material-symbols-outlined text-[16px]">check_circle</span>}
               </button>
             ))}
           </div>
