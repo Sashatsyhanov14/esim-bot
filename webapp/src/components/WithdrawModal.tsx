@@ -4,10 +4,10 @@ interface WithdrawModalProps {
     isOpen: boolean;
     onClose: () => void;
     balance: number;
-    lang: 'ru' | 'tr';
+    lang: string;
 }
 
-const translations = {
+const translations: Record<string, any> = {
     ru: {
         title: "Вывод бонусов",
         amountLabel: "Сумма (Макс: {balance} $)",
@@ -16,6 +16,51 @@ const translations = {
         methodPlaceholder: "Реквизиты...",
         submit: "Отправить запрос",
         alert: "Заявка на вывод {amount} $ ({method}) отправлена менеджеру!"
+    },
+    en: {
+        title: "Withdraw Bonuses",
+        amountLabel: "Amount (Max: {balance} $)",
+        amountPlaceholder: "0.00",
+        methodLabel: "Payout Method (Card / USDT / Number)",
+        methodPlaceholder: "Details...",
+        submit: "Submit Request",
+        alert: "Withdrawal request for {amount} $ ({method}) sent to manager!"
+    },
+    de: {
+        title: "Boni auszahlen",
+        amountLabel: "Betrag (Max: {balance} $)",
+        amountPlaceholder: "0.00",
+        methodLabel: "Auszahlungsmethode (Karte / USDT / Nummer)",
+        methodPlaceholder: "Details...",
+        submit: "Anfrage senden",
+        alert: "Auszahlungsanfrage über {amount} $ ({method}) an Manager gesendet!"
+    },
+    pl: {
+        title: "Wypłata Bonusów",
+        amountLabel: "Kwota (Maks: {balance} $)",
+        amountPlaceholder: "0.00",
+        methodLabel: "Metoda Wypłaty (Karta / USDT / Numer)",
+        methodPlaceholder: "Dane konta...",
+        submit: "Wyślij zapytanie",
+        alert: "Prośba o wypłatę {amount} $ ({method}) wysłana do menedżera!"
+    },
+    ar: {
+        title: "سحب المكافآت",
+        amountLabel: "المبلغ (الحد الأقصى: {balance} $)",
+        amountPlaceholder: "0.00",
+        methodLabel: "طريقة الدفع (بطاقة / USDT / رقم)",
+        methodPlaceholder: "التفاصيل...",
+        submit: "إرسال طلب",
+        alert: "تم إرسال طلب سحب {amount} $ ({method}) إلى المدير!"
+    },
+    fa: {
+        title: "برداشت پاداش‌ها",
+        amountLabel: "مبلغ (حداکثر: {balance} $)",
+        amountPlaceholder: "0.00",
+        methodLabel: "روش پرداخت (کارت / USDT / شماره)",
+        methodPlaceholder: "مشخصات...",
+        submit: "ارسال درخواست",
+        alert: "درخواست برداشت {amount} $ ({method}) به مدیر ارسال شد!"
     },
     tr: {
         title: "Bonus Çekimi",
@@ -34,7 +79,7 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ isOpen, onClose, balance,
 
     if (!isOpen) return null;
 
-    const t = translations[lang];
+    const t = translations[lang] || translations['en'];
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();

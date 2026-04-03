@@ -46,6 +46,51 @@ app.post('/api/send-qr', async (req, res) => {
     }
 });
 
+// API endpoint for WebApp Catalog Purchase
+app.post('/api/catalog-buy', async (req, res) => {
+    try {
+        const { telegramId, tariffId } = req.body;
+        if (!telegramId || !tariffId) return res.status(400).json({ error: 'Missing parameters' });
+
+        const { createOrder, getTariffs, supabase } = require('./src/supabase');
+        let { data: tariffs } = await getTariffs();
+        const tariff = (tariffs || []).find(t => t.id === tariffId);
+
+        if (!tariff) return res.status(404).json({ error: 'Tariff not found' });
+
+        const { data: orderData } = await createOrder(telegramId, tariffId, tariff.price_usd);
+
+        // Fetch managers to notify
+        const { data: managers } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'manager']);
+        if (managers && managers.length > 0) {
+            const { Markup } = require('telegraf');
+            
+            // Try fetch username
+            let username = "User";
+            try { 
+                const { data: bUser } = await supabase.from('users').select('username').eq('telegram_id', telegramId).single();
+                if (bUser && bUser.username) username = bUser.username;
+            } catch (e) {}
+
+            for (const manager of managers) {
+                try {
+                    const alert = `🚀 **ЗАКАЗ (КАТАЛОГ WebApp)!**\n\nЮзер: @${username} (ID: ${telegramId})\nТариф: ${tariff.country} | ${tariff.data_gb} на ${tariff.validity_period}\nЦена: $${tariff.price_usd}\n\n⚠️ ВАЖНО: Подтвердите оплату перед тем как скидывать eSIM-код!`;
+                    
+                    const buttons = (orderData && orderData.id) 
+                        ? Markup.inlineKeyboard([[Markup.button.callback('📤 Отправить eSIM (Код/Ссылка)', `sendqr_${orderData.id}`)]]) 
+                        : {};
+                    await bot.telegram.sendMessage(manager.telegram_id, alert, buttons);
+                } catch (e) {}
+            }
+        }
+
+        res.json({ success: true, orderId: orderData?.id });
+    } catch (err) {
+        console.error('Catalog Buy API Error:', err);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
 // Any other request serves the React app
 app.get('*', (req, res) => {
     res.sendFile(path.join(webappDistPath, 'index.html'));

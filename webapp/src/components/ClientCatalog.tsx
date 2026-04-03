@@ -9,13 +9,15 @@ interface Tariff {
     validity_period: string;
     price_usd: number;
     is_active: boolean;
+    payment_link?: string;
 }
 
-export default function ClientCatalog({ lang }: { lang: string }) {
+export default function ClientCatalog({ lang, telegramId }: { lang: string, telegramId?: string | null }) {
     const [tariffs, setTariffs] = useState<Tariff[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+    const [buyLoading, setBuyLoading] = useState<string | null>(null);
 
     const tg = window.Telegram?.WebApp;
 
@@ -30,18 +32,38 @@ export default function ClientCatalog({ lang }: { lang: string }) {
         setLoading(false);
     };
 
-    const handleBuy = (tariffId: string) => {
+    const handleBuy = async (tData: Tariff) => {
         if (!tg) {
             alert(lang === 'ru' ? 'Откройте WebApp через Telegram' : 'Open WebApp via Telegram');
             return;
         }
 
+        setBuyLoading(tData.id);
+
         try {
-            tg.sendData(JSON.stringify({ action: 'buy', tariffId }));
+            // First notify the backend to register the order silently
+            if (telegramId) {
+                await fetch('/api/catalog-buy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telegramId, tariffId: tData.id })
+                });
+            }
+
+            // Immediately redirect user to payment link
+            if (tData.payment_link) {
+                tg.openLink(tData.payment_link);
+            } else {
+                tg.openTelegramLink(`https://t.me/emedeoesimworld_bot?start=buy_${tData.id}`);
+            }
+            // Close the catalog webapp cleanly right after redirect triggers
+            setTimeout(() => tg.close(), 500); 
         } catch (e) {
-            // Fallback to deeplink if sendData not supported (e.g., inline button context)
-            tg.openTelegramLink(`https://t.me/emedeoesimworld_bot?start=buy_${tariffId}`);
+            console.error(e);
+            tg.openTelegramLink(`https://t.me/emedeoesimworld_bot?start=buy_${tData.id}`);
             tg.close();
+        } finally {
+            setBuyLoading(null);
         }
     };
 
@@ -54,34 +76,48 @@ export default function ClientCatalog({ lang }: { lang: string }) {
         );
     }
 
-    // Group by country
+    // DB localization helper
+    const loc = (field: string, tData: any) => {
+        if (lang !== 'en' && tData[`${field}_${lang}`]) {
+            return tData[`${field}_${lang}`];
+        }
+        return tData[field] || '';
+    };
+
+    // Group by localized country
     const grouped = tariffs.reduce((acc: Record<string, Tariff[]>, tariff) => {
-        if (!acc[tariff.country]) acc[tariff.country] = [];
-        acc[tariff.country].push(tariff);
+        const c = loc('country', tariff) || tariff.country;
+        if (!acc[c]) acc[c] = [];
+        acc[c].push(tariff);
         return acc;
     }, {});
 
     const countries = Object.keys(grouped).filter(c => c.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    // Translations
-    const lblSearch = lang === 'ru' ? 'Поиск страны...' : (lang === 'tr' ? 'Ülke ara...' : 'Search country...');
-    const lblCatalog = lang === 'ru' ? 'Каталог eSIM' : (lang === 'tr' ? 'eSIM Kataloğu' : 'eSIM Catalog');
-    const lblBack = lang === 'ru' ? 'Назад' : (lang === 'tr' ? 'Geri' : 'Back');
-    const lblBuy = lang === 'ru' ? 'КУПИТЬ' : (lang === 'tr' ? 'SATIN AL' : 'BUY NOW');
-    const lblTraffic = lang === 'ru' ? 'Трафик' : (lang === 'tr' ? 'İnternet' : 'Data');
-    const lblValidity = lang === 'ru' ? 'Срок' : (lang === 'tr' ? 'Süre' : 'Validity');
-    const lblEmpty = lang === 'ru' ? 'Ничего не найдено' : (lang === 'tr' ? 'Bulunamadı' : 'Nothing found');
+    const translations: Record<string, Record<string, string>> = {
+        ru: { search: 'Поиск страны...', catalog: 'Каталог eSIM', back: 'Назад', buy: 'КУПИТЬ', traffic: 'Трафик', validity: 'Срок', empty: 'Ничего не найдено', loading: 'Загрузка тарифов...', open_tg: 'Откройте WebApp через Telegram' },
+        en: { search: 'Search country...', catalog: 'eSIM Catalog', back: 'Back', buy: 'BUY NOW', traffic: 'Data', validity: 'Validity', empty: 'Nothing found', loading: 'Loading plans...', open_tg: 'Open WebApp via Telegram' },
+        de: { search: 'Land suchen...', catalog: 'eSIM-Katalog', back: 'Zurück', buy: 'KAUFEN', traffic: 'Daten', validity: 'Gültigkeit', empty: 'Nichts gefunden', loading: 'Tarife laden...', open_tg: 'Öffne WebApp über Telegram' },
+        pl: { search: 'Szukaj kraju...', catalog: 'Katalog eSIM', back: 'Wstecz', buy: 'KUP TERAZ', traffic: 'Internet', validity: 'Ważność', empty: 'Nic nie znaleziono', loading: 'Ładowanie taryf...', open_tg: 'Otwórz WebApp przez Telegram' },
+        ar: { search: 'ابحث عن بلد...', catalog: 'كتالوج eSIM', back: 'خلف', buy: 'اشتر الآن', traffic: 'بيانات', validity: 'صلاحية', empty: 'لا شيء وجد', loading: 'جارٍ تحميل الخطط...', open_tg: 'افتح WebApp عبر تيليجرام' },
+        fa: { search: 'جستجوی کشور...', catalog: 'کاتالوگ eSIM', back: 'بازگشت', buy: 'خرید', traffic: 'داده', validity: 'اعتبار', empty: 'چیزی یافت نشد', loading: 'در حال بارگذاری طرح‌ها...', open_tg: 'تگرام را باز کنید' },
+        tr: { search: 'Ülke ara...', catalog: 'eSIM Kataloğu', back: 'Geri', buy: 'SATIN AL', traffic: 'İnternet', validity: 'Süre', empty: 'Bulunamadı', loading: 'Tarifeler yükleniyor...', open_tg: 'WebApp\'i Telegram üzerinden açın' }
+    };
+    
+    // Safely fallback to 'en'
+    const t = translations[lang as string] || translations['en'];
+    const isRtl = lang === 'ar' || lang === 'fa';
 
     if (selectedCountry) {
         const countryTariffs = grouped[selectedCountry] || [];
         return (
-            <div className="space-y-4 animate-fade-in pb-8">
+            <div className={`space-y-4 animate-fade-in pb-8 ${isRtl ? 'rtl text-right' : ''}`} dir={isRtl ? 'rtl' : 'ltr'}>
                 <button 
                     onClick={() => setSelectedCountry(null)}
                     className="flex items-center gap-1 text-on-surface-variant hover:text-primary transition-colors text-sm font-bold bg-surface-container p-2 rounded-xl border border-white/5 w-fit"
                 >
                     <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-                    {lblBack}
+                    {t.back}
                 </button>
                 
                 <h2 className="text-2xl font-headline font-extrabold text-slate-100 flex items-center gap-2 mb-4">
@@ -95,7 +131,7 @@ export default function ClientCatalog({ lang }: { lang: string }) {
                             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-[40px] -z-10 translate-x-1/3 -translate-y-1/3 transition-all group-hover:bg-primary/20 pointer-events-none"></div>
                             
                             <div className="flex justify-between items-start mb-4">
-                                <h3 className="font-headline font-bold text-slate-100 text-lg">{selectedCountry}</h3>
+                                <h3 className="font-headline font-bold text-slate-100 text-lg">{loc('country', tData)}</h3>
                                 <span className="text-2xl font-extrabold text-green-400 drop-shadow-[0_0_8px_rgba(74,222,128,0.3)]">${tData.price_usd}</span>
                             </div>
 
@@ -105,8 +141,8 @@ export default function ClientCatalog({ lang }: { lang: string }) {
                                         <span className="material-symbols-outlined text-primary text-[18px]">wifi</span>
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="text-[9px] text-on-surface-variant font-extrabold tracking-wider uppercase">{lblTraffic}</span>
-                                        <span className="text-slate-100 font-bold">{tData.data_gb}</span>
+                                        <span className="text-[9px] text-on-surface-variant font-extrabold tracking-wider uppercase">{t.traffic}</span>
+                                        <span className="text-slate-100 font-bold">{loc('data_gb', tData)}</span>
                                     </div>
                                 </div>
                                 <div className="bg-surface-container-lowest/50 p-3 rounded-xl border border-outline-variant/10 flex items-center gap-3">
@@ -114,18 +150,25 @@ export default function ClientCatalog({ lang }: { lang: string }) {
                                         <span className="material-symbols-outlined text-secondary text-[18px]">schedule</span>
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="text-[9px] text-on-surface-variant font-extrabold tracking-wider uppercase">{lblValidity}</span>
-                                        <span className="text-slate-100 font-bold">{tData.validity_period}</span>
+                                        <span className="text-[9px] text-on-surface-variant font-extrabold tracking-wider uppercase">{t.validity}</span>
+                                        <span className="text-slate-100 font-bold">{loc('validity_period', tData)}</span>
                                     </div>
                                 </div>
                             </div>
 
                             <button 
-                                onClick={() => handleBuy(tData.id)}
-                                className="w-full bg-primary text-on-primary py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(208,188,255,0.2)] hover:bg-primary/90 active:scale-95 transition-all outline-none"
+                                onClick={() => handleBuy(tData)}
+                                disabled={buyLoading === tData.id}
+                                className="w-full bg-primary text-on-primary py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(208,188,255,0.2)] hover:bg-primary/90 active:scale-95 transition-all outline-none disabled:opacity-70 disabled:active:scale-100"
                             >
-                                <span className="material-symbols-outlined text-[18px]">shopping_cart_checkout</span>
-                                {lblBuy}
+                                {buyLoading === tData.id ? (
+                                    <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                                ) : (
+                                    <>
+                                        <span className="material-symbols-outlined text-[18px]">shopping_cart_checkout</span>
+                                        {t.buy}
+                                    </>
+                                )}
                             </button>
                         </div>
                     ))}
@@ -140,14 +183,14 @@ export default function ClientCatalog({ lang }: { lang: string }) {
                 <span className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center border border-primary/30 shadow-[0_0_15px_rgba(208,188,255,0.2)]">
                     <span className="material-symbols-outlined text-primary text-[24px]">storefront</span>
                 </span>
-                {lblCatalog}
+                {t.catalog}
             </h2>
 
             <div className="relative mx-1">
                 <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
                 <input
                     type="text"
-                    placeholder={lblSearch}
+                    placeholder={t.search}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full bg-surface-container border border-outline-variant/10 rounded-2xl py-4 pl-12 pr-4 text-sm text-on-surface focus:border-primary/50 focus:outline-none transition-all shadow-lg"
@@ -169,7 +212,7 @@ export default function ClientCatalog({ lang }: { lang: string }) {
                 
                 {countries.length === 0 && (
                     <div className="col-span-2 text-center p-8 text-on-surface-variant border border-dashed border-outline-variant/20 rounded-2xl">
-                        {lblEmpty}
+                        {t.empty}
                     </div>
                 )}
             </div>

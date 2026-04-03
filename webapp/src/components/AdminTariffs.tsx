@@ -11,6 +11,24 @@ interface Tariff {
     payment_link?: string;
     payment_qr_url?: string;
     is_active: boolean;
+    country_ru?: string;
+    data_gb_ru?: string;
+    validity_period_ru?: string;
+    country_de?: string;
+    data_gb_de?: string;
+    validity_period_de?: string;
+    country_pl?: string;
+    data_gb_pl?: string;
+    validity_period_pl?: string;
+    country_ar?: string;
+    data_gb_ar?: string;
+    validity_period_ar?: string;
+    country_fa?: string;
+    data_gb_fa?: string;
+    validity_period_fa?: string;
+    country_tr?: string;
+    data_gb_tr?: string;
+    validity_period_tr?: string;
 }
 
 export default function AdminTariffs({ t }: { t: any }) {
@@ -94,23 +112,82 @@ export default function AdminTariffs({ t }: { t: any }) {
                             <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider pl-1 mb-1 block">Сортировка / Sıralama</label>
                             <input type="number" placeholder={t.sortNumber} value={formData.sort_number || ''} onChange={e => setFormData({ ...formData, sort_number: parseInt(e.target.value) })} className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-3 text-sm text-on-surface focus:border-primary/50 focus:outline-none transition-colors" />
                         </div>
-                        <div className="col-span-2">
-                            <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider pl-1 mb-1 block">Страна / Ülke</label>
-                            <input type="text" placeholder={t.country} value={formData.country || ''} onChange={e => setFormData({ ...formData, country: e.target.value })} className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-3 text-sm text-on-surface focus:border-primary/50 focus:outline-none transition-colors" />
+
+                        {/* EN FIELDS */}
+                        <div className="col-span-2 mt-2">
+                            <h5 className="text-secondary text-sm font-bold border-b border-white/5 pb-1 mb-2">ENG (Default)</h5>
+                            <input type="text" placeholder="Country (e.g. Turkey)" value={formData.country || ''} onChange={e => setFormData({ ...formData, country: e.target.value })} className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-2.5 text-sm text-on-surface focus:border-primary/50 focus:outline-none mb-2" />
+                            <div className="flex gap-2">
+                                <input type="text" placeholder="Traffic (e.g. 1 GB)" value={formData.data_gb || ''} onChange={e => setFormData({ ...formData, data_gb: e.target.value })} className="w-1/2 bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-2.5 text-sm text-on-surface focus:border-primary/50 focus:outline-none" />
+                                <input type="text" placeholder="Validity (e.g. 7 days)" value={formData.validity_period || ''} onChange={e => setFormData({ ...formData, validity_period: e.target.value })} className="w-1/2 bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-2.5 text-sm text-on-surface focus:border-primary/50 focus:outline-none" />
+                            </div>
                         </div>
-                        <div className="col-span-1">
-                            <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider pl-1 mb-1 block">Трафик / İnternet</label>
-                            <input type="text" placeholder={t.traffic} value={formData.data_gb || ''} onChange={e => setFormData({ ...formData, data_gb: e.target.value })} className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-3 text-sm text-on-surface focus:border-primary/50 focus:outline-none transition-colors" />
+
+                        {/* RU FIELDS */}
+                        <div className="col-span-2 mt-2">
+                            <h5 className="text-secondary text-sm font-bold border-b border-white/5 pb-1 mb-2">RUS</h5>
+                            <input type="text" placeholder="Страна (например, Турция)" value={formData.country_ru || ''} onChange={e => setFormData({ ...formData, country_ru: e.target.value })} className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-2.5 text-sm text-on-surface focus:border-primary/50 focus:outline-none mb-2" />
+                            <div className="flex gap-2">
+                                <input type="text" placeholder="Трафик (например, 1 ГБ)" value={formData.data_gb_ru || ''} onChange={e => setFormData({ ...formData, data_gb_ru: e.target.value })} className="w-1/2 bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-2.5 text-sm text-on-surface focus:border-primary/50 focus:outline-none" />
+                                <input type="text" placeholder="Срок (например, 7 дней)" value={formData.validity_period_ru || ''} onChange={e => setFormData({ ...formData, validity_period_ru: e.target.value })} className="w-1/2 bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-2.5 text-sm text-on-surface focus:border-primary/50 focus:outline-none" />
+                            </div>
                         </div>
-                        <div className="col-span-1">
-                            <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider pl-1 mb-1 block">Срок / Süre</label>
-                            <input type="text" placeholder={t.validity} value={formData.validity_period || ''} onChange={e => setFormData({ ...formData, validity_period: e.target.value })} className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-3 text-sm text-on-surface focus:border-primary/50 focus:outline-none transition-colors" />
+
+                        {/* TR FIELDS */}
+                        <div className="col-span-2 mt-2">
+                            <h5 className="text-secondary text-sm font-bold border-b border-white/5 pb-1 mb-2">TUR</h5>
+                            <input type="text" placeholder="Ülke (örn. Türkiye)" value={formData.country_tr || ''} onChange={e => setFormData({ ...formData, country_tr: e.target.value })} className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-2.5 text-sm text-on-surface focus:border-primary/50 focus:outline-none mb-2" />
+                            <div className="flex gap-2">
+                                <input type="text" placeholder="İnternet (örn. 1 GB)" value={formData.data_gb_tr || ''} onChange={e => setFormData({ ...formData, data_gb_tr: e.target.value })} className="w-1/2 bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-2.5 text-sm text-on-surface focus:border-primary/50 focus:outline-none" />
+                                <input type="text" placeholder="Süre (örn. 7 gün)" value={formData.validity_period_tr || ''} onChange={e => setFormData({ ...formData, validity_period_tr: e.target.value })} className="w-1/2 bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-2.5 text-sm text-on-surface focus:border-primary/50 focus:outline-none" />
+                            </div>
                         </div>
-                        <div className="col-span-2">
+
+                        {/* DE FIELDS */}
+                        <div className="col-span-2 mt-2">
+                            <h5 className="text-secondary text-sm font-bold border-b border-white/5 pb-1 mb-2">DEU (German)</h5>
+                            <input type="text" placeholder="Land" value={formData.country_de || ''} onChange={e => setFormData({ ...formData, country_de: e.target.value })} className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-2.5 text-sm text-on-surface focus:border-primary/50 focus:outline-none mb-2" />
+                            <div className="flex gap-2">
+                                <input type="text" placeholder="Daten" value={formData.data_gb_de || ''} onChange={e => setFormData({ ...formData, data_gb_de: e.target.value })} className="w-1/2 bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-2.5 text-sm text-on-surface focus:border-primary/50 focus:outline-none" />
+                                <input type="text" placeholder="Gültigkeit" value={formData.validity_period_de || ''} onChange={e => setFormData({ ...formData, validity_period_de: e.target.value })} className="w-1/2 bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-2.5 text-sm text-on-surface focus:border-primary/50 focus:outline-none" />
+                            </div>
+                        </div>
+
+                        {/* PL FIELDS */}
+                        <div className="col-span-2 mt-2">
+                            <h5 className="text-secondary text-sm font-bold border-b border-white/5 pb-1 mb-2">POL (Polish)</h5>
+                            <input type="text" placeholder="Kraj" value={formData.country_pl || ''} onChange={e => setFormData({ ...formData, country_pl: e.target.value })} className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-2.5 text-sm text-on-surface focus:border-primary/50 focus:outline-none mb-2" />
+                            <div className="flex gap-2">
+                                <input type="text" placeholder="Internet" value={formData.data_gb_pl || ''} onChange={e => setFormData({ ...formData, data_gb_pl: e.target.value })} className="w-1/2 bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-2.5 text-sm text-on-surface focus:border-primary/50 focus:outline-none" />
+                                <input type="text" placeholder="Ważność" value={formData.validity_period_pl || ''} onChange={e => setFormData({ ...formData, validity_period_pl: e.target.value })} className="w-1/2 bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-2.5 text-sm text-on-surface focus:border-primary/50 focus:outline-none" />
+                            </div>
+                        </div>
+
+                        {/* AR FIELDS */}
+                        <div className="col-span-2 mt-2">
+                            <h5 className="text-secondary text-sm font-bold border-b border-white/5 pb-1 mb-2">ARA (Arabic)</h5>
+                            <input type="text" placeholder="بلد" value={formData.country_ar || ''} onChange={e => setFormData({ ...formData, country_ar: e.target.value })} className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-2.5 text-sm text-on-surface focus:border-primary/50 focus:outline-none mb-2 text-right" dir="auto" />
+                            <div className="flex gap-2">
+                                <input type="text" placeholder="بيانات" value={formData.data_gb_ar || ''} onChange={e => setFormData({ ...formData, data_gb_ar: e.target.value })} className="w-1/2 bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-2.5 text-sm text-on-surface focus:border-primary/50 focus:outline-none text-right" dir="auto" />
+                                <input type="text" placeholder="صلاحية" value={formData.validity_period_ar || ''} onChange={e => setFormData({ ...formData, validity_period_ar: e.target.value })} className="w-1/2 bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-2.5 text-sm text-on-surface focus:border-primary/50 focus:outline-none text-right" dir="auto" />
+                            </div>
+                        </div>
+
+                        {/* FA FIELDS */}
+                        <div className="col-span-2 mt-2">
+                            <h5 className="text-secondary text-sm font-bold border-b border-white/5 pb-1 mb-2">FAS (Persian)</h5>
+                            <input type="text" placeholder="کشور" value={formData.country_fa || ''} onChange={e => setFormData({ ...formData, country_fa: e.target.value })} className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-2.5 text-sm text-on-surface focus:border-primary/50 focus:outline-none mb-2 text-right" dir="auto" />
+                            <div className="flex gap-2">
+                                <input type="text" placeholder="داده" value={formData.data_gb_fa || ''} onChange={e => setFormData({ ...formData, data_gb_fa: e.target.value })} className="w-1/2 bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-2.5 text-sm text-on-surface focus:border-primary/50 focus:outline-none text-right" dir="auto" />
+                                <input type="text" placeholder="اعتبار" value={formData.validity_period_fa || ''} onChange={e => setFormData({ ...formData, validity_period_fa: e.target.value })} className="w-1/2 bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-2.5 text-sm text-on-surface focus:border-primary/50 focus:outline-none text-right" dir="auto" />
+                            </div>
+                        </div>
+
+                        <div className="col-span-2 mt-2 pt-2 border-t border-white/5">
                             <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider pl-1 mb-1 block">Цена USD / Fiyat</label>
                             <input type="number" placeholder={t.price} value={formData.price_usd || ''} onChange={e => setFormData({ ...formData, price_usd: parseFloat(e.target.value) })} className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-3 text-sm text-on-surface focus:border-primary/50 focus:outline-none transition-colors font-bold text-green-400" />
                         </div>
-                        <div className="col-span-2 mt-2 pt-2 border-t border-white/5">
+                        <div className="col-span-2 mt-2">
                             <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider pl-1 mb-1 block">Ссылки на оплату / Ödeme Linkleri</label>
                             <input type="text" placeholder={t.paymentLink} value={formData.payment_link || ''} onChange={e => setFormData({ ...formData, payment_link: e.target.value })} className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-3 text-sm text-on-surface focus:border-secondary/50 focus:outline-none transition-colors mb-2" />
                             <input type="text" placeholder={t.qrLink} value={formData.payment_qr_url || ''} onChange={e => setFormData({ ...formData, payment_qr_url: e.target.value })} className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-3 text-sm text-on-surface focus:border-secondary/50 focus:outline-none transition-colors" />
