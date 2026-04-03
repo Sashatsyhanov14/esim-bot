@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
 export default function AdminStats({ t, globalStats }: { t: any, globalStats: any }) {
@@ -143,9 +143,9 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
         const { error: upErr } = await supabase.from('users').update({ balance: 0 }).eq('telegram_id', tgId);
         
         if (upErr) {
-            alert(t.errorTitle || "Ошибка: " + upErr.message);
+            alert(t.errorTitle || "РћС€РёР±РєР°: " + upErr.message);
         } else {
-            alert(t.successTitle || "Успешно!");
+            alert(t.successTitle || "РЈСЃРїРµС€РЅРѕ!");
             fetchData(); // reload
         }
     };
@@ -156,7 +156,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
             setUsersInfo(prev => prev.map(u => u.telegram_id === tgId ? { ...u, custom_note: noteValue } : u));
             setManagersList(prev => prev.map(m => m.telegram_id === tgId ? { ...m, custom_note: noteValue } : m));
             setEditingNoteId(null);
-            tg?.showScanQrPopup && tg?.showAlert ? tg.showAlert(t.promoSuccess || "Заметка сохранена!") : alert(t.promoSuccess || "Saved!");
+            tg?.showScanQrPopup && tg?.showAlert ? tg.showAlert(t.promoSuccess || "Р—Р°РјРµС‚РєР° СЃРѕС…СЂР°РЅРµРЅР°!") : alert(t.promoSuccess || "Saved!");
         }
     };
 
@@ -254,7 +254,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                                                 value={noteValue}
                                                 onChange={(e) => setNoteValue(e.target.value)}
                                                 className="flex-1 bg-surface-container-high border border-outline-variant/20 rounded px-2 py-1 text-xs text-on-surface focus:outline-none"
-                                                placeholder="Имя менеджера..."
+                                                placeholder="РРјСЏ РјРµРЅРµРґР¶РµСЂР°..."
                                                 autoFocus
                                             />
                                             <button onClick={() => handleSaveNote(m.telegram_id)} className="bg-primary/20 text-primary p-1 rounded">
@@ -432,7 +432,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                                     <span className="material-symbols-outlined text-[14px]">open_in_new</span>
                                     {t.viewRefDealsBtn || 'View referral deals'}
                                 </button>
-                            )}�алов
+                            )}ЂР°Р»РѕРІ
                                 </button>
                             )}
 
@@ -484,12 +484,12 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                     <div className="flex justify-between items-center pb-2 border-b border-white/10">
                         <div>
                             <p className="font-headline font-bold text-on-surface text-base">
-                                🔗 {t.refDealsTitle || 'Referral deals'} @{selectedUser.username || selectedUser.telegram_id}
+                                рџ”— {t.refDealsTitle || 'Referral deals'} @{selectedUser.username || selectedUser.telegram_id}
                             </p>
                             <p className="text-[11px] text-on-surface-variant mt-0.5">
-                                Приглашено: <b className="text-primary">{selectedUser.invitedCount}</b>
-                                &nbsp;·&nbsp; Сделок: <b className="text-secondary">{selectedUser.refOrdersCount}</b>
-                                &nbsp;·&nbsp; Объём: <b className="text-green-400">${(selectedUser.refTotalVolume || 0).toFixed(2)}</b>
+                                РџСЂРёРіР»Р°С€РµРЅРѕ: <b className="text-primary">{selectedUser.invitedCount}</b>
+                                &nbsp;В·&nbsp; РЎРґРµР»РѕРє: <b className="text-secondary">{selectedUser.refOrdersCount}</b>
+                                &nbsp;В·&nbsp; РћР±СЉС‘Рј: <b className="text-green-400">${(selectedUser.refTotalVolume || 0).toFixed(2)}</b>
                             </p>
                         </div>
                         <button onClick={closeRefDrilldown} className="text-on-surface-variant hover:text-on-surface p-1">
@@ -510,11 +510,11 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                                     <span className="font-bold text-on-surface">{uObj?.username ? `@${uObj.username}` : uObj?.telegram_id || '?'}</span>
                                     <div className="text-right">
                                         <b className="text-green-400">${o.price_usd}</b>
-                                        <p className="text-[10px] text-yellow-400 font-bold">+${(Number(o.price_usd) * 0.20).toFixed(2)} {t.commissionLabel || 'комиссия'}</p>
+                                        <p className="text-[10px] text-yellow-400 font-bold">+${(Number(o.price_usd) * 0.20).toFixed(2)} {t.commissionLabel || 'РєРѕРјРёСЃСЃРёСЏ'}</p>
                                     </div>
                                 </div>
                                 <div className="text-xs text-on-surface-variant space-y-0.5">
-                                    <div>{o.tariffs ? `${o.tariffs.country} | ${o.tariffs.data_gb} | ${o.tariffs.validity_period}` : '—'}</div>
+                                    <div>{o.tariffs ? `${o.tariffs.country} | ${o.tariffs.data_gb} | ${o.tariffs.validity_period}` : 'вЂ”'}</div>
                                     <div className="flex justify-between items-center">
                                         <span>{new Date(o.created_at).toLocaleString()}</span>
                                         <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${
@@ -533,3 +533,4 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
         </div>
     );
 }
+
