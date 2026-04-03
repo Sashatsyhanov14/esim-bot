@@ -413,9 +413,9 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                     </div>
 
                     {refOrdersLoading ? (
-                        <div className="text-center text-on-surface-variant text-sm py-4 animate-pulse">Загрузка...</div>
+                        <div className="text-center text-on-surface-variant text-sm py-4 animate-pulse">{t.loading}</div>
                     ) : refOrders.length === 0 ? (
-                        <div className="text-center text-on-surface-variant text-sm py-4">Нет сделок у приглашённых</div>
+                        <div className="text-center text-on-surface-variant text-sm py-4">{t.noOrders}</div>
                     ) : refOrders.map((o: any) => {
                         const u = o.users as any;
                         const uObj = Array.isArray(u) ? u[0] : u;
@@ -425,7 +425,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                                     <span className="font-bold text-on-surface">{uObj?.username ? `@${uObj.username}` : uObj?.telegram_id || '?'}</span>
                                     <div className="text-right">
                                         <b className="text-green-400">${o.price_usd}</b>
-                                        <p className="text-[10px] text-yellow-400 font-bold">+${(Number(o.price_usd) * 0.20).toFixed(2)} комиссия</p>
+                                        <p className="text-[10px] text-yellow-400 font-bold">+${(Number(o.price_usd) * 0.20).toFixed(2)} {t.commissionLabel || 'комиссия'}</p>
                                     </div>
                                 </div>
                                 <div className="text-xs text-on-surface-variant space-y-0.5">
@@ -436,7 +436,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                                             o.status === 'paid' ? 'bg-green-500/20 text-green-400' :
                                             o.status === 'pending' ? 'bg-orange-500/20 text-orange-400' :
                                             'bg-red-500/20 text-red-400'
-                                        }`}>{o.status}</span>
+                                        }`}>{t.statuses ? (t.statuses[o.status] || o.status) : o.status}</span>
                                     </div>
                                 </div>
                             </div>

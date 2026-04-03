@@ -100,7 +100,8 @@ const translations = {
       pending: "В ОЖИДАНИИ",
       awaiting_qr: "ЖДЕТ QR",
       cancelled: "ОТМЕНЕН"
-    }
+    },
+    commissionLabel: "комиссия"
   },
   tr: {
     adminTitle: "Kurucu Paneli",
@@ -189,7 +190,8 @@ const translations = {
       pending: "BEKLİYOR",
       awaiting_qr: "QR BEKLİYOR",
       cancelled: "İPTAL"
-    }
+    },
+    commissionLabel: "komisyon"
   },
   en: {
     adminTitle: "Founder Panel",
@@ -278,7 +280,8 @@ const translations = {
       pending: "PENDING",
       awaiting_qr: "AWAITING QR",
       cancelled: "CANCELLED"
-    }
+    },
+    commissionLabel: "commission"
   },
   de: {
     adminTitle: "Gründer-Panel",
@@ -364,7 +367,8 @@ const translations = {
       pending: "AUSSTEHEND",
       awaiting_qr: "QR ERWARTET",
       cancelled: "ABGEBROCHEN"
-    }
+    },
+    commissionLabel: "Provision"
   },
   pl: {
     adminTitle: "Panel Założyciela",
@@ -450,7 +454,8 @@ const translations = {
       pending: "OCZEKUJĄCE",
       awaiting_qr: "CZĘKA NA QR",
       cancelled: "ANULOWANE"
-    }
+    },
+    commissionLabel: "prowizja"
   },
   ar: {
     adminTitle: "لوحة المؤسس",
@@ -535,8 +540,9 @@ const translations = {
       paid: "مدفوع",
       pending: "قيد الانتظار",
       awaiting_qr: "في انتظار QR",
-      cancelled: "ملغى"
-    }
+      cancelled: "ملغي"
+    },
+    commissionLabel: "عمولة"
   },
   fa: {
     adminTitle: "پنل مؤسس",
@@ -622,7 +628,8 @@ const translations = {
       pending: "در انتظار",
       awaiting_qr: "منتظر QR",
       cancelled: "لغو شد"
-    }
+    },
+    commissionLabel: "کمیسیون"
   }
 };
 
@@ -675,7 +682,11 @@ const App: React.FC = () => {
       }
 
       if (tgUser?.id) {
-        if (tgUser.language_code === 'tr') setLang('tr');
+        const supportedLangs = ['ru', 'en', 'tr', 'de', 'pl', 'ar', 'fa'];
+        const userLang = tgUser.language_code?.toLowerCase();
+        if (userLang && supportedLangs.includes(userLang)) {
+          setLang(userLang);
+        }
         await fetchUserData(tgUser.id, tgUser.first_name, tgUser.username);
       } else {
         setLoading(false);
@@ -687,7 +698,9 @@ const App: React.FC = () => {
   const t = translations[lang as keyof typeof translations] || translations['en'];
 
   const toggleLang = () => {
-    setLang(lang === 'ru' ? 'en' : 'ru');
+    const supportedLangs = ['ru', 'en', 'tr', 'de', 'pl', 'ar', 'fa'];
+    const nextIdx = (supportedLangs.indexOf(lang) + 1) % supportedLangs.length;
+    setLang(supportedLangs[nextIdx]);
   };
 
   const renderLangSwitcher = () => (
