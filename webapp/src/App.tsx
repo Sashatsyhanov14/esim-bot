@@ -101,7 +101,17 @@ const translations = {
       awaiting_qr: "ЖДЕТ QR",
       cancelled: "ОТМЕНЕН"
     },
-    commissionLabel: "комиссия"
+    commissionLabel: "комиссия",
+    notePlaceholder: "Имя или заметка...",
+    refDealsLabel: "СДЕЛОК ПО РЕФКЕ:",
+    ownPurchasesLabel: "СВОИ ПОКУПКИ:",
+    refVolumeLabel: "ОБЪ. РЕФЕРАЛОВ",
+    commissionLabelAdmin: "КОМИССИЯ",
+    viewRefDealsBtn: "Смотреть сделки рефералов",
+    payoutBtn: "Выплатить",
+    payoutHistoryLabel: "История выплат:",
+    refDealsTitle: "Сделки рефералов",
+    confirmPayout: "Выплатить {amount}$ пользователю?\nБаланс будет обнулен.",
   },
   tr: {
     adminTitle: "Kurucu Paneli",
@@ -191,7 +201,17 @@ const translations = {
       awaiting_qr: "QR BEKLİYOR",
       cancelled: "İPTAL"
     },
-    commissionLabel: "komisyon"
+    commissionLabel: "komisyon",
+    notePlaceholder: "İsim veya not...",
+    refDealsLabel: "REF İŞLEMLERİ:",
+    ownPurchasesLabel: "KENDİ SATIN ALMALARI:",
+    refVolumeLabel: "REF HACMİ",
+    commissionLabelAdmin: "KOMİSYON",
+    viewRefDealsBtn: "Referans işlemlerini gör",
+    payoutBtn: "Ödeme Yap",
+    payoutHistoryLabel: "Ödeme geçmişi:",
+    refDealsTitle: "Referans İşlemleri",
+    confirmPayout: "Kullanıcıya {amount}$ ödensin mi?\nBakiye sıfırlanacak.",
   },
   en: {
     adminTitle: "Founder Panel",
@@ -281,7 +301,17 @@ const translations = {
       awaiting_qr: "AWAITING QR",
       cancelled: "CANCELLED"
     },
-    commissionLabel: "commission"
+    commissionLabel: "commission",
+    notePlaceholder: "Name or note...",
+    refDealsLabel: "REF DEALS:",
+    ownPurchasesLabel: "OWN PURCHASES:",
+    refVolumeLabel: "REF VOLUME",
+    commissionLabelAdmin: "COMMISSION",
+    viewRefDealsBtn: "View referral deals",
+    payoutBtn: "Payout",
+    payoutHistoryLabel: "Payout history:",
+    refDealsTitle: "Referral deals",
+    confirmPayout: "Payout {amount}$ to user?\nBalance will be reset.",
   },
   de: {
     adminTitle: "Gründer-Panel",
@@ -368,7 +398,17 @@ const translations = {
       awaiting_qr: "QR ERWARTET",
       cancelled: "ABGEBROCHEN"
     },
-    commissionLabel: "Provision"
+    commissionLabel: "Provision",
+    notePlaceholder: "Name oder Notiz...",
+    refDealsLabel: "REF-DEALS:",
+    ownPurchasesLabel: "EIGENE KÄUFE:",
+    refVolumeLabel: "REF-VOLUMEN",
+    commissionLabelAdmin: "PROVISION",
+    viewRefDealsBtn: "Referral-Deals anzeigen",
+    payoutBtn: "Auszahlen",
+    payoutHistoryLabel: "Auszahlungshistorie:",
+    refDealsTitle: "Referral-Deals",
+    confirmPayout: "{amount}$ an Nutzer auszahlen?\nGuthaben wird zurückgesetzt.",
   },
   pl: {
     adminTitle: "Panel Założyciela",
@@ -455,7 +495,17 @@ const translations = {
       awaiting_qr: "CZĘKA NA QR",
       cancelled: "ANULOWANE"
     },
-    commissionLabel: "prowizja"
+    commissionLabel: "prowizja",
+    notePlaceholder: "Imię lub notatka...",
+    refDealsLabel: "TRANSAKCJE REF:",
+    ownPurchasesLabel: "WŁASNE ZAKUPY:",
+    refVolumeLabel: "WOLUMEN REF",
+    commissionLabelAdmin: "PROWIZJA",
+    viewRefDealsBtn: "Zobacz transakcje poleconych",
+    payoutBtn: "Wypłać",
+    payoutHistoryLabel: "Historia wypłat:",
+    refDealsTitle: "Transakcje poleconych",
+    confirmPayout: "Wypłacić {amount}$ użytkownikowi?\nSaldo zostanie zresetowane.",
   },
   ar: {
     adminTitle: "لوحة المؤسس",
@@ -542,7 +592,17 @@ const translations = {
       awaiting_qr: "في انتظار QR",
       cancelled: "ملغي"
     },
-    commissionLabel: "عمولة"
+    commissionLabel: "عمولة",
+    notePlaceholder: "الاسم أو ملاحظة...",
+    refDealsLabel: "صفقات الإحالة:",
+    ownPurchasesLabel: "مشتريات خاصة:",
+    refVolumeLabel: "حجم الإحالات",
+    commissionLabelAdmin: "العمولة",
+    viewRefDealsBtn: "عرض صفقات الإحالة",
+    payoutBtn: "دفع",
+    payoutHistoryLabel: "سجل الدفعات:",
+    refDealsTitle: "صفقات الإحالة",
+    confirmPayout: "دفع {amount}$ للمستخدم؟\nسيتم تصوير الرصيد.",
   },
   fa: {
     adminTitle: "پنل مؤسس",
@@ -941,6 +1001,14 @@ const App: React.FC = () => {
         </div>
         <p className="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-1">{t.bonusBalance}</p>
         <h2 className="text-4xl font-headline font-extrabold text-slate-100 mb-2">${user?.balance?.toFixed(2) || '0.00'}</h2>
+        {(user?.balance || 0) > 0 && (
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="mt-2 bg-primary/20 text-primary border border-primary/30 px-6 py-2 rounded-xl font-bold uppercase tracking-widest text-[10px] active:scale-95 transition-all"
+          >
+            {t.withdraw}
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-3 mx-2">
@@ -1006,12 +1074,6 @@ const App: React.FC = () => {
           </div>
           <div className="flex items-center gap-2 bg-surface-container-lowest p-1.5 rounded-xl border border-outline-variant/10">
             <span className="text-xs font-bold text-on-surface-variant uppercase tracking-wider px-2 border-r border-outline-variant/10 mr-1">{t.promoLabel}</span>
-            <input
-              type="text"
-              readOnly
-              value={user?.telegram_id || ''}
-              className="flex-1 bg-transparent font-bold text-primary outline-none px-2 font-mono text-[15px]"
-            />
             <button
               onClick={() => {
                 navigator.clipboard.writeText(String(user?.telegram_id));
@@ -1021,6 +1083,12 @@ const App: React.FC = () => {
             >
               <span className="material-symbols-outlined text-[20px]">content_copy</span>
             </button>
+            <input
+              type="text"
+              readOnly
+              value={user?.telegram_id || ''}
+              className="flex-1 bg-transparent font-bold text-primary outline-none px-2 font-mono text-[15px]"
+            />
           </div>
         </div>
 

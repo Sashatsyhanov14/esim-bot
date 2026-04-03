@@ -149,7 +149,7 @@ app.post('/api/withdraw-request', async (req, res) => {
         const msg = `🚀 **ЗАПРОС БОНУСОВ!**\n\n👤 Клиент: ${userLabel}\n💰 Сумма: **$${amount}**\n💳 Способ: ${method}\n\n⚠️ Проверьте баланс пользователя в админке перед выплатой!`;
 
         const { data: managers } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'manager']);
-        if (managers) {
+        if (managers && bot) {
             for (const manager of managers) {
                 try {
                     await bot.telegram.sendMessage(manager.telegram_id, msg, { parse_mode: 'Markdown' });

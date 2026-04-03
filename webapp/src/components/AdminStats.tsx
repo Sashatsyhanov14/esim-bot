@@ -125,7 +125,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
     };
 
     const handleMarkPaid = async (tgId: number, currentBalance: number) => {
-        if (!window.confirm(`Выплатить $${currentBalance.toFixed(2)} пользователю?\nБаланс будет обнулен, а в историю будет добавлена запись о выплате.`)) return;
+        if (!window.confirm(t.confirmPayout?.replace('{amount}', currentBalance.toFixed(2)) || `Payout $${currentBalance.toFixed(2)}?`)) return;
         
         const { error: insErr } = await supabase.from('chat_history').insert({
             id: window.crypto.randomUUID(),
@@ -136,16 +136,16 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
         });
 
         if (insErr) {
-            alert("Ошибка сохранения истории: " + insErr.message);
+            alert(t.promoError || "Error saving history: " + insErr.message);
             return;
         }
 
         const { error: upErr } = await supabase.from('users').update({ balance: 0 }).eq('telegram_id', tgId);
         
         if (upErr) {
-            alert("Ошибка обнуления баланса: " + upErr.message);
+            alert(t.errorTitle || "Ошибка: " + upErr.message);
         } else {
-            alert("Выплата успешно зафиксирована!");
+            alert(t.successTitle || "Успешно!");
             fetchData(); // reload
         }
     };
@@ -156,7 +156,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
             setUsersInfo(prev => prev.map(u => u.telegram_id === tgId ? { ...u, custom_note: noteValue } : u));
             setManagersList(prev => prev.map(m => m.telegram_id === tgId ? { ...m, custom_note: noteValue } : m));
             setEditingNoteId(null);
-            tg?.showScanQrPopup && tg?.showAlert ? tg.showAlert("Заметка сохранена!") : alert("Saved!");
+            tg?.showScanQrPopup && tg?.showAlert ? tg.showAlert(t.promoSuccess || "Заметка сохранена!") : alert(t.promoSuccess || "Saved!");
         }
     };
 
@@ -393,7 +393,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                                                 value={noteValue}
                                                 onChange={(e) => setNoteValue(e.target.value)}
                                                 className="flex-1 bg-surface-container-lowest border border-outline-variant/20 rounded px-2 py-1 text-xs text-on-surface focus:outline-none"
-                                                placeholder="Имя или заметка..."
+                                                placeholder={t.notePlaceholder || "Name or note..."}
                                                 autoFocus
                                             />
                                             <button onClick={() => handleSaveNote(u.telegram_id)} className="bg-primary/20 text-primary p-1 rounded">
@@ -406,33 +406,33 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                                     )}
                                     <div className="text-[10px] text-on-surface-variant uppercase mt-1 flex flex-col gap-1">
                                         <div className="flex gap-3">
-                                            <span>{t.invitedLabelStats || 'ПРИГЛАСИЛ:'} <b className="text-primary">{u.invitedCount}</b></span>
-                                            <span>СДЕЛОК ПО РЕФКЕ: <b className="text-secondary">{u.refOrdersCount}</b></span>
+                                            <span>{t.invitedLabelStats || 'INVITED:'} <b className="text-primary">{u.invitedCount}</b></span>
+                                            <span>{t.refDealsLabel || 'REF DEALS:'} <b className="text-secondary">{u.refOrdersCount}</b></span>
                                         </div>
                                         <div className="flex gap-3 mt-1 pt-1 border-t border-white/5">
-                                            <span>СВОИ ПОКУПКИ: <b className="text-on-surface">{u.ordersCount}</b></span>
+                                            <span>{t.ownPurchasesLabel || 'OWN PURCHASES:'} <b className="text-on-surface">{u.ordersCount}</b></span>
                                         </div>
                                     </div>
                                 </div>
                                 <div className="text-right flex flex-col items-end pl-2 gap-2">
                                     <div>
-                                        <p className="text-[10px] text-on-surface-variant uppercase">ОБЪ. РЕФЕРАЛОВ</p>
-                                        <p className="font-headline font-bold text-blue-400 mt-[-2px]">${(u.refTotalVolume || 0).toFixed(2)}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] text-on-surface-variant uppercase">КОМИССИЯ</p>
+                                        <p className="text-[10px] text-on-surface-variant uppercase">{t.refVolumeLabel || 'REF VOLUME'}</p>
+                                        <p className="font-headline font-bold text-blue-400 mt-[-2px]">${(u.refTotalVolume || 0).toFixed(                                    <div>
+                                        <p className="text-[10px] text-on-surface-variant uppercase">{t.commissionLabelAdmin || 'COMMISSION'}</p>
                                         <p className="font-headline font-bold text-green-400 mt-[-2px]">${u.earnedBonuses.toFixed(2)}</p>
                                     </div>
                                 </div>
                             </div>
-
+ 
                             {u.invitedCount > 0 && (
                                 <button
                                     onClick={() => openRefDrilldown(u)}
                                     className="w-full py-2 text-[11px] font-bold uppercase tracking-wider bg-secondary/10 text-secondary border border-secondary/20 rounded-lg flex items-center justify-center gap-1.5 hover:bg-secondary/20 active:scale-95 transition-all"
                                 >
                                     <span className="material-symbols-outlined text-[14px]">open_in_new</span>
-                                    Смотреть сделки рефералов
+                                    {t.viewRefDealsBtn || 'View referral deals'}
+                                </button>
+                            )}�алов
                                 </button>
                             )}
 
@@ -441,18 +441,18 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                                 <div className="flex justify-between items-center mb-2">
                                     <div className="flex items-center gap-2">
                                         <span className="material-symbols-outlined text-[14px] text-tertiary">account_balance_wallet</span>
-                                        <span className="text-xs font-bold text-on-surface uppercase tracking-widest">Баланс: <span className="text-tertiary">${(u.balance || 0).toFixed(2)}</span></span>
+                                        <span className="text-xs font-bold text-on-surface uppercase tracking-widest">{t.balance || 'Balance'}: <span className="text-tertiary">${(u.balance || 0).toFixed(2)}</span></span>
                                     </div>
                                     {(u.balance || 0) > 0 && (
                                         <button onClick={() => handleMarkPaid(u.telegram_id, u.balance)} className="bg-tertiary/20 text-tertiary border border-tertiary/30 px-3 py-1 text-[10px] rounded-md font-bold uppercase tracking-wider hover:bg-tertiary/30 active:scale-95 transition-all">
-                                            Выплатить
+                                            {t.payoutBtn || 'Payout'}
                                         </button>
                                     )}
                                 </div>
                                 
                                 {u.payouts && u.payouts.length > 0 && (
                                     <div className="mt-2 pt-2 border-t border-outline-variant/10">
-                                        <p className="text-[9px] text-on-surface-variant font-bold uppercase mb-1">История выплат:</p>
+                                        <p className="text-[9px] text-on-surface-variant font-bold uppercase mb-1">{t.payoutHistoryLabel || 'Payout history:'}</p>
                                         <div className="flex flex-col gap-1 max-h-24 overflow-y-auto clean-scrollbar pr-1">
                                             {u.payouts.map((p: any, idx: number) => (
                                                 <div key={idx} className="flex justify-between text-[10px] items-center bg-surface-container-lowest px-2 py-1 rounded">
@@ -484,7 +484,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                     <div className="flex justify-between items-center pb-2 border-b border-white/10">
                         <div>
                             <p className="font-headline font-bold text-on-surface text-base">
-                                🔗 Сделки рефералов @{selectedUser.username || selectedUser.telegram_id}
+                                🔗 {t.refDealsTitle || 'Referral deals'} @{selectedUser.username || selectedUser.telegram_id}
                             </p>
                             <p className="text-[11px] text-on-surface-variant mt-0.5">
                                 Приглашено: <b className="text-primary">{selectedUser.invitedCount}</b>
