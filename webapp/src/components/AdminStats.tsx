@@ -15,6 +15,8 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
 
     const [newManagerId, setNewManagerId] = useState('');
     const [managersList, setManagersList] = useState<any[]>([]);
+    const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
+    const [noteValue, setNoteValue] = useState('');
     const tg = window.Telegram?.WebApp;
 
     useEffect(() => {
@@ -35,7 +37,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
 
         if (ordersData) setOrders(ordersData);
 
-        const { data: allUsers } = await supabase.from('users').select('telegram_id, username, referrer_id, balance');
+        const { data: allUsers } = await supabase.from('users').select('telegram_id, username, referrer_id, balance, custom_note');
         const { data: allPayouts } = await supabase.from('chat_history').select('user_id, content, created_at').eq('role', 'assistant').like('content', 'PAYOUT_RECORD:%').order('created_at', { ascending: false });
 
         if (allUsers && ordersData) {
@@ -145,6 +147,15 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
         } else {
             alert("Выплата успешно зафиксирована!");
             fetchData(); // reload
+        }
+    };
+
+    const handleSaveNote = async (tgId: number) => {
+        const { error } = await supabase.from('users').update({ custom_note: noteValue }).eq('telegram_id', tgId);
+        if (!error) {
+            setUsersInfo(prev => prev.map(u => u.telegram_id === tgId ? { ...u, custom_note: noteValue } : u));
+            setEditingNoteId(null);
+            tg?.showScanQrPopup && tg?.showAlert ? tg.showAlert("Заметка сохранена!") : alert("Saved!");
         }
     };
 
@@ -318,7 +329,43 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                         <div key={u.telegram_id} className="glass-card p-4 rounded-xl flex flex-col gap-3">
                             <div className="flex items-center justify-between">
                                 <div className="flex-1">
-                                    <p className="font-headline font-semibold text-on-surface text-sm">{u.username ? `@${u.username}` : u.telegram_id}</p>
+                                    <div className="flex items-center gap-2">
+                                        <p className="font-headline font-semibold text-on-surface text-sm">{u.username ? `@${u.username}` : u.telegram_id}</p>
+                                        {u.custom_note && (
+                                            <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold">
+                                                {u.custom_note}
+                                            </span>
+                                        )}
+                                        {editingNoteId !== u.telegram_id && (
+                                            <button 
+                                                onClick={() => {
+                                                    setEditingNoteId(u.telegram_id);
+                                                    setNoteValue(u.custom_note || '');
+                                                }}
+                                                className="text-on-surface-variant hover:text-primary transition-colors"
+                                            >
+                                                <span className="material-symbols-outlined text-[14px]">edit_note</span>
+                                            </button>
+                                        )}
+                                    </div>
+                                    {editingNoteId === u.telegram_id && (
+                                        <div className="flex gap-2 mt-2">
+                                            <input 
+                                                type="text"
+                                                value={noteValue}
+                                                onChange={(e) => setNoteValue(e.target.value)}
+                                                className="flex-1 bg-surface-container-lowest border border-outline-variant/20 rounded px-2 py-1 text-xs text-on-surface focus:outline-none"
+                                                placeholder="Имя или заметка..."
+                                                autoFocus
+                                            />
+                                            <button onClick={() => handleSaveNote(u.telegram_id)} className="bg-primary/20 text-primary p-1 rounded">
+                                                <span className="material-symbols-outlined text-[14px]">check</span>
+                                            </button>
+                                            <button onClick={() => setEditingNoteId(null)} className="bg-error/20 text-error p-1 rounded">
+                                                <span className="material-symbols-outlined text-[14px]">close</span>
+                                            </button>
+                                        </div>
+                                    )}
                                     <div className="text-[10px] text-on-surface-variant uppercase mt-1 flex flex-col gap-1">
                                         <div className="flex gap-3">
                                             <span>{t.invitedLabelStats || 'ПРИГЛАСИЛ:'} <b className="text-primary">{u.invitedCount}</b></span>

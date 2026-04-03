@@ -645,6 +645,7 @@ const App: React.FC = () => {
   const [lang, setLang] = useState<string>('ru');
 
   const [activeTab, setActiveTab] = useState<'referral' | 'catalog' | 'stats' | 'tariffs' | 'faq'>('catalog');
+  const [showLangDropdown, setShowLangDropdown] = useState(false);
 
   const tg = window.Telegram?.WebApp;
 
@@ -697,20 +698,39 @@ const App: React.FC = () => {
 
   const t = translations[lang as keyof typeof translations] || translations['en'];
 
-  const toggleLang = () => {
-    const supportedLangs = ['ru', 'en', 'tr', 'de', 'pl', 'ar', 'fa'];
-    const nextIdx = (supportedLangs.indexOf(lang) + 1) % supportedLangs.length;
-    setLang(supportedLangs[nextIdx]);
-  };
+
 
   const renderLangSwitcher = () => (
-    <button
-      onClick={toggleLang}
-      className="bg-surface-container-high hover:bg-surface-container-highest px-3 py-1.5 rounded-full text-[10px] font-extrabold text-on-surface flex items-center gap-1 transition-colors border border-white/5 active:scale-95"
-    >
-      <span className="material-symbols-outlined text-[14px]">language</span>
-      {lang.toUpperCase()}
-    </button>
+    <div className="relative">
+      <button
+        onClick={() => setShowLangDropdown(!showLangDropdown)}
+        className="bg-surface-container-high hover:bg-surface-container-highest px-3 py-1.5 rounded-full text-[10px] font-extrabold text-on-surface flex items-center gap-1 transition-colors border border-white/5 active:scale-95"
+      >
+        <span className="material-symbols-outlined text-[14px]">language</span>
+        {lang.toUpperCase()}
+      </button>
+
+      {showLangDropdown && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setShowLangDropdown(false)} />
+          <div className="absolute right-0 mt-2 w-32 bg-surface-container-highest border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden py-1 animate-in fade-in zoom-in duration-200 origin-top-right">
+            {['ru', 'en', 'tr', 'de', 'pl', 'ar', 'fa'].map((l) => (
+              <button
+                key={l}
+                onClick={() => {
+                  setLang(l);
+                  setShowLangDropdown(false);
+                }}
+                className={`w-full text-left px-4 py-2 text-xs font-bold hover:bg-primary/20 transition-colors flex items-center justify-between ${lang === l ? 'text-primary bg-primary/10' : 'text-on-surface'}`}
+              >
+                <span>{l.toUpperCase()}</span>
+                {lang === l && <span className="material-symbols-outlined text-xs">check</span>}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
   );
 
   const fetchUserData = async (tgId: number, firstName?: string, username?: string) => {
