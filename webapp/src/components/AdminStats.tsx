@@ -154,6 +154,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
         const { error } = await supabase.from('users').update({ custom_note: noteValue }).eq('telegram_id', tgId);
         if (!error) {
             setUsersInfo(prev => prev.map(u => u.telegram_id === tgId ? { ...u, custom_note: noteValue } : u));
+            setManagersList(prev => prev.map(m => m.telegram_id === tgId ? { ...m, custom_note: noteValue } : m));
             setEditingNoteId(null);
             tg?.showScanQrPopup && tg?.showAlert ? tg.showAlert("Заметка сохранена!") : alert("Saved!");
         }
@@ -216,16 +217,53 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                         <div className="pt-4 mt-4 border-t border-outline-variant/10 space-y-2">
                             <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">{t.activeEmployees}</p>
                             {managersList.map((m) => (
-                                <div key={m.telegram_id} className="flex justify-between items-center bg-surface-container-lowest p-2 px-3 rounded-lg border border-outline-variant/10">
-                                    <div className="flex items-center gap-2">
-                                        <span className="material-symbols-outlined text-[16px] text-tertiary">{m.role === 'founder' ? 'shield_person' : 'badge'}</span>
-                                        <span className="text-sm text-on-surface font-medium truncate w-32">@{m.username || String(m.telegram_id)}</span>
-                                        {m.role === 'founder' && <span className="text-[8px] uppercase tracking-widest bg-primary/20 text-primary px-1.5 py-0.5 rounded-sm font-bold">{t.ownerBadge}</span>}
+                                <div key={m.telegram_id} className="flex flex-col bg-surface-container-lowest p-2 px-3 rounded-lg border border-outline-variant/10 gap-2">
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-[16px] text-tertiary">{m.role === 'founder' ? 'shield_person' : 'badge'}</span>
+                                            <span className="text-sm text-on-surface font-medium truncate max-w-[120px]">@{m.username || String(m.telegram_id)}</span>
+                                            {m.custom_note && (
+                                                <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold">
+                                                    {m.custom_note}
+                                                </span>
+                                            )}
+                                            {editingNoteId !== m.telegram_id && (
+                                                <button 
+                                                    onClick={() => {
+                                                        setEditingNoteId(m.telegram_id);
+                                                        setNoteValue(m.custom_note || '');
+                                                    }}
+                                                    className="text-on-surface-variant hover:text-primary transition-colors"
+                                                >
+                                                    <span className="material-symbols-outlined text-[14px]">edit_note</span>
+                                                </button>
+                                            )}
+                                            {m.role === 'founder' && <span className="text-[8px] uppercase tracking-widest bg-primary/20 text-primary px-1.5 py-0.5 rounded-sm font-bold">{t.ownerBadge}</span>}
+                                        </div>
+                                        {m.role !== 'founder' && (
+                                            <button onClick={() => handleRemoveManager(m.telegram_id)} className="text-error hover:bg-error/10 p-1.5 rounded-md transition-colors active:scale-95 flex items-center justify-center">
+                                                <span className="material-symbols-outlined text-[16px]">person_remove</span>
+                                            </button>
+                                        )}
                                     </div>
-                                    {m.role !== 'founder' && (
-                                        <button onClick={() => handleRemoveManager(m.telegram_id)} className="text-error hover:bg-error/10 p-1.5 rounded-md transition-colors active:scale-95 flex items-center justify-center">
-                                            <span className="material-symbols-outlined text-[16px]">person_remove</span>
-                                        </button>
+
+                                    {editingNoteId === m.telegram_id && (
+                                        <div className="flex gap-2">
+                                            <input 
+                                                type="text"
+                                                value={noteValue}
+                                                onChange={(e) => setNoteValue(e.target.value)}
+                                                className="flex-1 bg-surface-container-high border border-outline-variant/20 rounded px-2 py-1 text-xs text-on-surface focus:outline-none"
+                                                placeholder="Имя менеджера..."
+                                                autoFocus
+                                            />
+                                            <button onClick={() => handleSaveNote(m.telegram_id)} className="bg-primary/20 text-primary p-1 rounded">
+                                                <span className="material-symbols-outlined text-[14px]">check</span>
+                                            </button>
+                                            <button onClick={() => setEditingNoteId(null)} className="bg-error/20 text-error p-1 rounded">
+                                                <span className="material-symbols-outlined text-[14px]">close</span>
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
                             ))}

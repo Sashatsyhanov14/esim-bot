@@ -1105,6 +1105,7 @@ const App: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         balance={user?.balance || 0}
         lang={lang}
+        telegramId={user?.telegram_id}
       />
     </>
   );

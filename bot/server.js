@@ -132,8 +132,28 @@ app.post('/api/translate', async (req, res) => {
         const translatedText = await getLocalizedText(targetLang, text);
         
         res.json({ translatedText });
+app.post('/api/withdraw-request', async (req, res) => {
+    try {
+        const { telegram_id, amount, method } = req.body;
+        if (!telegram_id || !amount || !method) return res.status(400).json({ error: 'Missing fields' });
+
+        const { data: user } = await supabase.from('users').select('username, custom_note').eq('telegram_id', telegram_id).single();
+        const userLabel = user?.custom_note ? `${user.custom_note} (@${user.username || telegram_id})` : `@${user?.username || telegram_id}`;
+
+        const msg = `🚀 **ЗАПРОС БОНУСОВ!**\n\n👤 Клиент: ${userLabel}\n💰 Сумма: **$${amount}**\n💳 Способ: ${method}\n\n⚠️ Проверьте баланс пользователя в админке перед выплатой!`;
+
+        const { data: managers } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'manager']);
+        if (managers) {
+            for (const manager of managers) {
+                try {
+                    await bot.telegram.sendMessage(manager.telegram_id, msg, { parse_mode: 'Markdown' });
+                } catch (e) { console.error(`Failed to notify manager ${manager.telegram_id}:`, e.message); }
+            }
+        }
+
+        res.json({ success: true });
     } catch (err) {
-        console.error('API Translate Error:', err);
+        console.error('Withdraw Request Error:', err);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });

@@ -5,13 +5,13 @@ interface WithdrawModalProps {
     onClose: () => void;
     balance: number;
     lang: string;
+    telegramId?: number;
 }
 
 const translations: Record<string, any> = {
     ru: {
         title: "Вывод бонусов",
-        amountLabel: "Сумма (Макс: {balance} $)",
-        amountPlaceholder: "0.00",
+        amountLabel: "Выводимая сумма: {balance} $",
         methodLabel: "Способ выплаты (Карта / USDT / Номер)",
         methodPlaceholder: "Реквизиты...",
         submit: "Отправить запрос",
@@ -19,8 +19,7 @@ const translations: Record<string, any> = {
     },
     en: {
         title: "Withdraw Bonuses",
-        amountLabel: "Amount (Max: {balance} $)",
-        amountPlaceholder: "0.00",
+        amountLabel: "Amount to withdraw: {balance} $",
         methodLabel: "Payout Method (Card / USDT / Number)",
         methodPlaceholder: "Details...",
         submit: "Submit Request",
@@ -64,8 +63,7 @@ const translations: Record<string, any> = {
     },
     tr: {
         title: "Bonus Çekimi",
-        amountLabel: "Tutar (Maks: {balance} $)",
-        amountPlaceholder: "0.00",
+        amountLabel: "Çekilecek tutar: {balance} $",
         methodLabel: "Ödeme Yöntemi (Kart / USDT / Numara)",
         methodPlaceholder: "Hesap Bilgileri...",
         submit: "Talebi Gönder",
@@ -73,18 +71,32 @@ const translations: Record<string, any> = {
     }
 };
 
-const WithdrawModal: React.FC<WithdrawModalProps> = ({ isOpen, onClose, balance, lang }) => {
-    const [amount, setAmount] = useState('');
+const WithdrawModal: React.FC<WithdrawModalProps> = ({ isOpen, onClose, balance, lang, telegramId }) => {
     const [method, setMethod] = useState('');
+    const [loading, setLoading] = useState(false);
 
     if (!isOpen) return null;
 
     const t = translations[lang] || translations['en'];
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        alert(t.alert.replace('{amount}', amount).replace('{method}', method));
-        onClose();
+        if (!telegramId || balance <= 0) return;
+
+        setLoading(true);
+        try {
+            await fetch('/api/withdraw-request', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ telegram_id: telegramId, amount: balance, method })
+            });
+            alert(t.alert.replace('{amount}', String(balance)).replace('{method}', method));
+            onClose();
+        } catch (err) {
+            alert("Error sending request");
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -98,17 +110,9 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ isOpen, onClose, balance,
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4 font-body">
-                    <div className="space-y-1">
-                        <label className="text-sm text-on-surface-variant font-bold uppercase tracking-wide">{t.amountLabel.replace('{balance}', String(balance))}</label>
-                        <input
-                            type="number"
-                            required
-                            max={balance}
-                            value={amount}
-                            onChange={(e) => setAmount(e.target.value)}
-                            className="w-full p-3 flex-1 bg-surface-container-lowest border border-outline-variant/20 rounded-lg text-sm text-on-surface focus:outline-none focus:border-primary/50"
-                            placeholder={t.amountPlaceholder}
-                        />
+                    <div className="bg-primary/5 p-4 rounded-xl border border-primary/20 mb-4 animate-in fade-in zoom-in duration-300">
+                        <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mb-1 opacity-60">{t.amountLabel.split(':')[0]}</p>
+                        <p className="text-2xl font-headline font-extrabold text-primary">${balance.toFixed(2)}</p>
                     </div>
 
                     <div className="space-y-1">
@@ -123,8 +127,12 @@ const WithdrawModal: React.FC<WithdrawModalProps> = ({ isOpen, onClose, balance,
                         />
                     </div>
 
-                    <button type="submit" className="w-full py-4 text-sm uppercase tracking-widest font-bold bg-primary/20 text-primary border border-primary/30 rounded-xl shadow-[0_0_15px_rgba(208,188,255,0.1)] hover:bg-primary/30 active:scale-95 transition-all">
-                        {t.submit}
+                    <button 
+                        type="submit" 
+                        disabled={loading}
+                        className="w-full py-4 text-sm uppercase tracking-widest font-bold bg-primary/20 text-primary border border-primary/30 rounded-xl shadow-[0_0_15px_rgba(208,188,255,0.1)] hover:bg-primary/30 active:scale-95 transition-all disabled:opacity-50"
+                    >
+                        {loading ? '...' : t.submit}
                     </button>
                 </form>
             </div>
