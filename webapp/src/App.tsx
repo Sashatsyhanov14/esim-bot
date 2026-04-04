@@ -1079,34 +1079,34 @@ const App: React.FC = () => {
         <p className="text-sm font-medium text-on-surface-variant mb-4">{t.promoTitle}</p>
 
         <div className="space-y-3">
-          <div className="flex items-center gap-2 bg-surface-container-lowest p-1.5 rounded-xl border border-outline-variant/10">
+          <div 
+            onClick={() => copyToClipboard(refLink)}
+            className="flex items-center gap-2 bg-surface-container-lowest p-1.5 rounded-xl border border-outline-variant/10 cursor-pointer hover:bg-surface-container-low transition-colors"
+          >
             <input
               type="text"
               readOnly
               value={refLink}
-              className="flex-1 bg-transparent text-sm text-on-surface outline-none px-2 font-mono"
+              className="flex-1 bg-transparent text-sm text-on-surface outline-none px-2 font-mono cursor-pointer"
             />
-            <button
-              onClick={() => copyToClipboard(refLink)}
-              className="w-[42px] h-[42px] bg-primary/20 text-primary rounded-lg flex items-center justify-center active:scale-90 transition-transform hover:bg-primary/30"
-            >
+            <div className="w-[42px] h-[42px] flex items-center justify-center text-primary opacity-60">
               <span className="material-symbols-outlined text-[20px]">content_copy</span>
-            </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2 bg-surface-container-lowest p-1.5 rounded-xl border border-outline-variant/10">
+          <div 
+            onClick={() => copyToClipboard(String(user?.telegram_id))}
+            className="flex items-center gap-2 bg-surface-container-lowest p-1.5 rounded-xl border border-outline-variant/10 cursor-pointer hover:bg-surface-container-low transition-colors"
+          >
             <span className="text-xs font-bold text-on-surface-variant uppercase tracking-wider px-2 border-r border-outline-variant/10 mr-1">{t.promoLabel}</span>
             <input
               type="text"
               readOnly
               value={user?.telegram_id || ''}
-              className="flex-1 bg-transparent font-bold text-primary outline-none px-2 font-mono text-[15px]"
+              className="flex-1 bg-transparent font-bold text-primary outline-none px-2 font-mono text-[15px] cursor-pointer"
             />
-            <button
-              onClick={() => copyToClipboard(String(user?.telegram_id))}
-              className="w-[42px] h-[42px] bg-primary/20 text-primary rounded-lg flex items-center justify-center active:scale-90 transition-transform hover:bg-primary/30"
-            >
+            <div className="w-[42px] h-[42px] flex items-center justify-center text-primary opacity-60">
               <span className="material-symbols-outlined text-[20px]">content_copy</span>
-            </button>
+            </div>
           </div>
         </div>
 
