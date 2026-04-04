@@ -885,9 +885,30 @@ const App: React.FC = () => {
 
   const refLink = user ? `https://t.me/emedeoesimworld_bot?start=${user.telegram_id}` : '';
 
-  const copyRefLink = () => {
-    navigator.clipboard.writeText(refLink);
-    tg?.showAlert(t.linkCopied);
+  const copyToClipboard = (text: string) => {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        tg?.showAlert(t.linkCopied);
+      }).catch(() => {
+        fallbackCopy(text);
+      });
+    } else {
+      fallbackCopy(text);
+    }
+  };
+
+  const fallbackCopy = (text: string) => {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      tg?.showAlert(t.linkCopied);
+    } catch (err) {
+      console.error('Fallback copy failed', err);
+    }
+    document.body.removeChild(textArea);
   };
 
   const handleManualLogin = async () => {
@@ -1066,7 +1087,7 @@ const App: React.FC = () => {
               className="flex-1 bg-transparent text-sm text-on-surface outline-none px-2 font-mono"
             />
             <button
-              onClick={copyRefLink}
+              onClick={() => copyToClipboard(refLink)}
               className="w-[42px] h-[42px] bg-primary/20 text-primary rounded-lg flex items-center justify-center active:scale-90 transition-transform hover:bg-primary/30"
             >
               <span className="material-symbols-outlined text-[20px]">content_copy</span>
@@ -1074,21 +1095,18 @@ const App: React.FC = () => {
           </div>
           <div className="flex items-center gap-2 bg-surface-container-lowest p-1.5 rounded-xl border border-outline-variant/10">
             <span className="text-xs font-bold text-on-surface-variant uppercase tracking-wider px-2 border-r border-outline-variant/10 mr-1">{t.promoLabel}</span>
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(String(user?.telegram_id));
-                tg?.showAlert(t.linkCopied);
-              }}
-              className="w-[42px] h-[42px] bg-primary/20 text-primary rounded-lg flex items-center justify-center active:scale-90 transition-transform hover:bg-primary/30"
-            >
-              <span className="material-symbols-outlined text-[20px]">content_copy</span>
-            </button>
             <input
               type="text"
               readOnly
               value={user?.telegram_id || ''}
               className="flex-1 bg-transparent font-bold text-primary outline-none px-2 font-mono text-[15px]"
             />
+            <button
+              onClick={() => copyToClipboard(String(user?.telegram_id))}
+              className="w-[42px] h-[42px] bg-primary/20 text-primary rounded-lg flex items-center justify-center active:scale-90 transition-transform hover:bg-primary/30"
+            >
+              <span className="material-symbols-outlined text-[20px]">content_copy</span>
+            </button>
           </div>
         </div>
 
