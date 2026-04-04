@@ -1081,7 +1081,7 @@ const App: React.FC = () => {
         <div className="space-y-3">
           <div 
             onClick={() => copyToClipboard(refLink)}
-            className="flex items-center gap-2 bg-surface-container-lowest p-1.5 rounded-xl border border-outline-variant/10 cursor-pointer hover:bg-surface-container-low transition-colors"
+            className="flex items-center gap-2 bg-surface-container-lowest p-2 rounded-xl border border-outline-variant/10 cursor-pointer hover:bg-surface-container-low transition-colors min-h-[48px]"
           >
             <input
               type="text"
@@ -1089,13 +1089,10 @@ const App: React.FC = () => {
               value={refLink}
               className="flex-1 bg-transparent text-sm text-on-surface outline-none px-2 font-mono cursor-pointer"
             />
-            <div className="w-[42px] h-[42px] flex items-center justify-center text-primary opacity-60">
-              <span className="material-symbols-outlined text-[20px]">content_copy</span>
-            </div>
           </div>
           <div 
             onClick={() => copyToClipboard(String(user?.telegram_id))}
-            className="flex items-center gap-2 bg-surface-container-lowest p-1.5 rounded-xl border border-outline-variant/10 cursor-pointer hover:bg-surface-container-low transition-colors"
+            className="flex items-center gap-2 bg-surface-container-lowest p-2 rounded-xl border border-outline-variant/10 cursor-pointer hover:bg-surface-container-low transition-colors min-h-[48px]"
           >
             <span className="text-xs font-bold text-on-surface-variant uppercase tracking-wider px-2 border-r border-outline-variant/10 mr-1">{t.promoLabel}</span>
             <input
@@ -1104,9 +1101,6 @@ const App: React.FC = () => {
               value={user?.telegram_id || ''}
               className="flex-1 bg-transparent font-bold text-primary outline-none px-2 font-mono text-[15px] cursor-pointer"
             />
-            <div className="w-[42px] h-[42px] flex items-center justify-center text-primary opacity-60">
-              <span className="material-symbols-outlined text-[20px]">content_copy</span>
-            </div>
           </div>
         </div>
 
