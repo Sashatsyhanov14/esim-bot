@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
 export default function AdminStats({ t, globalStats }: { t: any, globalStats: any }) {
@@ -417,13 +417,15 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                                 <div className="text-right flex flex-col items-end pl-2 gap-2">
                                     <div>
                                         <p className="text-[10px] text-on-surface-variant uppercase">{t.refVolumeLabel || 'REF VOLUME'}</p>
-                                        <p className="font-headline font-bold text-blue-400 mt-[-2px]">${(u.refTotalVolume || 0).toFixed(                                    <div>
+                                        <p className="font-headline font-bold text-blue-400 mt-[-2px]">${(u.refTotalVolume || 0).toFixed(2)}</p>
+                                    </div>
+                                    <div>
                                         <p className="text-[10px] text-on-surface-variant uppercase">{t.commissionLabelAdmin || 'COMMISSION'}</p>
                                         <p className="font-headline font-bold text-green-400 mt-[-2px]">${u.earnedBonuses.toFixed(2)}</p>
                                     </div>
                                 </div>
                             </div>
- 
+
                             {u.invitedCount > 0 && (
                                 <button
                                     onClick={() => openRefDrilldown(u)}
@@ -431,8 +433,6 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                                 >
                                     <span className="material-symbols-outlined text-[14px]">open_in_new</span>
                                     {t.viewRefDealsBtn || 'View referral deals'}
-                                </button>
-                            )}ЂР°Р»РѕРІ
                                 </button>
                             )}
 
