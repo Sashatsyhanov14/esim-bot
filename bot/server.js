@@ -68,7 +68,7 @@ app.post('/api/catalog-buy', async (req, res) => {
         const { data: orderData } = await createOrder(telegramId, tariffId, tariff.price_usd);
 
         // Fetch managers to notify
-        const { data: managers } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'manager']);
+        const { data: managers } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'admin', 'manager']);
         if (managers && managers.length > 0) {
             const { Markup } = require('telegraf');
             

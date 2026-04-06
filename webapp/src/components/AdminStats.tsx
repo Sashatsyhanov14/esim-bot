@@ -14,10 +14,14 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
     const [refOrdersLoading, setRefOrdersLoading] = useState(false);
 
     const [newManagerId, setNewManagerId] = useState('');
+    const [newManagerRole, setNewManagerRole] = useState<'manager' | 'admin'>('manager');
     const [managersList, setManagersList] = useState<any[]>([]);
     const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
     const [noteValue, setNoteValue] = useState('');
     const tg = window.Telegram?.WebApp;
+
+    const user = globalStats?.user; // Assume user is passed in globalStats or fetched
+    const isAdmin = user?.role === 'founder' || user?.role === 'admin';
 
     useEffect(() => {
         fetchData();
@@ -86,14 +90,14 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
             setUsersInfo(sortedUsers);
         }
 
-        const { data: mUsers } = await supabase.from('users').select('*').in('role', ['manager', 'founder']);
+        const { data: mUsers } = await supabase.from('users').select('*').in('role', ['manager', 'admin', 'founder']);
         if (mUsers) setManagersList(mUsers);
 
         setLoading(false);
     };
 
     const handleAddManager = async () => {
-        if (!newManagerId) return;
+        if (!newManagerId || !isAdmin) return;
         const tgId = parseInt(newManagerId);
 
         const { data: existingUser } = await supabase.from('users').select('*').eq('telegram_id', tgId).single();
@@ -102,14 +106,15 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
             return;
         }
 
-        const { error } = await supabase.from('users').update({ role: 'manager' }).eq('telegram_id', tgId);
+        const { error } = await supabase.from('users').update({ role: newManagerRole }).eq('telegram_id', tgId);
 
         if (!error) {
             setManagersList(prev => {
-                if (prev.find(m => m.telegram_id === tgId)) return prev;
-                return [...prev, { ...existingUser, role: 'manager' }];
+                const list = prev.filter(m => m.telegram_id !== tgId);
+                return [...list, { ...existingUser, role: newManagerRole }];
             });
-            tg?.showAlert(t.managerAddSuccess?.replace('{id}', String(tgId)) || `Success!`);
+            const roleName = newManagerRole === 'admin' ? t.adminBadge : t.managerBadge;
+            tg?.showAlert(t.managerAddSuccess?.replace('{id}', String(tgId)).replace('{role}', roleName) || `Success!`);
             setNewManagerId('');
         } else {
             tg?.showAlert(t.managerAddFail);
@@ -185,6 +190,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
 
     return (
         <div className="space-y-6">
+            {isAdmin && (
             <section className="space-y-4 mb-2 border-b border-white/5 pb-6">
                 <h3 className="text-lg font-headline font-bold text-on-surface flex items-center gap-2">
                     <span className="material-symbols-outlined text-primary">engineering</span>
@@ -200,17 +206,37 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                             <p className="text-xs text-on-surface-variant">{t.enterTgId}</p>
                         </div>
                     </div>
-                    <div className="flex gap-2 pt-2">
-                        <input
-                            type="number"
-                            value={newManagerId}
-                            onChange={(e) => setNewManagerId(e.target.value)}
-                            className="flex-1 bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-4 min-h-[42px] text-sm text-on-surface focus:outline-none focus:border-primary/50"
-                            placeholder="12345678"
-                        />
-                        <button onClick={handleAddManager} className="whitespace-nowrap bg-primary/20 text-primary border border-primary/30 w-[42px] h-[42px] min-w-[42px] flex items-center justify-center rounded-lg shadow-[0_0_15px_rgba(208,188,255,0.1)] hover:bg-primary/30 transition-colors active:scale-95">
-                            <span className="material-symbols-outlined font-bold text-xl">add</span>
-                        </button>
+                    <div className="flex flex-col gap-3 pt-2">
+                        <div className="flex gap-2">
+                            <input
+                                type="number"
+                                value={newManagerId}
+                                onChange={(e) => setNewManagerId(e.target.value)}
+                                className="flex-1 bg-surface-container-lowest border border-outline-variant/20 rounded-lg px-4 min-h-[42px] text-sm text-on-surface focus:outline-none focus:border-primary/50"
+                                placeholder="12345678"
+                            />
+                            <button onClick={handleAddManager} className="whitespace-nowrap bg-primary/20 text-primary border border-primary/30 w-[42px] h-[42px] min-w-[42px] flex items-center justify-center rounded-lg shadow-[0_0_15px_rgba(208,188,255,0.1)] hover:bg-primary/30 transition-all active:scale-95">
+                                <span className="material-symbols-outlined font-bold text-xl">add</span>
+                            </button>
+                        </div>
+                        
+                        <div className="flex items-center gap-4 bg-surface-container-lowest/50 p-2 px-3 rounded-lg border border-outline-variant/10">
+                            <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">{t.roleLabel}</span>
+                            <div className="flex gap-2 flex-1">
+                                <button 
+                                    onClick={() => setNewManagerRole('manager')}
+                                    className={`flex-1 py-1 rounded-md text-[10px] font-bold uppercase transition-all ${newManagerRole === 'manager' ? 'bg-secondary/20 text-secondary border border-secondary/30' : 'bg-surface-container-high text-on-surface-variant'}`}
+                                >
+                                    {t.selectManager}
+                                </button>
+                                <button 
+                                    onClick={() => setNewManagerRole('admin')}
+                                    className={`flex-1 py-1 rounded-md text-[10px] font-bold uppercase transition-all ${newManagerRole === 'admin' ? 'bg-primary/20 text-primary border border-primary/30' : 'bg-white/5 text-on-surface-variant'}`}
+                                >
+                                    {t.selectAdmin}
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                     {managersList.length > 0 && (
@@ -220,25 +246,18 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                                 <div key={m.telegram_id} className="flex flex-col bg-surface-container-lowest p-2 px-3 rounded-lg border border-outline-variant/10 gap-2">
                                     <div className="flex justify-between items-center">
                                         <div className="flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-[16px] text-tertiary">{m.role === 'founder' ? 'shield_person' : 'badge'}</span>
+                                            <span className="material-symbols-outlined text-[16px] text-tertiary">
+                                                {m.role === 'founder' ? 'shield_person' : (m.role === 'admin' ? 'manage_accounts' : 'badge')}
+                                            </span>
                                             <span className="text-sm text-on-surface font-medium truncate max-w-[120px]">@{m.username || String(m.telegram_id)}</span>
-                                            {m.custom_note && (
-                                                <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold">
-                                                    {m.custom_note}
+                                            {m.role !== 'client' && (
+                                                <span className={`text-[8px] uppercase tracking-widest px-1.5 py-0.5 rounded-sm font-bold ${
+                                                    m.role === 'founder' ? 'bg-primary/20 text-primary' : 
+                                                    (m.role === 'admin' ? 'bg-secondary/20 text-secondary' : 'bg-tertiary/20 text-tertiary')
+                                                }`}>
+                                                    {m.role === 'founder' ? t.ownerBadge : (m.role === 'admin' ? t.adminBadge : t.managerBadge)}
                                                 </span>
                                             )}
-                                            {editingNoteId !== m.telegram_id && (
-                                                <button 
-                                                    onClick={() => {
-                                                        setEditingNoteId(m.telegram_id);
-                                                        setNoteValue(m.custom_note || '');
-                                                    }}
-                                                    className="text-on-surface-variant hover:text-primary transition-colors"
-                                                >
-                                                    <span className="material-symbols-outlined text-[14px]">edit_note</span>
-                                                </button>
-                                            )}
-                                            {m.role === 'founder' && <span className="text-[8px] uppercase tracking-widest bg-primary/20 text-primary px-1.5 py-0.5 rounded-sm font-bold">{t.ownerBadge}</span>}
                                         </div>
                                         {m.role !== 'founder' && (
                                             <button onClick={() => handleRemoveManager(m.telegram_id)} className="text-error hover:bg-error/10 p-1.5 rounded-md transition-colors active:scale-95 flex items-center justify-center">
@@ -247,14 +266,14 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                                         )}
                                     </div>
 
-                                    {editingNoteId === m.telegram_id && (
+                                    {editingNoteId === m.telegram_id ? (
                                         <div className="flex gap-2">
                                             <input 
                                                 type="text"
                                                 value={noteValue}
                                                 onChange={(e) => setNoteValue(e.target.value)}
                                                 className="flex-1 bg-surface-container-high border border-outline-variant/20 rounded px-2 py-1 text-xs text-on-surface focus:outline-none"
-                                                placeholder="РРјСЏ РјРµРЅРµРґР¶РµСЂР°..."
+                                                placeholder="Имя менеджера..."
                                                 autoFocus
                                             />
                                             <button onClick={() => handleSaveNote(m.telegram_id)} className="bg-primary/20 text-primary p-1 rounded">
@@ -264,6 +283,34 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                                                 <span className="material-symbols-outlined text-[14px]">close</span>
                                             </button>
                                         </div>
+                                    ) : (
+                                        m.custom_note && (
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold">
+                                                    {m.custom_note}
+                                                </span>
+                                                <button 
+                                                    onClick={() => {
+                                                        setEditingNoteId(m.telegram_id);
+                                                        setNoteValue(m.custom_note || '');
+                                                    }}
+                                                    className="text-on-surface-variant hover:text-primary transition-colors"
+                                                >
+                                                    <span className="material-symbols-outlined text-[14px]">edit_note</span>
+                                                </button>
+                                            </div>
+                                        ) || (
+                                            <button 
+                                                onClick={() => {
+                                                    setEditingNoteId(m.telegram_id);
+                                                    setNoteValue('');
+                                                }}
+                                                className="text-[10px] text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1"
+                                            >
+                                                <span className="material-symbols-outlined text-[14px]">add_notes</span>
+                                                Добавить заметку
+                                            </button>
+                                        )
                                     )}
                                 </div>
                             ))}
@@ -271,6 +318,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                     )}
                 </div>
             </section>
+            )}
 
             <section className="grid grid-cols-2 gap-3">
                 <div className="bg-[#201f22] p-4 rounded-xl flex flex-col justify-between min-h-[100px] border border-white/5">

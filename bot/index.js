@@ -576,7 +576,7 @@ bot.on('text', async (ctx) => {
             const { data: managers } = await supabase
                 .from('users')
                 .select('telegram_id')
-                .in('role', ['founder', 'manager']);
+                .in('role', ['founder', 'admin', 'manager']);
 
             if (managers && managers.length > 0) {
                 for (const manager of managers) {

@@ -25,10 +25,15 @@ const translations = {
     enterTgId: "Введите Telegram ID",
     activeEmployees: "Действующие сотрудники",
     managerAddError: "ОШИБКА: Этот пользователь еще ни разу не запускал бота! Пусть нажмет /start в боте.",
-    managerAddSuccess: "Успех! ID {id} теперь Менеджер.",
+    managerAddSuccess: "Успех! ID {id} теперь {role}.",
     managerRemoveSuccess: "Сотрудник {id} удален.",
-    managerAddFail: "Ошибка при добавлении менеджера.",
+    managerAddFail: "Ошибка при добавлении.",
     ownerBadge: "Владелец",
+    adminBadge: "Админ",
+    managerBadge: "Менеджер",
+    selectAdmin: "Админ",
+    selectManager: "Менеджер",
+    roleLabel: "Роль:",
     balance: "Баланс",
     invitedCount: "Приглашены",
     userTitle: "Бонусы",
@@ -950,7 +955,9 @@ const App: React.FC = () => {
     );
   }
 
-  const isFounder = user?.role === 'founder' || user?.role === 'manager';
+  const isAdmin = user?.role === 'founder' || user?.role === 'admin';
+  const isManager = user?.role === 'manager';
+  const isStaff = isAdmin || isManager;
 
   const renderAdminHeader = () => (
     <header className="px-6 pt-10 pb-6 relative overflow-hidden">
@@ -1130,9 +1137,9 @@ const App: React.FC = () => {
 
   return (
     <>
-      {isFounder && isManagerTab ? renderAdminHeader() : renderUserHeader()}
+      {isStaff && isManagerTab ? renderAdminHeader() : renderUserHeader()}
       <main className="px-4 pt-2 space-y-8 max-w-2xl mx-auto pb-24">
-        {isFounder && isManagerTab ? renderAdminContent() : renderUserContent()}
+        {isStaff && isManagerTab ? renderAdminContent() : renderUserContent()}
       </main>
 
       <nav className="fixed bottom-0 w-full z-50 flex justify-around items-center px-2 pb-6 pt-3 bg-[#131315]/80 backdrop-blur-2xl rounded-t-[1.5rem] shadow-[0_-10px_30px_rgba(0,0,0,0.5)] border-t border-white/5">
@@ -1152,15 +1159,18 @@ const App: React.FC = () => {
           <span className="font-['Inter'] text-[9px] font-extrabold uppercase tracking-widest mt-1">{t.tabReferral}</span>
         </button>
 
-        {isFounder && (
+        {isStaff && (
+          <button
+            onClick={() => setActiveTab('stats')}
+            className={`flex flex-col items-center p-2 rounded-xl transition-all w-full max-w-[80px] ${activeTab === 'stats' ? 'text-primary scale-110' : 'text-on-surface-variant hover:text-on-surface'}`}
+          >
+            <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'stats' ? "\'FILL\' 1" : "\'FILL\' 0" }}>bar_chart</span>
+            <span className="font-['Inter'] text-[9px] font-extrabold uppercase tracking-widest mt-1">{t.tabStats}</span>
+          </button>
+        )}
+
+        {isAdmin && (
           <>
-            <button
-              onClick={() => setActiveTab('stats')}
-              className={`flex flex-col items-center p-2 rounded-xl transition-all w-full max-w-[80px] ${activeTab === 'stats' ? 'text-primary scale-110' : 'text-on-surface-variant hover:text-on-surface'}`}
-            >
-              <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'stats' ? "\'FILL\' 1" : "\'FILL\' 0" }}>bar_chart</span>
-              <span className="font-['Inter'] text-[9px] font-extrabold uppercase tracking-widest mt-1">{t.tabStats}</span>
-            </button>
             <button
               onClick={() => setActiveTab('tariffs')}
               className={`flex flex-col items-center p-2 rounded-xl transition-all w-full max-w-[80px] ${activeTab === 'tariffs' ? 'text-primary scale-110' : 'text-on-surface-variant hover:text-on-surface'}`}
@@ -1168,7 +1178,6 @@ const App: React.FC = () => {
               <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'tariffs' ? "\'FILL\' 1" : "\'FILL\' 0" }}>sell</span>
               <span className="font-['Inter'] text-[9px] font-extrabold uppercase tracking-widest mt-1">{t.tabTariffs}</span>
             </button>
-            {/* Make FAQ take less space or remove it to fit 5 items comfortably? Let's give buttons a max width */}
             <button
               onClick={() => setActiveTab('faq')}
               className={`flex flex-col items-center p-2 rounded-xl transition-all w-full max-w-[80px] ${activeTab === 'faq' ? 'text-primary scale-110' : 'text-on-surface-variant hover:text-on-surface'}`}
