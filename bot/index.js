@@ -1,15 +1,22 @@
 const { Telegraf, session, Markup } = require('telegraf');
 const axios = require('axios');
 const dotenv = require('dotenv');
+const path = require('path');
 const { supabase, getUser, createUser, getTariffs, saveMessage, getHistory, createOrder, getFaq, clearHistory } = require('./src/supabase');
 const { getChatResponse, getLocalizedText } = require('./src/openai');
 
-dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, './.env') });
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 const MANAGER_ID = parseInt(process.env.MANAGER_ID);
 
 const userLangCache = {};
+
+let botInfo = null;
+bot.telegram.getMe().then(info => {
+    botInfo = info;
+    console.log(`[INFO] Bot started as @${info.username}`);
+});
 
 bot.use(session());
 
@@ -219,7 +226,8 @@ bot.start(async (ctx) => {
 
         if (startPayload === 'getqr') {
             const lang = userLangCache[telegramId] || ctx.from.language_code || 'en';
-            const refLink = `https://t.me/emedeoesimworld_bot?start=${telegramId}`;
+            const botUsername = botInfo?.username || ctx.botInfo?.username || 'emedeoesimworld_bot';
+            const refLink = `https://t.me/${botUsername}?start=${telegramId}`;
             const textRu = `🎁 Вот твоя пригласительная ссылка и QR-код:\n\n${refLink}\n\nТвой промокод (для ввода вручную): \`${telegramId}\``;
             const text = await getLocalizedText(lang, textRu);
             const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(refLink)}&margin=10`;
@@ -500,7 +508,7 @@ bot.on('text', async (ctx) => {
     // Get AI response
     const aiResponse = await getChatResponse(tariffs, faqText, history || [], userText);
 
-    const langMatch = aiResponse.match(/\[LANG:\s*(ru|tr|en|fa|ar|de|pl)\]/i);
+    const langMatch = aiResponse.match(/\[LANG:\s*([a-z]{2})\]/i);
     if (langMatch) {
         const newLang = langMatch[1].toLowerCase();
         if (newLang !== userLangCache[telegramId]) {

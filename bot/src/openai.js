@@ -3,12 +3,13 @@ const axios = require('axios');
 const dotenv = require('dotenv');
 const { ANALYZER_PROMPT, WRITER_PROMPT, LOCALIZER_PROMPT } = require('./prompts');
 
-dotenv.config();
+const path = require('path');
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const openai = new OpenAI({
     baseURL: 'https://openrouter.ai/api/v1',
-    apiKey: process.env.OPENAI_API_KEY,
-    timeout: 120000, // 2 minutes timeout to allow slow models (like DeepSeek) to respond without crashing the bot
+    apiKey: (process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY || '').trim(),
+    timeout: 120000, 
     defaultHeaders: {
         'HTTP-Referer': 'https://esim-bot.com',
         'X-Title': 'eSIM Bot',
@@ -73,7 +74,11 @@ module.exports = {
             return finalMessage + '\n' + embeddedTags;
 
         } catch (error) {
-            console.error('OpenAI Error:', error);
+            console.error('[OpenAI Fatal Error]:', error.message);
+            if (error.response) {
+                console.error('[OpenAI Status]:', error.response.status);
+                console.error('[OpenAI Data]:', error.response.data);
+            }
             return 'Извини, я приуныл. Попробуй позже.';
         }
     },
