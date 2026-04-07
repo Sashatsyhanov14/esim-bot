@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
 export default function AdminStats({ t, globalStats }: { t: any, globalStats: any }) {
+    const { user } = globalStats;
     const [activeTab, setActiveTab] = useState<'orders' | 'users'>('orders');
     const [isOrdersExpanded, setIsOrdersExpanded] = useState(false);
     const [isUsersExpanded, setIsUsersExpanded] = useState(false);
@@ -20,7 +21,6 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
     const [noteValue, setNoteValue] = useState('');
     const tg = window.Telegram?.WebApp;
 
-    const user = globalStats?.user; // Assume user is passed in globalStats or fetched
     const isAdmin = user?.role === 'founder' || user?.role === 'admin';
 
     useEffect(() => {
@@ -38,8 +38,6 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
         tariffs:tariff_id (country, data_gb, validity_period)
       `)
             .order('created_at', { ascending: false });
-
-        if (ordersData) setOrders(ordersData);
 
         const { data: allUsers } = await supabase.from('users').select('telegram_id, username, referrer_id, balance, custom_note');
         const { data: allPayouts } = await supabase.from('chat_history').select('user_id, content, created_at').eq('role', 'assistant').like('content', 'PAYOUT_RECORD:%').order('created_at', { ascending: false });
@@ -83,9 +81,27 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                 }
             });
 
-            const sortedUsers = Object.values(uMap)
+            let sortedUsers = Object.values(uMap)
                 .filter((u: any) => u.invitedCount > 0 || u.ordersCount > 0 || u.balance > 0)
                 .sort((a: any, b: any) => b.earnedBonuses - a.earnedBonuses);
+
+            const isOnlyManager = user?.role === 'manager';
+            if (isOnlyManager) {
+                // Manager only sees their own referral stats
+                sortedUsers = sortedUsers.filter((u: any) => String(u.telegram_id) === String(user.telegram_id));
+                const managerData = sortedUsers[0];
+                const managedUserIds = managerData?.invitedUserIds || [];
+                
+                // Filter orders to only those from people invited by this manager
+                const managerOrders = ordersData.filter((o: any) => {
+                    const uObj = o.users as any;
+                    const uId = String(uObj?.telegram_id || (Array.isArray(uObj) ? uObj[0]?.telegram_id : ''));
+                    return managedUserIds.includes(uId);
+                });
+                setOrders(managerOrders);
+            } else {
+                setOrders(ordersData);
+            }
 
             setUsersInfo(sortedUsers);
         }

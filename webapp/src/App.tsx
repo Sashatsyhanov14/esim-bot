@@ -704,7 +704,7 @@ const App: React.FC = () => {
   const [referrals, setReferrals] = useState<any[]>([]);
   const [purchasedRefsCount, setPurchasedRefsCount] = useState(0);
   const [payoutsHistory, setPayoutsHistory] = useState<any[]>([]);
-  const [globalStats, setGlobalStats] = useState({ totalUsers: 0, totalOrders: 0, totalSales: 0 });
+  const [globalStats, setGlobalStats] = useState({ totalUsers: 0, totalOrders: 0, totalSales: 0, user: null as any });
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [lang, setLang] = useState<string>('ru');
@@ -877,7 +877,8 @@ const App: React.FC = () => {
           setGlobalStats({
             totalUsers: uCount || 0,
             totalOrders: oCount || 0,
-            totalSales: sumSales
+            totalSales: sumSales,
+            user: currentUser
           });
         }
       }
