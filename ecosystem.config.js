@@ -1,7 +1,7 @@
 module.exports = {
     apps: [
         {
-            name: 'esim-bot-1',
+            name: 'bot1',
             script: 'npm',
             args: 'start',
             cwd: './bot',
