@@ -92,15 +92,15 @@ app.post('/api/catalog-buy', async (req, res) => {
 
                     const alertTexts = {
                         ru: {
-                            text: `🚀 **ЗАКАЗ (КАТАЛОГ WebApp)!**\n\nЮзер: @${username} (ID: ${telegramId})\nТариф: ${mlt.country} | ${mlt.data_gb} на ${mlt.validity}\nЦена: $${tariff.price_usd}\n\n⚠️ ВАЖНО: Подтвердите оплату перед тем как скидывать eSIM-код!`,
+                            text: `👤 **Юзер:** @${username} (ID: ${telegramId})\n🚀 **ЗАКАЗ (КАТАЛОГ WebApp)!**\n\nТариф: ${mlt.country} | ${mlt.data_gb} на ${mlt.validity}\nЦена: $${tariff.price_usd}\n\n⚠️ ВАЖНО: Подтвердите оплату перед тем как скидывать eSIM-код!`,
                             btn: '📤 Отправить eSIM (Код/Ссылка)'
                         },
                         tr: {
-                            text: `🚀 **SİPARİŞ (KATALOG WebApp)!**\n\nKullanıcı: @${username} (ID: ${telegramId})\nTarife: ${mlt.country} | ${mlt.data_gb} - ${mlt.validity}\nFiyat: $${tariff.price_usd}\n\n⚠️ ÖNEMLİ: Ödeme onayından sonra gönderin!`,
+                            text: `👤 **Kullanıcı:** @${username} (ID: ${telegramId})\n🚀 **SİPARİŞ (KATALOG WebApp)!**\n\nTarife: ${mlt.country} | ${mlt.data_gb} - ${mlt.validity}\nFiyat: $${tariff.price_usd}\n\n⚠️ ÖNEMLİ: Ödeme onayından sonra gönderin!`,
                             btn: '📤 eSIM Gönder'
                         },
                         en: {
-                            text: `🚀 **ORDER (CATALOG WebApp)!**\n\nUser: @${username} (ID: ${telegramId})\nPlan: ${mlt.country} | ${mlt.data_gb} for ${mlt.validity}\nPrice: $${tariff.price_usd}\n\n⚠️ IMPORTANT: Verify payment before sending!`,
+                            text: `👤 **User:** @${username} (ID: ${telegramId})\n🚀 **ORDER (CATALOG WebApp)!**\n\nPlan: ${mlt.country} | ${mlt.data_gb} for ${mlt.validity}\nPrice: $${tariff.price_usd}\n\n⚠️ IMPORTANT: Verify payment before sending!`,
                             btn: '📤 Send eSIM (Code/Link)'
                         }
                     };
@@ -146,7 +146,7 @@ app.post('/api/withdraw-request', async (req, res) => {
         const { data: user } = await supabase.from('users').select('username, custom_note').eq('telegram_id', telegram_id).single();
         const userLabel = user?.custom_note ? `${user.custom_note} (@${user.username || telegram_id})` : `@${user?.username || telegram_id}`;
 
-        const msg = `🚀 **ЗАПРОС БОНУСОВ!**\n\n👤 Клиент: ${userLabel}\n💰 Сумма: **$${amount}**\n💳 Способ: ${method}\n\n⚠️ Проверьте баланс пользователя в админке перед выплатой!`;
+        const msg = `👤 **Клиент:** ${userLabel} (ID: ${telegram_id})\n🚀 **ЗАПРОС БОНУСОВ!**\n\n💰 Сумма: **$${amount}**\n💳 Способ: ${method}\n\n⚠️ Проверьте баланс пользователя в админке перед выплатой!`;
 
         const { data: managers } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'manager']);
         if (managers && bot) {
