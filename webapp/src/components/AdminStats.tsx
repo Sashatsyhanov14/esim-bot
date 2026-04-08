@@ -33,6 +33,8 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
         if (s.includes('monten') || s.includes('черног')) return '🇲🇪';
         if (s.includes('serb') || s.includes('серб')) return '🇷🇸';
         if (s.includes('euro') || s.includes('евро')) return '🇪🇺';
+        if (s.includes('saudi') || s.includes('сауд')) return '🇸🇦';
+        if (s.includes('dubai') || s.includes('uae') || s.includes('оаэ') || s.includes('emir')) return '🇦🇪';
         if (s.includes('global') || s.includes('глобал') || s.includes('world') || s.includes('мир')) return '🌎';
         if (s.includes('asia') || s.includes('азия')) return '🌏';
         if (s.includes('africa') || s.includes('африка')) return '🌍';

@@ -133,7 +133,7 @@ export default function ClientCatalog({ lang, telegramId }: { lang: string, tele
         if (c.includes('thai') || c.includes('таил')) return { emoji: '🇹🇭', code: 'th' };
         if (c.includes('viet') || c.includes('вьет')) return { emoji: '🇻🇳', code: 'vn' };
         if (c.includes('isra') || c.includes('изра') || c.includes('israil')) return { emoji: '🇮🇱', code: 'il' };
-        if (c.includes('emir') || c.includes('оаэ') || c.includes('bae')) return { emoji: '🇦🇪', code: 'ae' };
+        if (c.includes('emir') || c.includes('оаэ') || c.includes('bae') || c.includes('dubai') || c.includes('uae')) return { emoji: '🇦🇪', code: 'ae' };
         if (c.includes('egypt') || c.includes('егип') || c.includes('mısır')) return { emoji: '🇪🇬', code: 'eg' };
         if (c.includes('georg') || c.includes('груз')) return { emoji: '🇬🇪', code: 'ge' };
         if (c.includes('armen') || c.includes('армен')) return { emoji: '🇦🇲', code: 'am' };
@@ -151,6 +151,7 @@ export default function ClientCatalog({ lang, telegramId }: { lang: string, tele
         if (c.includes('swiss') || c.includes('швейц') || c.includes('isviçre')) return { emoji: '🇨🇭', code: 'ch' };
         if (c.includes('indones') || c.includes('индонез')) return { emoji: '🇮🇩', code: 'id' };
         if (c.includes('malays') || c.includes('малайз')) return { emoji: '🇲🇾', code: 'my' };
+        if (c.includes('saudi') || c.includes('сауд')) return { emoji: '🇸🇦', code: 'sa' };
         return { emoji: '🏳️', code: '' };
     };
 
@@ -159,12 +160,20 @@ export default function ClientCatalog({ lang, telegramId }: { lang: string, tele
         const data = getFlagData(country);
         if (!data.code || data.code === 'un') return <span className={size === "lg" ? "text-3xl" : "text-xl"}>{data.emoji}</span>;
         
-        const sizePx = size === "lg" ? "64" : (size === "md" ? "48" : "32");
+        // Use standard FlagCDN widths: 20, 40, 80, 160...
+        const sizePx = size === "lg" ? "80" : (size === "md" ? "40" : "20");
         return (
             <img 
                 src={`https://flagcdn.com/w${sizePx}/${data.code}.png`} 
                 alt={country}
-                className={`${size === "lg" ? "w-8 h-5" : "w-6 h-4"} object-cover rounded shadow-sm border border-white/10`}
+                className={`${size === "lg" ? "w-8 h-5" : "w-6 h-4"} object-cover rounded-[2px] shadow-sm border border-white/5`}
+                onError={(e) => {
+                    (e.target as any).style.display = 'none';
+                    const span = document.createElement('span');
+                    span.innerText = data.emoji;
+                    span.className = size === "lg" ? "text-3xl" : "text-xl";
+                    (e.target as any).parentNode.appendChild(span);
+                }}
             />
         );
     };
