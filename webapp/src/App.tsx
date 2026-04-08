@@ -798,7 +798,12 @@ const App: React.FC = () => {
                 }}
                 className={`w-full text-left px-4 py-3 text-xs font-bold transition-all flex items-center justify-between border-l-4 ${lang === l ? 'text-primary bg-primary/10 border-primary' : 'text-slate-300 border-transparent hover:bg-white/5'}`}
               >
-                <span>{l === 'ru' ? 'Русский' : l === 'en' ? 'English' : l === 'tr' ? 'Türkçe' : l === 'de' ? 'Deutsch' : l === 'pl' ? 'Polski' : l === 'ar' ? 'العربية' : 'فارسی'}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-base leading-none">
+                    {l === 'ru' ? '🇷🇺' : l === 'en' ? '🇺🇸' : l === 'tr' ? '🇹🇷' : l === 'de' ? '🇩🇪' : l === 'pl' ? '🇵🇱' : l === 'ar' ? '🇦🇪' : '🇮🇷'}
+                  </span>
+                  <span>{l === 'ru' ? 'Русский' : l === 'en' ? 'English' : l === 'tr' ? 'Türkçe' : l === 'de' ? 'Deutsch' : l === 'pl' ? 'Polski' : l === 'ar' ? 'العربية' : 'فارسی'}</span>
+                </div>
                 {lang === l && <span className="material-symbols-outlined text-[16px]">check_circle</span>}
               </button>
             ))}

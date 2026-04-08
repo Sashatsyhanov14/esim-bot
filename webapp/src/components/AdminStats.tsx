@@ -89,19 +89,9 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
             if (isOnlyManager) {
                 // Manager only sees their own referral stats
                 sortedUsers = sortedUsers.filter((u: any) => String(u.telegram_id) === String(user.telegram_id));
-                const managerData = sortedUsers[0];
-                const managedUserIds = managerData?.invitedUserIds || [];
-                
-                // Filter orders to only those from people invited by this manager
-                const managerOrders = ordersData.filter((o: any) => {
-                    const uObj = o.users as any;
-                    const uId = String(uObj?.telegram_id || (Array.isArray(uObj) ? uObj[0]?.telegram_id : ''));
-                    return managedUserIds.includes(uId);
-                });
-                setOrders(managerOrders);
-            } else {
-                setOrders(ordersData);
             }
+            
+            setOrders(ordersData);
 
             setUsersInfo(sortedUsers);
         }
@@ -114,26 +104,37 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
 
     const handleAddManager = async () => {
         if (!newManagerId || !isAdmin) return;
-        const tgId = parseInt(newManagerId);
+        
+        let query = supabase.from('users').select('*');
+        const input = newManagerId.trim();
+        
+        if (/^\d+$/.test(input)) {
+            query = query.eq('telegram_id', parseInt(input));
+        } else {
+            const username = input.startsWith('@') ? input.substring(1) : input;
+            query = query.eq('username', username);
+        }
 
-        const { data: existingUser } = await supabase.from('users').select('*').eq('telegram_id', tgId).single();
+        const { data: existingUser } = await query.single();
+        
         if (!existingUser) {
-            tg?.showAlert(t.managerAddError);
+            tg?.showAlert(t.managerAddError || 'User not found.');
             return;
         }
 
-        const { error } = await supabase.from('users').update({ role: newManagerRole }).eq('telegram_id', tgId);
+        const { error } = await supabase.from('users').update({ role: newManagerRole }).eq('telegram_id', existingUser.telegram_id);
 
         if (!error) {
             setManagersList(prev => {
-                const list = prev.filter(m => m.telegram_id !== tgId);
+                const list = prev.filter(m => m.telegram_id !== existingUser.telegram_id);
                 return [...list, { ...existingUser, role: newManagerRole }];
             });
             const roleName = newManagerRole === 'admin' ? t.adminBadge : t.managerBadge;
-            tg?.showAlert(t.managerAddSuccess?.replace('{id}', String(tgId)).replace('{role}', roleName) || `Success!`);
+            const successMsg = t.managerAddSuccess?.replace('{id}', String(existingUser.username || existingUser.telegram_id)).replace('{role}', roleName) || `Success!`;
+            tg?.showAlert(successMsg);
             setNewManagerId('');
         } else {
-            tg?.showAlert(t.managerAddFail);
+            tg?.showAlert(t.managerAddFail || 'Update failed.');
         }
     };
 

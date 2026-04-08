@@ -110,6 +110,41 @@ export default function ClientCatalog({ lang, telegramId }: { lang: string, tele
     const t = translations[lang as string] || translations['en'];
     const isRtl = lang === 'ar' || lang === 'fa';
 
+    const getFlag = (countryName: string) => {
+        const c = countryName.toLowerCase();
+        // Countries & Regions
+        if (c.includes('turk') || c.includes('турц') || c.includes('türkiye') || c.includes('türkiye') || c.includes('alanya') || c.includes('antalya') || c.includes('istanbul') || c.includes('side') || c.includes('kemer') || c.includes('belek') || c.includes('fethiye') || c.includes('marmaris') || c.includes('bodrum') || c.includes('cappadocia') || c.includes('аланья') || c.includes('анталья') || c.includes('стамбул') || c.includes('сиде') || c.includes('кемер') || c.includes('белек') || c.includes('фетхие') || c.includes('мармарис') || c.includes('бодрум') || c.includes('каппадокия')) return '🇹🇷';
+        if (c.includes('europ') || c.includes('европ') || c.includes('avrupa')) return '🇪🇺';
+        if (c.includes('usa') || c.includes('сша') || c.includes('abd')) return '🇺🇸';
+        if (c.includes('thai') || c.includes('таил')) return '🇹🇭';
+        if (c.includes('viet') || c.includes('вьет')) return '🇻🇳';
+        if (c.includes('isra') || c.includes('изра') || c.includes('israil')) return '🇮🇱';
+        if (c.includes('emir') || c.includes('оаэ') || c.includes('bae')) return '🇦🇪';
+        if (c.includes('egypt') || c.includes('егип') || c.includes('mısır')) return '🇪🇬';
+        if (c.includes('georg') || c.includes('груз') || c.includes('gürcistan')) return '🇬🇪';
+        if (c.includes('armen') || c.includes('армен') || c.includes('ermenistan')) return '🇦🇲';
+        if (c.includes('kazak') || c.includes('казак')) return '🇰🇿';
+        if (c.includes('azer') || c.includes('азер') || c.includes('azerbaycan')) return '🇦🇿';
+        if (c.includes('uzbek') || c.includes('узбек') || c.includes('özbekistan')) return '🇺🇿';
+        if (c.includes('russia') || c.includes('росси') || c.includes('rusya')) return '🇷🇺';
+        if (c.includes('montene') || c.includes('черногор') || c.includes('karadağ')) return '🇲🇪';
+        if (c.includes('cyprus') || c.includes('кипр') || c.includes('kıbrıs')) return '🇨🇾';
+        if (c.includes('france') || c.includes('франц') || c.includes('fransa')) return '🇫🇷';
+        if (c.includes('italy') || c.includes('итали') || c.includes('italya')) return '🇮🇹';
+        if (c.includes('spain') || c.includes('испан') || c.includes('ispanya')) return '🇪🇸';
+        if (c.includes('greece') || c.includes('греци') || c.includes('yunanistan')) return '🇬🇷';
+        if (c.includes('china') || c.includes('китай') || c.includes('çin')) return '🇨🇳';
+        if (c.includes('japan') || c.includes('япон') || c.includes('japonya')) return '🇯🇵';
+        if (c.includes('uk') || c.includes('brit') || c.includes('британ') || c.includes('ingiltere')) return '🇬🇧';
+        if (c.includes('germany') || c.includes('герман') || c.includes('almanya')) return '🇩🇪';
+        if (c.includes('poland') || c.includes('польш') || c.includes('polonya')) return '🇵🇱';
+        if (c.includes('baltic') || c.includes('балти')) return '🇪🇪';
+        if (c.includes('swiss') || c.includes('швейц') || c.includes('isviçre')) return '🇨🇭';
+        if (c.includes('indones') || c.includes('индонез')) return '🇮🇩';
+        if (c.includes('malays') || c.includes('малайз')) return '🇲🇾';
+        return null;
+    };
+
     if (selectedCountry) {
         const countryTariffs = grouped[selectedCountry] || [];
         return (
@@ -123,7 +158,9 @@ export default function ClientCatalog({ lang, telegramId }: { lang: string, tele
                 </button>
                 
                 <h2 className="text-2xl font-headline font-extrabold text-slate-100 flex items-center gap-2 mb-4">
-                    <span className="material-symbols-outlined text-primary text-3xl">public</span>
+                    <span className="text-3xl filter drop-shadow-sm">
+                        {getFlag(selectedCountry) || '🏳️'}
+                    </span>
                     {selectedCountry}
                 </h2>
 
@@ -207,7 +244,9 @@ export default function ClientCatalog({ lang, telegramId }: { lang: string, tele
                         className="glass-card flex flex-col items-center justify-center p-5 rounded-2xl relative overflow-hidden group border border-outline-variant/10 hover:border-primary/30 active:scale-95 transition-all text-center h-28"
                     >
                         <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/5 transition-colors"></div>
-                        <span className="material-symbols-outlined text-secondary text-3xl mb-2 opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all">public</span>
+                        <span className="text-3xl mb-2 opacity-90 group-hover:opacity-100 group-hover:scale-110 transition-all filter drop-shadow-sm">
+                            {getFlag(c) || '🏳️'}
+                        </span>
                         <span className="font-headline font-bold text-slate-200 text-sm leading-tight text-balance group-hover:text-primary transition-colors">{c}</span>
                     </button>
                 ))}
