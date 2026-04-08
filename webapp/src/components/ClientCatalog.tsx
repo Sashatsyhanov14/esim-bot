@@ -110,48 +110,63 @@ export default function ClientCatalog({ lang, telegramId }: { lang: string, tele
     const t = translations[lang as string] || translations['en'];
     const isRtl = lang === 'ar' || lang === 'fa';
 
-    const getFlag = (countryName: string) => {
-        if (!countryName) return '🏳️';
+    const getFlagData = (countryName: string) => {
+        if (!countryName) return { emoji: '🏳️', code: '' };
         const c = countryName.toLowerCase();
         
         // Regions & Global
-        if (c.includes('euro') || c.includes('евро')) return '🇪🇺';
-        if (c.includes('uk') || c.includes('united kingdom') || c.includes('brit') || c.includes('британ') || c.includes('англия') || c.includes('ingiltere')) return '🇬🇧';
-        if (c.includes('france') || c.includes('франц') || c.includes('fransa')) return '🇫🇷';
-        if (c.includes('ital') || c.includes('итал') || c.includes('italya')) return '🇮🇹';
-        if (c.includes('spain') || c.includes('испан') || c.includes('ispanya')) return '🇪🇸';
-        if (c.includes('germany') || c.includes('герман') || c.includes('almanya')) return '🇩🇪';
-        if (c.includes('global') || c.includes('глобал') || c.includes('world') || c.includes('мир')) return '🌎';
-        if (c.includes('asia') || c.includes('азия')) return '🌏';
-        if (c.includes('africa') || c.includes('африка')) return '🌍';
-        if (c.includes('middle east') || c.includes('восток')) return '🏜️';
-        if (c.includes('latin') || c.includes('латин')) return '🌎';
+        if (c.includes('euro') || c.includes('евро')) return { emoji: '🇪🇺', code: 'eu' };
+        if (c.includes('uk') || c.includes('united kingdom') || c.includes('brit') || c.includes('британ') || c.includes('англия') || c.includes('ingiltere')) return { emoji: '🇬🇧', code: 'gb' };
+        if (c.includes('france') || c.includes('франц') || c.includes('fransa')) return { emoji: '🇫🇷', code: 'fr' };
+        if (c.includes('ital') || c.includes('итал') || c.includes('italya')) return { emoji: '🇮🇹', code: 'it' };
+        if (c.includes('spain') || c.includes('испан') || c.includes('ispanya')) return { emoji: '🇪🇸', code: 'es' };
+        if (c.includes('germany') || c.includes('герман') || c.includes('almanya')) return { emoji: '🇩🇪', code: 'de' };
+        if (c.includes('global') || c.includes('глобал') || c.includes('world') || c.includes('мир')) return { emoji: '🌎', code: 'un' };
+        if (c.includes('asia') || c.includes('азия')) return { emoji: '🌏', code: 'un' };
+        if (c.includes('africa') || c.includes('африка')) return { emoji: '🌍', code: 'un' };
+        if (c.includes('middle east') || c.includes('восток')) return { emoji: '🏜️', code: 'un' };
+        if (c.includes('latin') || c.includes('латин')) return { emoji: '🌎', code: 'un' };
         
         // Countries & Regions
-        if (c.includes('turk') || c.includes('турц') || c.includes('türkiye') || c.includes('alanya') || c.includes('antalya') || c.includes('istanbul') || c.includes('side') || c.includes('kemер') || c.includes('belek') || c.includes('fethiye') || c.includes('marmaris') || c.includes('bodrum') || c.includes('cappadocia') || c.includes('аланья') || c.includes('анталья') || c.includes('стамбул') || c.includes('сиде') || c.includes('кемер') || c.includes('белек') || c.includes('фетхие') || c.includes('мармарис') || c.includes('бодрум') || c.includes('каппадокия')) return '🇹🇷';
-        if (c.includes('usa') || c.includes('сша') || c.includes('abd')) return '🇺🇸';
-        if (c.includes('thai') || c.includes('таил')) return '🇹🇭';
-        if (c.includes('viet') || c.includes('вьет')) return '🇻🇳';
-        if (c.includes('isra') || c.includes('изра') || c.includes('israil')) return '🇮🇱';
-        if (c.includes('emir') || c.includes('оаэ') || c.includes('bae')) return '🇦🇪';
-        if (c.includes('egypt') || c.includes('егип') || c.includes('mısır')) return '🇪🇬';
-        if (c.includes('georg') || c.includes('груз')) return '🇬🇪';
-        if (c.includes('armen') || c.includes('армен')) return '🇦🇲';
-        if (c.includes('kazak') || c.includes('казак')) return '🇰🇿';
-        if (c.includes('azer') || c.includes('азер')) return '🇦🇿';
-        if (c.includes('uzbek') || c.includes('узбек')) return '🇺🇿';
-        if (c.includes('chin') || c.includes('кит')) return '🇨🇳';
-        if (c.includes('kore') || c.includes('коре')) return '🇰🇷';
-        if (c.includes('jap') || c.includes('яп')) return '🇯🇵';
-        if (c.includes('monten') || c.includes('черног')) return '🇲🇪';
-        if (c.includes('serb') || c.includes('серб')) return '🇷🇸';
-        if (c.includes('greece') || c.includes('греци') || c.includes('yunanistan')) return '🇬🇷';
-        if (c.includes('poland') || c.includes('польш') || c.includes('polonya')) return '🇵🇱';
-        if (c.includes('baltic') || c.includes('балти')) return '🇪🇪';
-        if (c.includes('swiss') || c.includes('швейц') || c.includes('isviçre')) return '🇨🇭';
-        if (c.includes('indones') || c.includes('индонез')) return '🇮🇩';
-        if (c.includes('malays') || c.includes('малайз')) return '🇲🇾';
-        return '🏳️';
+        if (c.includes('turk') || c.includes('турц') || c.includes('türkiye') || c.includes('alanya') || c.includes('antalya') || c.includes('istanbul') || c.includes('side') || c.includes('kemер') || c.includes('belek') || c.includes('fethiye') || c.includes('marmaris') || c.includes('bodrum') || c.includes('cappadocia') || c.includes('аланья') || c.includes('анталья') || c.includes('стамбул') || c.includes('сиде') || c.includes('кемер') || c.includes('белек') || c.includes('фетхие') || c.includes('мармарис') || c.includes('бодрум') || c.includes('каппадокия')) return { emoji: '🇹🇷', code: 'tr' };
+        if (c.includes('usa') || c.includes('сша') || c.includes('abd')) return { emoji: '🇺🇸', code: 'us' };
+        if (c.includes('thai') || c.includes('таил')) return { emoji: '🇹🇭', code: 'th' };
+        if (c.includes('viet') || c.includes('вьет')) return { emoji: '🇻🇳', code: 'vn' };
+        if (c.includes('isra') || c.includes('изра') || c.includes('israil')) return { emoji: '🇮🇱', code: 'il' };
+        if (c.includes('emir') || c.includes('оаэ') || c.includes('bae')) return { emoji: '🇦🇪', code: 'ae' };
+        if (c.includes('egypt') || c.includes('егип') || c.includes('mısır')) return { emoji: '🇪🇬', code: 'eg' };
+        if (c.includes('georg') || c.includes('груз')) return { emoji: '🇬🇪', code: 'ge' };
+        if (c.includes('armen') || c.includes('армен')) return { emoji: '🇦🇲', code: 'am' };
+        if (c.includes('kazak') || c.includes('казак')) return { emoji: '🇰🇿', code: 'kz' };
+        if (c.includes('azer') || c.includes('азер')) return { emoji: '🇦🇿', code: 'az' };
+        if (c.includes('uzbek') || c.includes('узбек')) return { emoji: '🇺🇿', code: 'uz' };
+        if (c.includes('chin') || c.includes('кит')) return { emoji: '🇨🇳', code: 'cn' };
+        if (c.includes('kore') || c.includes('коре')) return { emoji: '🇰🇷', code: 'kr' };
+        if (c.includes('jap') || c.includes('яп')) return { emoji: '🇯🇵', code: 'jp' };
+        if (c.includes('monten') || c.includes('черног')) return { emoji: '🇲🇪', code: 'me' };
+        if (c.includes('serb') || c.includes('серб')) return { emoji: '🇷🇸', code: 'rs' };
+        if (c.includes('greece') || c.includes('греци') || c.includes('yunanistan')) return { emoji: '🇬🇷', code: 'gr' };
+        if (c.includes('poland') || c.includes('польш') || c.includes('polonya')) return { emoji: '🇵🇱', code: 'pl' };
+        if (c.includes('baltic') || c.includes('балти')) return { emoji: '🇪🇪', code: 'ee' };
+        if (c.includes('swiss') || c.includes('швейц') || c.includes('isviçre')) return { emoji: '🇨🇭', code: 'ch' };
+        if (c.includes('indones') || c.includes('индонез')) return { emoji: '🇮🇩', code: 'id' };
+        if (c.includes('malays') || c.includes('малайз')) return { emoji: '🇲🇾', code: 'my' };
+        return { emoji: '🏳️', code: '' };
+    };
+
+    const FlagIcon = ({ country, size = "md" }: { country: string | null, size?: "sm" | "md" | "lg" }) => {
+        if (!country) return null;
+        const data = getFlagData(country);
+        if (!data.code || data.code === 'un') return <span className={size === "lg" ? "text-3xl" : "text-xl"}>{data.emoji}</span>;
+        
+        const sizePx = size === "lg" ? "64" : (size === "md" ? "48" : "32");
+        return (
+            <img 
+                src={`https://flagcdn.com/w${sizePx}/${data.code}.png`} 
+                alt={country}
+                className={`${size === "lg" ? "w-8 h-5" : "w-6 h-4"} object-cover rounded shadow-sm border border-white/10`}
+            />
+        );
     };
 
     if (selectedCountry) {
@@ -166,10 +181,8 @@ export default function ClientCatalog({ lang, telegramId }: { lang: string, tele
                     {t.back}
                 </button>
                 
-                <h2 className="text-2xl font-headline font-extrabold text-slate-100 flex items-center gap-2 mb-4">
-                    <span className="text-3xl filter drop-shadow-sm">
-                        {getFlag(selectedCountry) || '🏳️'}
-                    </span>
+                <h2 className="text-2xl font-headline font-extrabold text-slate-100 flex items-center gap-3 mb-4">
+                    <FlagIcon country={selectedCountry} size="lg" />
                     {selectedCountry}
                 </h2>
 
@@ -253,9 +266,9 @@ export default function ClientCatalog({ lang, telegramId }: { lang: string, tele
                         className="glass-card flex flex-col items-center justify-center p-5 rounded-2xl relative overflow-hidden group border border-outline-variant/10 hover:border-primary/30 active:scale-95 transition-all text-center h-28"
                     >
                         <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/5 transition-colors"></div>
-                        <span className="text-3xl mb-2 opacity-90 group-hover:opacity-100 group-hover:scale-110 transition-all filter drop-shadow-sm">
-                            {getFlag(c) || '🏳️'}
-                        </span>
+                        <div className="mb-2 group-hover:scale-110 transition-all filter drop-shadow-sm">
+                            <FlagIcon country={c} size="md" />
+                        </div>
                         <span className="font-headline font-bold text-slate-200 text-sm leading-tight text-balance group-hover:text-primary transition-colors">{c}</span>
                     </button>
                 ))}

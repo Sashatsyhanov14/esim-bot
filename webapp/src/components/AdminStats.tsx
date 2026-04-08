@@ -53,6 +53,11 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
         fetchData();
     }, []);
 
+    const fetchManagers = async () => {
+        const { data: mUsers } = await supabase.from('users').select('*').in('role', ['manager', 'admin', 'founder']);
+        if (mUsers) setManagersList(mUsers);
+    };
+
     const fetchData = async () => {
         setLoading(true);
 
@@ -122,8 +127,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
             setUsersInfo(sortedUsers);
         }
 
-        const { data: mUsers } = await supabase.from('users').select('*').in('role', ['manager', 'admin', 'founder']);
-        if (mUsers) setManagersList(mUsers);
+        await fetchManagers();
 
         setLoading(false);
     };
@@ -144,31 +148,34 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
         const { data: existingUser } = await query.single();
         
         if (!existingUser) {
-            tg?.showAlert(t.managerAddError || 'User not found.');
+            tg?.showAlert(t.managerAddError || 'Пользователь не найден.');
             return;
         }
 
-        const { error } = await supabase.from('users').update({ role: newManagerRole }).eq('telegram_id', existingUser.telegram_id);
-
-        if (!error) {
-            setManagersList(prev => {
-                const list = prev.filter(m => m.telegram_id !== existingUser.telegram_id);
-                return [...list, { ...existingUser, role: newManagerRole }];
-            });
-            const roleName = newManagerRole === 'admin' ? t.adminBadge : t.managerBadge;
-            const successMsg = t.managerAddSuccess?.replace('{id}', String(existingUser.username || existingUser.telegram_id)).replace('{role}', roleName) || `Success!`;
-            tg?.showAlert(successMsg);
-            setNewManagerId('');
+        const { error: upErr } = await supabase.from('users').update({ role: newManagerRole }).eq('telegram_id', existingUser.telegram_id);
+        
+        if (upErr) {
+            tg?.showAlert(t.managerAddFail || 'Ошибка обновления: ' + upErr.message);
         } else {
-            tg?.showAlert(t.managerAddFail || 'Update failed.');
+            tg?.showAlert(t.successTitle || "Успешно!");
+            fetchManagers();
+            setNewManagerId('');
         }
     };
 
     const handleRemoveManager = async (tgId: number) => {
         const { error } = await supabase.from('users').update({ role: 'client' }).eq('telegram_id', tgId);
         if (!error) {
-            setManagersList(prev => prev.filter(m => m.telegram_id !== tgId));
-            tg?.showAlert(t.managerRemoveSuccess?.replace('{id}', String(tgId)) || `Removed`);
+            fetchManagers();
+            tg?.showAlert(t.managerRemoveSuccess?.replace('{id}', String(tgId)) || `Удален`);
+        }
+    };
+
+    const handleUpdateRole = async (tgId: number, newRole: 'manager' | 'admin') => {
+        const { error } = await supabase.from('users').update({ role: newRole }).eq('telegram_id', tgId);
+        if (!error) {
+            fetchManagers();
+            tg?.showAlert("✅ Роль обновлена");
         }
     };
 
@@ -191,9 +198,9 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
         const { error: upErr } = await supabase.from('users').update({ balance: 0 }).eq('telegram_id', tgId);
         
         if (upErr) {
-            alert(t.errorTitle || "РћС€РёР±РєР°: " + upErr.message);
+            alert(t.errorTitle || "Ошибка: " + upErr.message);
         } else {
-            alert(t.successTitle || "РЈСЃРїРµС€РЅРѕ!");
+            alert(t.successTitle || "Успешно!");
             fetchData(); // reload
         }
     };
@@ -202,9 +209,9 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
         const { error } = await supabase.from('users').update({ custom_note: noteValue }).eq('telegram_id', tgId);
         if (!error) {
             setUsersInfo(prev => prev.map(u => u.telegram_id === tgId ? { ...u, custom_note: noteValue } : u));
-            setManagersList(prev => prev.map(m => m.telegram_id === tgId ? { ...m, custom_note: noteValue } : m));
+            fetchManagers();
             setEditingNoteId(null);
-            tg?.showScanQrPopup && tg?.showAlert ? tg.showAlert(t.promoSuccess || "Р—Р°РјРµС‚РєР° СЃРѕС…СЂР°РЅРµРЅР°!") : alert(t.promoSuccess || "Saved!");
+            tg?.showAlert ? tg.showAlert(t.promoSuccess || "Заметка сохранена!") : alert(t.promoSuccess || "Saved!");
         }
     };
 
@@ -293,13 +300,25 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                                                 {m.role === 'founder' ? 'shield_person' : (m.role === 'admin' ? 'manage_accounts' : 'badge')}
                                             </span>
                                             <span className="text-sm text-on-surface font-medium truncate max-w-[120px]">@{m.username || String(m.telegram_id)}</span>
-                                            {m.role !== 'client' && (
-                                                <span className={`text-[8px] uppercase tracking-widest px-1.5 py-0.5 rounded-sm font-bold ${
-                                                    m.role === 'founder' ? 'bg-primary/20 text-primary' : 
-                                                    (m.role === 'admin' ? 'bg-secondary/20 text-secondary' : 'bg-tertiary/20 text-tertiary')
-                                                }`}>
-                                                    {m.role === 'founder' ? t.ownerBadge : (m.role === 'admin' ? t.adminBadge : t.managerBadge)}
+                                            {m.role === 'founder' ? (
+                                                <span className="text-[8px] uppercase tracking-widest px-1.5 py-0.5 rounded-sm font-bold bg-primary/20 text-primary">
+                                                    {t.ownerBadge}
                                                 </span>
+                                            ) : (
+                                                <div className="flex bg-surface-container-high p-0.5 rounded border border-outline-variant/10">
+                                                    <button 
+                                                        onClick={() => handleUpdateRole(m.telegram_id, 'manager')}
+                                                        className={`px-1.5 py-0.5 rounded-sm text-[8px] font-bold uppercase transition-all ${m.role === 'manager' ? 'bg-tertiary/20 text-tertiary' : 'text-on-surface-variant hover:text-on-surface'}`}
+                                                    >
+                                                        M
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleUpdateRole(m.telegram_id, 'admin')}
+                                                        className={`px-1.5 py-0.5 rounded-sm text-[8px] font-bold uppercase transition-all ${m.role === 'admin' ? 'bg-secondary/20 text-secondary' : 'text-on-surface-variant hover:text-on-surface'}`}
+                                                    >
+                                                        A
+                                                    </button>
+                                                </div>
                                             )}
                                         </div>
                                         {m.role !== 'founder' && (
