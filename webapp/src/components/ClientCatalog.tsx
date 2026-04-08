@@ -112,6 +112,13 @@ export default function ClientCatalog({ lang, telegramId }: { lang: string, tele
 
     const getFlag = (countryName: string) => {
         const c = countryName.toLowerCase();
+        // Regions & Global
+        if (c.includes('world') || c.includes('global') || c.includes('весь мир') || c.includes('глобал')) return '🌎';
+        if (c.includes('asia') || c.includes('азия')) return '🌏';
+        if (c.includes('africa') || c.includes('африка')) return '🌍';
+        if (c.includes('middle east') || c.includes('ближний восток')) return '🏜️';
+        if (c.includes('latin americ') || c.includes('латинская америка')) return '🌎';
+        
         // Countries & Regions
         if (c.includes('turk') || c.includes('турц') || c.includes('türkiye') || c.includes('türkiye') || c.includes('alanya') || c.includes('antalya') || c.includes('istanbul') || c.includes('side') || c.includes('kemer') || c.includes('belek') || c.includes('fethiye') || c.includes('marmaris') || c.includes('bodrum') || c.includes('cappadocia') || c.includes('аланья') || c.includes('анталья') || c.includes('стамбул') || c.includes('сиде') || c.includes('кемер') || c.includes('белек') || c.includes('фетхие') || c.includes('мармарис') || c.includes('бодрум') || c.includes('каппадокия')) return '🇹🇷';
         if (c.includes('europ') || c.includes('европ') || c.includes('avrupa')) return '🇪🇺';
