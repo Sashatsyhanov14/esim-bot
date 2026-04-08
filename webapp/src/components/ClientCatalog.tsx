@@ -124,7 +124,7 @@ export default function ClientCatalog({ lang, telegramId }: { lang: string, tele
         if (c.includes('global') || c.includes('глобал') || c.includes('world') || c.includes('мир')) return { emoji: '🌎', code: 'un' };
         if (c.includes('asia') || c.includes('азия')) return { emoji: '🌏', code: 'un' };
         if (c.includes('africa') || c.includes('африка')) return { emoji: '🌍', code: 'un' };
-        if (c.includes('middle east') || c.includes('восток')) return { emoji: '🏜️', code: 'un' };
+        if (c.includes('middle east') || c.includes('восток') || c.includes('орта доғу')) return { emoji: '🏜️', code: 'un' };
         if (c.includes('latin') || c.includes('латин')) return { emoji: '🌎', code: 'un' };
         
         // Countries & Regions
@@ -152,6 +152,8 @@ export default function ClientCatalog({ lang, telegramId }: { lang: string, tele
         if (c.includes('indones') || c.includes('индонез')) return { emoji: '🇮🇩', code: 'id' };
         if (c.includes('malays') || c.includes('малайз')) return { emoji: '🇲🇾', code: 'my' };
         if (c.includes('saudi') || c.includes('сауд')) return { emoji: '🇸🇦', code: 'sa' };
+        if (c.includes('russia') || c.includes('россия') || c.includes('рф') || c === 'ru' || c === 'rus') return { emoji: '🇷🇺', code: 'ru' };
+        if (c.includes('ukraine') || c.includes('украин')) return { emoji: '🇺🇦', code: 'ua' };
         return { emoji: '🏳️', code: '' };
     };
 

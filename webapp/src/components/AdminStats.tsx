@@ -35,6 +35,8 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
         if (s.includes('euro') || s.includes('евро')) return '🇪🇺';
         if (s.includes('saudi') || s.includes('сауд')) return '🇸🇦';
         if (s.includes('dubai') || s.includes('uae') || s.includes('оаэ') || s.includes('emir')) return '🇦🇪';
+        if (s.includes('russia') || s.includes('россия') || s.includes('рф') || s === 'ru' || s === 'rus') return '🇷🇺';
+        if (s.includes('ukraine') || s.includes('украин')) return '🇺🇦';
         if (s.includes('global') || s.includes('глобал') || s.includes('world') || s.includes('мир')) return '🌎';
         if (s.includes('asia') || s.includes('азия')) return '🌏';
         if (s.includes('africa') || s.includes('африка')) return '🌍';
