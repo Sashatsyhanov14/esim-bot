@@ -160,13 +160,14 @@ export default function ClientCatalog({ lang, telegramId }: { lang: string, tele
     const FlagIcon = ({ country, size = "md" }: { country: string | null, size?: "sm" | "md" | "lg" }) => {
         if (!country) return null;
         const data = getFlagData(country);
-        if (!data.code || data.code === 'un') return <span className={size === "lg" ? "text-3xl" : "text-xl"}>{data.emoji}</span>;
         
         // Use standard FlagCDN widths: 20, 40, 80, 160...
         const sizePx = size === "lg" ? "80" : (size === "md" ? "40" : "20");
+        const flagCode = data.code || 'un'; // Fallback to UN flag for a "real flag" look if code is missing
+        
         return (
             <img 
-                src={`https://flagcdn.com/w${sizePx}/${data.code}.png`} 
+                src={`https://flagcdn.com/w${sizePx}/${flagCode}.png`} 
                 alt={country}
                 className={`${size === "lg" ? "w-8 h-5" : "w-6 h-4"} object-cover rounded-[2px] shadow-sm border border-white/5`}
                 onError={(e) => {
