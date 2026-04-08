@@ -870,7 +870,7 @@ const App: React.FC = () => {
         const { data: userPayouts } = await supabase.from('chat_history').select('content, created_at').eq('user_id', tgId).eq('role', 'assistant').like('content', 'PAYOUT_RECORD:%').order('created_at', { ascending: false });
         setPayoutsHistory(userPayouts || []);
 
-        if (currentUser.role === 'founder' || currentUser.role === 'manager') {
+        if (currentUser.role === 'founder' || currentUser.role === 'manager' || currentUser.role === 'admin') {
           const { count: uCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
           const { data: paidOrdersList, count: oCount } = await supabase.from('orders').select('price_usd', { count: 'exact' }).eq('status', 'paid');
 

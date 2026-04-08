@@ -14,6 +14,32 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
     const [refOrders, setRefOrders] = useState<any[]>([]);
     const [refOrdersLoading, setRefOrdersLoading] = useState(false);
 
+    const getFlag = (searchStr: string) => {
+        if (!searchStr) return '';
+        const s = searchStr.toLowerCase();
+        if (s.includes('turk') || s.includes('турц')) return '🇹🇷';
+        if (s.includes('viet') || s.includes('вьет')) return '🇻🇳';
+        if (s.includes('thai') || s.includes('таи')) return '🇹🇭';
+        if (s.includes('indo') || s.includes('индо')) return '🇮🇩';
+        if (s.includes('kazakh') || s.includes('казах')) return '🇰🇿';
+        if (s.includes('azer') || s.includes('азер')) return '🇦🇿';
+        if (s.includes('georg') || s.includes('груз')) return '🇬🇪';
+        if (s.includes('usa') || s.includes('сша')) return '🇺🇸';
+        if (s.includes('germ') || s.includes('герм')) return '🇩🇪';
+        if (s.includes('egypt') || s.includes('егип')) return '🇪🇬';
+        if (s.includes('china') || s.includes('кита')) return '🇨🇳';
+        if (s.includes('korea') || s.includes('коре')) return '🇰🇷';
+        if (s.includes('japan') || s.includes('япон')) return '🇯🇵';
+        if (s.includes('monten') || s.includes('черног')) return '🇲🇪';
+        if (s.includes('serb') || s.includes('серб')) return '🇷🇸';
+        if (s.includes('euro') || s.includes('евро')) return '🇪🇺';
+        if (s.includes('global') || s.includes('глобал') || s.includes('world') || s.includes('мир')) return '🌎';
+        if (s.includes('asia') || s.includes('азия')) return '🌏';
+        if (s.includes('africa') || s.includes('африка')) return '🌍';
+        if (s.includes('middle east') || s.includes('восток')) return '🏜️';
+        return '';
+    };
+
     const [newManagerId, setNewManagerId] = useState('');
     const [newManagerRole, setNewManagerRole] = useState<'manager' | 'admin'>('manager');
     const [managersList, setManagersList] = useState<any[]>([]);
@@ -398,7 +424,14 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                                     <div className="text-on-surface-variant text-xs space-y-1.5 mb-2">
                                         <div className="flex items-center gap-1.5">
                                             <span className="material-symbols-outlined text-[14px]">inventory_2</span>
-                                            <span>{o.tariffs ? `${o.tariffs.country} | ${o.tariffs.data_gb} | ${o.tariffs.validity_period}` : t.deletedTariff}</span>
+                                            <span>
+                                                {o.tariffs ? (
+                                                    <>
+                                                        <span className="mr-1">{getFlag(o.tariffs.country)}</span>
+                                                        {o.tariffs.country} | {o.tariffs.data_gb} | {o.tariffs.validity_period}
+                                                    </>
+                                                ) : t.deletedTariff}
+                                            </span>
                                         </div>
                                         <div className="flex items-center gap-1.5">
                                             <span className="material-symbols-outlined text-[14px]">calendar_today</span>

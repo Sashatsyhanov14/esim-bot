@@ -111,45 +111,47 @@ export default function ClientCatalog({ lang, telegramId }: { lang: string, tele
     const isRtl = lang === 'ar' || lang === 'fa';
 
     const getFlag = (countryName: string) => {
+        if (!countryName) return '🏳️';
         const c = countryName.toLowerCase();
+        
         // Regions & Global
-        if (c.includes('world') || c.includes('global') || c.includes('весь мир') || c.includes('глобал')) return '🌎';
+        if (c.includes('euro') || c.includes('евро')) return '🇪🇺';
+        if (c.includes('uk') || c.includes('united kingdom') || c.includes('brit') || c.includes('британ') || c.includes('англия') || c.includes('ingiltere')) return '🇬🇧';
+        if (c.includes('france') || c.includes('франц') || c.includes('fransa')) return '🇫🇷';
+        if (c.includes('ital') || c.includes('итал') || c.includes('italya')) return '🇮🇹';
+        if (c.includes('spain') || c.includes('испан') || c.includes('ispanya')) return '🇪🇸';
+        if (c.includes('germany') || c.includes('герман') || c.includes('almanya')) return '🇩🇪';
+        if (c.includes('global') || c.includes('глобал') || c.includes('world') || c.includes('мир')) return '🌎';
         if (c.includes('asia') || c.includes('азия')) return '🌏';
         if (c.includes('africa') || c.includes('африка')) return '🌍';
-        if (c.includes('middle east') || c.includes('ближний восток')) return '🏜️';
-        if (c.includes('latin americ') || c.includes('латинская америка')) return '🌎';
+        if (c.includes('middle east') || c.includes('восток')) return '🏜️';
+        if (c.includes('latin') || c.includes('латин')) return '🌎';
         
         // Countries & Regions
-        if (c.includes('turk') || c.includes('турц') || c.includes('türkiye') || c.includes('türkiye') || c.includes('alanya') || c.includes('antalya') || c.includes('istanbul') || c.includes('side') || c.includes('kemer') || c.includes('belek') || c.includes('fethiye') || c.includes('marmaris') || c.includes('bodrum') || c.includes('cappadocia') || c.includes('аланья') || c.includes('анталья') || c.includes('стамбул') || c.includes('сиде') || c.includes('кемер') || c.includes('белек') || c.includes('фетхие') || c.includes('мармарис') || c.includes('бодрум') || c.includes('каппадокия')) return '🇹🇷';
-        if (c.includes('europ') || c.includes('европ') || c.includes('avrupa')) return '🇪🇺';
+        if (c.includes('turk') || c.includes('турц') || c.includes('türkiye') || c.includes('alanya') || c.includes('antalya') || c.includes('istanbul') || c.includes('side') || c.includes('kemер') || c.includes('belek') || c.includes('fethiye') || c.includes('marmaris') || c.includes('bodrum') || c.includes('cappadocia') || c.includes('аланья') || c.includes('анталья') || c.includes('стамбул') || c.includes('сиде') || c.includes('кемер') || c.includes('белек') || c.includes('фетхие') || c.includes('мармарис') || c.includes('бодрум') || c.includes('каппадокия')) return '🇹🇷';
         if (c.includes('usa') || c.includes('сша') || c.includes('abd')) return '🇺🇸';
         if (c.includes('thai') || c.includes('таил')) return '🇹🇭';
         if (c.includes('viet') || c.includes('вьет')) return '🇻🇳';
         if (c.includes('isra') || c.includes('изра') || c.includes('israil')) return '🇮🇱';
         if (c.includes('emir') || c.includes('оаэ') || c.includes('bae')) return '🇦🇪';
         if (c.includes('egypt') || c.includes('егип') || c.includes('mısır')) return '🇪🇬';
-        if (c.includes('georg') || c.includes('груз') || c.includes('gürcistan')) return '🇬🇪';
-        if (c.includes('armen') || c.includes('армен') || c.includes('ermenistan')) return '🇦🇲';
+        if (c.includes('georg') || c.includes('груз')) return '🇬🇪';
+        if (c.includes('armen') || c.includes('армен')) return '🇦🇲';
         if (c.includes('kazak') || c.includes('казак')) return '🇰🇿';
-        if (c.includes('azer') || c.includes('азер') || c.includes('azerbaycan')) return '🇦🇿';
-        if (c.includes('uzbek') || c.includes('узбек') || c.includes('özbekistan')) return '🇺🇿';
-        if (c.includes('russia') || c.includes('росси') || c.includes('rusya')) return '🇷🇺';
-        if (c.includes('montene') || c.includes('черногор') || c.includes('karadağ')) return '🇲🇪';
-        if (c.includes('cyprus') || c.includes('кипр') || c.includes('kıbrıs')) return '🇨🇾';
-        if (c.includes('france') || c.includes('франц') || c.includes('fransa')) return '🇫🇷';
-        if (c.includes('italy') || c.includes('итали') || c.includes('italya')) return '🇮🇹';
-        if (c.includes('spain') || c.includes('испан') || c.includes('ispanya')) return '🇪🇸';
+        if (c.includes('azer') || c.includes('азер')) return '🇦🇿';
+        if (c.includes('uzbek') || c.includes('узбек')) return '🇺🇿';
+        if (c.includes('chin') || c.includes('кит')) return '🇨🇳';
+        if (c.includes('kore') || c.includes('коре')) return '🇰🇷';
+        if (c.includes('jap') || c.includes('яп')) return '🇯🇵';
+        if (c.includes('monten') || c.includes('черног')) return '🇲🇪';
+        if (c.includes('serb') || c.includes('серб')) return '🇷🇸';
         if (c.includes('greece') || c.includes('греци') || c.includes('yunanistan')) return '🇬🇷';
-        if (c.includes('china') || c.includes('китай') || c.includes('çin')) return '🇨🇳';
-        if (c.includes('japan') || c.includes('япон') || c.includes('japonya')) return '🇯🇵';
-        if (c.includes('uk') || c.includes('brit') || c.includes('британ') || c.includes('ingiltere')) return '🇬🇧';
-        if (c.includes('germany') || c.includes('герман') || c.includes('almanya')) return '🇩🇪';
         if (c.includes('poland') || c.includes('польш') || c.includes('polonya')) return '🇵🇱';
         if (c.includes('baltic') || c.includes('балти')) return '🇪🇪';
         if (c.includes('swiss') || c.includes('швейц') || c.includes('isviçre')) return '🇨🇭';
         if (c.includes('indones') || c.includes('индонез')) return '🇮🇩';
         if (c.includes('malays') || c.includes('малайз')) return '🇲🇾';
-        return null;
+        return '🏳️';
     };
 
     if (selectedCountry) {
