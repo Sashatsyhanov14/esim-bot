@@ -54,7 +54,9 @@ Android: https://play.google.com/store/apps/details?id=com.emedeo.codeware
 IOS: https://apps.apple.com/app/emedeo/id6738978452`;
     
     setTimeout(async () => {
-        const delayText = await getLocalizedText(lang, delayTextRu);
+        // Read from cache at fire time — ensures we use the latest detected language
+        const fireLang = userLangCache[userId] || lang;
+        const delayText = await getLocalizedText(fireLang, delayTextRu);
         try {
             const photoUrl = 'https://drive.google.com/uc?export=download&id=1zxDZ_QkKYu6VKFlS7nNlRktlLKLxSx47';
             // Use axios with headers to bypass potential blocks
@@ -521,9 +523,9 @@ bot.on('text', async (ctx) => {
     }
 
     const saleMatch = aiResponse.match(/\[SALE_REQUEST:\s*([a-zA-Z0-9_-]+)\]/i);
-    let rawText = aiResponse.replace(/\[SALE_REQUEST:.*?\]/gi, '').replace(/\[LANG:.*?\]/gi, '').trim();
-    const targetLang = userLangCache[telegramId] || 'ru';
-    let finalResponse = await getLocalizedText(targetLang, rawText);
+    let finalResponse = aiResponse.replace(/\[SALE_REQUEST:.*?\]/gi, '').replace(/\[LANG:.*?\]/gi, '').trim();
+    // NOTE: The AI Writer already responds in the correct language (lang_code from Analyzer).
+    // Do NOT call getLocalizedText here — it would corrupt the already-translated text.
 
     if (saleMatch) {
         const tariffId = saleMatch[1];
@@ -533,14 +535,14 @@ bot.on('text', async (ctx) => {
             try {
                 const { data: orderData } = await createOrder(telegramId, tariffId, tariff.price_usd);
 
-            // Fetch dynamic uiLang strictly from userLangCache updated by AI
             const uiLang = userLangCache[telegramId] || ctx.from.language_code || 'en';
             const ltAI = locTariff(tariff, uiLang);
 
             const payTextRu = `\n\nВыбранный тариф: ${ltAI.country} | ${ltAI.data_gb} на ${ltAI.validity}\n\n👇 **Оплатить онлайн:**\n${tariff.payment_link || 'Обратись к менеджеру'}\n\n✅ *Сразу после успешной оплаты мы вышлем твой тариф!*`;
             const payText = await getLocalizedText(uiLang, payTextRu);
-
             finalResponse += payText;
+            // Schedule follow-up AFTER updating cache from [LANG:xx] tag above:
+            scheduleFollowup(telegramId, uiLang);
 
             await saveMessage(telegramId, 'assistant', finalResponse);
             try {

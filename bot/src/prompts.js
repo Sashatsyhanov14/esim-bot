@@ -27,7 +27,11 @@ Analysis Logic:
    a) If the user clearly names a specific plan (e.g., "5GB", "unlimited", "30 days") from a country shown -> intent: "sale", use the exact "tariff_id".
    b) If the user sends just a NUMBER (e.g., "1", "2", "3") — look in the conversation history to find which country was listed last, find the tariff at that position (1-indexed) in the database for that country, and set intent: "sale" with its "tariff_id".
    c) If the exact tariff is unclear -> intent: "clarification".
-4. LANGUAGE DETECTION (lang_code): Detect ANY ISO 639-1 language code (ru, en, tr, fa, ar, de, pl, zh, es, fr etc.) based on client's text and history.
+4. LANGUAGE DETECTION (CRITICAL RULE — follow this priority order):
+   a) FIRST: Look at the user's LATEST message text and detect the language. This is the highest priority.
+   b) SECOND: If the latest message is ambiguous (e.g. just a number like "2" or "ok"), look at the PREVIOUS user messages in history and use their language.
+   c) NEVER switch language mid-conversation unless the user clearly types in a new language.
+   Output as "lang_code" using ISO 639-1 codes (ru, en, tr, fa, ar, de, pl, zh, es, fr etc.).
 
 YOUR RESPONSE MUST BE ONLY JSON:
 {
