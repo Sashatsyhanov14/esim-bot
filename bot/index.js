@@ -85,7 +85,7 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
     if (ctx.message.text && ctx.message.text.startsWith('/start')) return next();
 
     const { data: sender } = await getUser(senderId);
-    const isManager = sender && (sender.role === 'manager' || sender.role === 'founder' || senderId === MANAGER_ID);
+    const isManager = sender && (sender.role === 'manager' || sender.role === 'founder' || sender.role === 'admin' || senderId === MANAGER_ID);
 
     if (!isManager) {
         return next();
@@ -651,7 +651,7 @@ bot.action(/^sendqr_(.+)$/, async (ctx) => {
     const telegramId = ctx.from.id;
 
     const { data: user } = await getUser(telegramId);
-    if (!user || (user.role !== 'founder' && user.role !== 'manager')) {
+    if (!user || (user.role !== 'founder' && user.role !== 'manager' && user.role !== 'admin')) {
         return ctx.answerCbQuery('❌ У вас нет прав для подтверждения.', { show_alert: true });
     }
 
@@ -705,7 +705,7 @@ bot.action(/^cancelqr_(.+)$/, async (ctx) => {
     const telegramId = ctx.from.id;
 
     const { data: user } = await getUser(telegramId);
-    if (!user || (user.role !== 'founder' && user.role !== 'manager')) {
+    if (!user || (user.role !== 'founder' && user.role !== 'manager' && user.role !== 'admin')) {
         return ctx.answerCbQuery('❌ У вас нет прав.', { show_alert: true });
     }
 
@@ -733,7 +733,7 @@ bot.action(/^cancel_(.+)$/, async (ctx) => {
     const telegramId = ctx.from.id;
 
     const { data: user } = await getUser(telegramId);
-    if (!user || (user.role !== 'founder' && user.role !== 'manager')) {
+    if (!user || (user.role !== 'founder' && user.role !== 'manager' && user.role !== 'admin')) {
         return ctx.answerCbQuery('❌ У вас нет прав.', { show_alert: true });
     }
 
