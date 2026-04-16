@@ -39,7 +39,13 @@ export default function AdminTariffs({ t }: { t: any }) {
     const [formData, setFormData] = useState<Partial<Tariff>>({});
     const [searchQuery, setSearchQuery] = useState('');
     const [showOnlyActive, setShowOnlyActive] = useState(false);
+    const [notification, setNotification] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
     const formRef = useRef<HTMLDivElement>(null);
+
+    const showNotify = (msg: string, type: 'success' | 'error' = 'success') => {
+        setNotification({ msg, type });
+        setTimeout(() => setNotification(null), 4000);
+    };
 
     const scrollToForm = () => {
         setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
@@ -58,8 +64,7 @@ export default function AdminTariffs({ t }: { t: any }) {
 
     const handleSave = async () => {
         if (!formData.country || !formData.data_gb || !formData.validity_period || !formData.price_usd) {
-            const tg = window.Telegram?.WebApp;
-            tg?.showAlert?.('Заполните обязательные поля: Country, Data, Validity, Price USD') || alert('Заполните обязательные поля: Country, Data, Validity, Price USD');
+            showNotify('Заполните обязательные поля: Country, Data, Validity, Price USD', 'error');
             return;
         }
 
@@ -69,22 +74,18 @@ export default function AdminTariffs({ t }: { t: any }) {
             const { error } = await supabase.from('tariffs').insert([insertData]);
             if (error) {
                 console.error('[INSERT ERROR]', error);
-                const tg = window.Telegram?.WebApp;
-                tg?.showAlert?.(`Ошибка добавления: ${error.message}`) || alert(`Ошибка: ${error.message}`);
+                showNotify(`Ошибка добавления: ${error.message}`, 'error');
                 return;
             }
-            const tg = window.Telegram?.WebApp;
-            tg?.showAlert?.(`✅ Тариф "${formData.country}" создан!`) || alert(`✅ Тариф "${formData.country}" создан!`);
+            showNotify(`✅ Тариф "${formData.country}" создан!`);
         } else {
             const { error } = await supabase.from('tariffs').update(formData).eq('id', editingId);
             if (error) {
                 console.error('[UPDATE ERROR]', error);
-                const tg = window.Telegram?.WebApp;
-                tg?.showAlert?.(`Ошибка обновления: ${error.message}`) || alert(`Ошибка: ${error.message}`);
+                showNotify(`Ошибка обновления: ${error.message}`, 'error');
                 return;
             }
-            const tg = window.Telegram?.WebApp;
-            tg?.showAlert?.(`✅ Тариф "${formData.country}" обновлён!`) || alert(`✅ Тариф "${formData.country}" обновлён!`);
+            showNotify(`✅ Тариф "${formData.country}" обновлён!`);
         }
         setEditingId(null);
         setFormData({});
@@ -125,10 +126,7 @@ export default function AdminTariffs({ t }: { t: any }) {
     };
 
     const handleAutoTranslate = async () => {
-        if (!formData.country || !formData.data_gb || !formData.validity_period) {
-            alert("Заполните основные поля (Country, Data, Validity)!");
-            return;
-        }
+        if (!formData.country) return;
 
         const langs = ['ru', 'tr', 'de', 'pl', 'ar', 'fa'];
         
@@ -192,6 +190,13 @@ export default function AdminTariffs({ t }: { t: any }) {
             {editingId && (
                 <div ref={formRef} className="glass-card p-4 rounded-xl space-y-3 border border-primary/30 overflow-hidden relative">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-[40px] -z-10 translate-x-1/2 -translate-y-1/2"></div>
+
+                    {notification && (
+                        <div className={`p-3 rounded-lg text-xs font-bold mb-2 animate-bounce flex items-center gap-2 ${notification.type === 'error' ? 'bg-error/20 text-error' : 'bg-green-500/20 text-green-400'}`}>
+                            <span className="material-symbols-outlined text-[16px]">{notification.type === 'error' ? 'report' : 'check_circle'}</span>
+                            {notification.msg}
+                        </div>
+                    )}
 
                     <h4 className="font-bold text-primary mb-3 text-lg flex items-center gap-2">
                         <span className="material-symbols-outlined">{editingId === 'new' ? 'add_circle' : 'edit_square'}</span>
