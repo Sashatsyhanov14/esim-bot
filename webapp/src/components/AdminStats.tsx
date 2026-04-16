@@ -65,7 +65,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
     const fetchData = async () => {
         setLoading(true);
 
-        const { data: ordersData } = await supabase
+        let { data: ordersData } = await supabase
             .from('orders')
             .select(`
         id, created_at, status, price_usd, assigned_manager,
@@ -121,13 +121,24 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                 .sort((a: any, b: any) => b.earnedBonuses - a.earnedBonuses);
 
             const isOnlyManager = user?.role === 'manager';
+            const managerId = String(user?.telegram_id);
+
             if (isOnlyManager) {
-                // Manager only sees their own referral stats
-                sortedUsers = sortedUsers.filter((u: any) => String(u.telegram_id) === String(user.telegram_id));
+                // Manager only sees their own record AND their referrals
+                sortedUsers = sortedUsers.filter((u: any) => 
+                    String(u.telegram_id) === managerId || 
+                    String(u.referrer_id) === managerId
+                );
+                
+                // Filter orders to only show those from their referrals
+                const myUserIds = sortedUsers.map(u => String(u.telegram_id));
+                ordersData = ordersData.filter((o: any) => {
+                    const uObj = Array.isArray(o.users) ? o.users[0] : o.users;
+                    return myUserIds.includes(String(uObj?.telegram_id));
+                });
             }
             
             setOrders(ordersData);
-
             setUsersInfo(sortedUsers);
         }
 

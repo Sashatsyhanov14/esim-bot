@@ -409,9 +409,18 @@ bot.on('message', async (ctx, next) => {
                             } catch (err) {}
                         }
 
-                        const { data: managers } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'manager']);
-                        if (managers && managers.length > 0) {
-                            for (const manager of managers) {
+                        const { data: buyer } = await getUser(telegramId);
+                        const referrerId = buyer?.referrer_id;
+
+                        const { data: allManagers } = await supabase.from('users').select('telegram_id, role').in('role', ['founder', 'manager']);
+                        const alertManagers = (allManagers || []).filter(m => m.role === 'founder' || m.telegram_id === referrerId);
+                        if (alertManagers.length > 0) {
+                            // Calculate 15% commission as profit
+                            const profitUSD = (tariff.price_usd * 0.15).toFixed(2);
+                            const profitRUB = tariff.price_rub ? (tariff.price_rub * 0.15).toFixed(0) : null;
+                            const profitText = `💰 Прибыль: $${profitUSD}${profitRUB ? ` (₽${profitRUB})` : ''}`;
+
+                            for (const manager of alertManagers) {
                                 try {
                                     const mLangRaw = userLangCache[manager.telegram_id] || 'ru';
                                     const mLang = mLangRaw === 'ru' ? 'ru' : (mLangRaw === 'tr' ? 'tr' : 'en');
@@ -420,15 +429,15 @@ bot.on('message', async (ctx, next) => {
 
                                     const managerTextsLocalized = {
                                         ru: {
-                                            alert: `🚀 **ЗАКАЗ (КАТАЛОГ)!**\n\nЮзер: @${username} (ID: ${telegramId})\nТариф: ${mlt.country} | ${mlt.data_gb} на ${mlt.validity}\nЦена: ${managerPriceText}\n\n⚠️ ВАЖНО: Подтвердите оплату перед тем как скидывать eSIM-код!`,
+                                            alert: `🚀 **ЗАКАЗ (КАТАЛОГ)!**\n\nЮзер: @${username} (ID: ${telegramId})\nТариф: ${mlt.country} | ${mlt.data_gb} на ${mlt.validity}\nЦена: ${managerPriceText}\n${profitText}\n\n⚠️ ВАЖНО: Подтвердите оплату перед тем как скидывать eSIM-код!`,
                                             sendBtn: '📤 Отправить eSIM (Код/Ссылка)'
                                         },
                                         tr: {
-                                            alert: `🚀 **SİPARİŞ (KATALOG)!**\n\nKullanıcı: @${username} (ID: ${telegramId})\nTarife: ${mlt.country} | ${mlt.data_gb} - ${mlt.validity}\nFiyat: ${managerPriceText}\n\n⚠️ ÖNEMLİ: Link veya QR'ı göndermeden önce ödemeyi onaylayın!`,
+                                            alert: `🚀 **SİPARİŞ (KATALOG)!**\n\nKullanıcı: @${username} (ID: ${telegramId})\nTarife: ${mlt.country} | ${mlt.data_gb} - ${mlt.validity}\nFiyat: ${managerPriceText}\n${profitText}\n\n⚠️ ÖNEMLİ: Link veya QR'ı göndermeden önce ödemeyi onaylayın!`,
                                             sendBtn: '📤 eSIM Gönder'
                                         },
                                         en: {
-                                            alert: `🚀 **ORDER (CATALOG)!**\n\nUser: @${username} (ID: ${telegramId})\nPlan: ${mlt.country} | ${mlt.data_gb} for ${mlt.validity}\nPrice: ${managerPriceText}\n\n⚠️ IMPORTANT: Verify payment before sending the Link/Code!`,
+                                            alert: `🚀 **ORDER (CATALOG)!**\n\nUser: @${username} (ID: ${telegramId})\nPlan: ${mlt.country} | ${mlt.data_gb} for ${mlt.validity}\nPrice: ${managerPriceText}\n${profitText}\n\n⚠️ IMPORTANT: Verify payment before sending the Link/Code!`,
                                             sendBtn: '📤 Send eSIM (Code/Link)'
                                         }
                                     };

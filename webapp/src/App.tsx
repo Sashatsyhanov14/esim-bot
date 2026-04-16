@@ -871,17 +871,36 @@ const App: React.FC = () => {
         setPayoutsHistory(userPayouts || []);
 
         if (currentUser.role === 'founder' || currentUser.role === 'manager' || currentUser.role === 'admin') {
-          const { count: uCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
-          const { data: paidOrdersList, count: oCount } = await supabase.from('orders').select('price_usd', { count: 'exact' }).eq('status', 'paid');
-
+          let uCount = 0;
+          let oCount = 0;
           let sumSales = 0;
-          if (paidOrdersList) {
-            sumSales = paidOrdersList.reduce((acc: number, order: any) => acc + (Number(order.price_usd) || 0), 0);
+
+          if (currentUser.role === 'manager') {
+            const { count } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('referrer_id', tgId);
+            uCount = count || 0;
+
+            const { data: refUsers } = await supabase.from('users').select('telegram_id').eq('referrer_id', tgId);
+            if (refUsers && refUsers.length > 0) {
+              const refIds = refUsers.map((u: any) => u.telegram_id);
+              const { data: refOrders, count: refOrderCount } = await supabase.from('orders').select('price_usd', { count: 'exact' }).in('user_id', refIds).eq('status', 'paid');
+              oCount = refOrderCount || 0;
+              if (refOrders) {
+                sumSales = refOrders.reduce((acc: number, order: any) => acc + (Number(order.price_usd) || 0), 0);
+              }
+            }
+          } else {
+            const { count } = await supabase.from('users').select('*', { count: 'exact', head: true });
+            uCount = count || 0;
+            const { data: paidOrdersList, count: totalOrderCount } = await supabase.from('orders').select('price_usd', { count: 'exact' }).eq('status', 'paid');
+            oCount = totalOrderCount || 0;
+            if (paidOrdersList) {
+              sumSales = paidOrdersList.reduce((acc: number, order: any) => acc + (Number(order.price_usd) || 0), 0);
+            }
           }
 
           setGlobalStats({
-            totalUsers: uCount || 0,
-            totalOrders: oCount || 0,
+            totalUsers: uCount,
+            totalOrders: oCount,
             totalSales: sumSales,
             user: currentUser
           });
