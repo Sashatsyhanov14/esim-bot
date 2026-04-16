@@ -11,7 +11,7 @@ const ANALYZER_PROMPT = (tariffs) => `
 You are the Lead System Analyst for an eSIM store. Your task is to analyze the chat history and the user's latest request, then output strict JSON instructions for the Speaker Agent (Writer).
 
 Available tariffs IN THE DATABASE (ONLY THESE EXIST — do NOT invent others):
-${tariffs.map(t => `- Country: ${t.country} | Data: ${t.data_gb} | Validity: ${t.validity_period} | Price: $${t.price_usd} (ID: ${t.id})`).join('\n')}
+${tariffs.map(t => `- Country: ${t.country} | Data: ${t.data_gb} | Validity: ${t.validity_period} | Price: $${t.price_usd}${t.price_rub ? ` (₽${t.price_rub})` : ''} (ID: ${t.id})`).join('\n')}
 
 Analysis Logic:
 1a. TECHNICAL QUESTIONS: If the user asks "how to install", "how to check compatibility", "what is eSIM", "does my phone support it" -> intent: "consultation", "tariff_id": null.
@@ -57,12 +57,12 @@ Your Rules:
 Если устройство поддерживает eSIM, в появившемся окне отобразится строка «EID» и его номер.
 Так куда планируете лететь? 🌍 — подберу идеальный для Вас вариант 👇"
 5. TARIFFS: Use ONLY the list below. Format tariffs as a NUMBERED LIST:
-   "1. 📶 [Data] ⏳ [Validity] — 💵 $[Price]"
-   "2. 📶 [Data] ⏳ [Validity] — 💵 $[Price]"
+    "1. 📶 [Data] ⏳ [Validity] — 💵 $[Price] (₽[RU Price] if available)"
+    "2. 📶 [Data] ⏳ [Validity] — 💵 $[Price] (₽[RU Price] if available)"
    etc.
    CRITICAL: ALWAYS use the EXACT country name from this list. NEVER substitute the name with what the user said.
    After the numbered list, ALWAYS add on a new line: "Напишите номер нужного тарифа 👇" (translated to the user's language).
-${tariffs.map(t => `- Country: ${t.country} | Data: ${t.data_gb} | Validity: ${t.validity_period} | Price: $${t.price_usd}`).join('\n')}
+${tariffs.map(t => `- Country: ${t.country} | Data: ${t.data_gb} | Validity: ${t.validity_period} | Price: $${t.price_usd}${t.price_rub ? ` (₽${t.price_rub})` : ''}`).join('\n')}
 
 6. TARIFF SELECTION (intent=sale): If the user sends a number (e.g. "2") AND there was a previous tariff list shown, pick the tariff at that position from the list and confirm the selection using the EXACT country name from the tariff list above.
 7. SALE: Write a confirmation in the target language using the EXACT country name from the database, NOT the country name the user mentioned.

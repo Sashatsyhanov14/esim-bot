@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
 interface Tariff {
@@ -8,6 +8,7 @@ interface Tariff {
     data_gb: string;
     validity_period: string;
     price_usd: number;
+    price_rub?: number;
     payment_link?: string;
     payment_qr_url?: string;
     is_active: boolean;
@@ -37,6 +38,12 @@ export default function AdminTariffs({ t }: { t: any }) {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [formData, setFormData] = useState<Partial<Tariff>>({});
     const [searchQuery, setSearchQuery] = useState('');
+    const [showOnlyActive, setShowOnlyActive] = useState(false);
+    const formRef = useRef<HTMLDivElement>(null);
+
+    const scrollToForm = () => {
+        setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    };
 
     useEffect(() => {
         fetchTariffs();
@@ -50,13 +57,63 @@ export default function AdminTariffs({ t }: { t: any }) {
     };
 
     const handleSave = async () => {
+        if (!formData.country || !formData.data_gb || !formData.validity_period || !formData.price_usd) {
+            const tg = window.Telegram?.WebApp;
+            tg?.showAlert?.('Заполните обязательные поля: Country, Data, Validity, Price USD') || alert('Заполните обязательные поля: Country, Data, Validity, Price USD');
+            return;
+        }
+
         if (editingId === 'new') {
-            await supabase.from('tariffs').insert([formData]);
+            // Strip id so Supabase generates a fresh UUID
+            const { id, ...insertData } = formData as any;
+            const { error } = await supabase.from('tariffs').insert([insertData]);
+            if (error) {
+                console.error('[INSERT ERROR]', error);
+                const tg = window.Telegram?.WebApp;
+                tg?.showAlert?.(`Ошибка добавления: ${error.message}`) || alert(`Ошибка: ${error.message}`);
+                return;
+            }
+            const tg = window.Telegram?.WebApp;
+            tg?.showAlert?.(`✅ Тариф "${formData.country}" создан!`) || alert(`✅ Тариф "${formData.country}" создан!`);
         } else {
-            await supabase.from('tariffs').update(formData).eq('id', editingId);
+            const { error } = await supabase.from('tariffs').update(formData).eq('id', editingId);
+            if (error) {
+                console.error('[UPDATE ERROR]', error);
+                const tg = window.Telegram?.WebApp;
+                tg?.showAlert?.(`Ошибка обновления: ${error.message}`) || alert(`Ошибка: ${error.message}`);
+                return;
+            }
+            const tg = window.Telegram?.WebApp;
+            tg?.showAlert?.(`✅ Тариф "${formData.country}" обновлён!`) || alert(`✅ Тариф "${formData.country}" обновлён!`);
         }
         setEditingId(null);
         setFormData({});
+        fetchTariffs();
+    };
+
+    const filteredTariffs = tariffs.filter(t =>
+        (t.country.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.data_gb.toLowerCase().includes(searchQuery.toLowerCase())) &&
+        (!showOnlyActive || t.is_active)
+    );
+
+    const handleMoveUp = async (tariff: Tariff, index: number) => {
+        if (index === 0) return;
+        const prev = filteredTariffs[index - 1];
+        const prevSort = prev.sort_number;
+        const curSort = tariff.sort_number;
+        await supabase.from('tariffs').update({ sort_number: prevSort }).eq('id', tariff.id);
+        await supabase.from('tariffs').update({ sort_number: curSort }).eq('id', prev.id);
+        fetchTariffs();
+    };
+
+    const handleMoveDown = async (tariff: Tariff, index: number) => {
+        if (index >= filteredTariffs.length - 1) return;
+        const next = filteredTariffs[index + 1];
+        const nextSort = next.sort_number;
+        const curSort = tariff.sort_number;
+        await supabase.from('tariffs').update({ sort_number: nextSort }).eq('id', tariff.id);
+        await supabase.from('tariffs').update({ sort_number: curSort }).eq('id', next.id);
         fetchTariffs();
     };
 
@@ -100,17 +157,12 @@ export default function AdminTariffs({ t }: { t: any }) {
 
     if (loading) return <div className="text-center p-4 animate-pulse text-on-surface-variant">Загрузка тарифов...</div>;
 
-    const filteredTariffs = tariffs.filter(t =>
-        t.country.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.data_gb.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
     return (
         <div className="space-y-4">
             <div className="flex justify-between items-center pl-1">
                 <h3 className="text-lg font-headline font-bold text-on-surface">{t.manageTariffs}</h3>
                 <button
-                    onClick={() => { setEditingId('new'); setFormData({ is_active: true, sort_number: tariffs.length + 1 }); }}
+                    onClick={() => { setEditingId('new'); setFormData({ is_active: true, sort_number: tariffs.length + 1 }); scrollToForm(); }}
                     className="flex items-center gap-1 bg-primary/20 text-primary border border-primary/30 px-3 py-1.5 rounded-lg text-sm font-bold active:scale-95 transition-all hover:bg-primary/30"
                 >
                     <span className="material-symbols-outlined text-[18px]">add</span>
@@ -118,19 +170,27 @@ export default function AdminTariffs({ t }: { t: any }) {
                 </button>
             </div>
 
-            <div className="relative">
-                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
-                <input
-                    type="text"
-                    placeholder={t.searchTariffs || (t.addTariff === 'Добавить' ? 'Поиск по стране или трафику...' : 'Ülke veya internet ara...')}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-xl py-3.5 pl-11 pr-4 text-sm text-on-surface focus:border-primary/50 focus:outline-none transition-colors shadow-sm"
-                />
+            <div className="flex gap-2">
+                <div className="relative flex-1">
+                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
+                    <input
+                        type="text"
+                        placeholder={t.searchTariffs || 'Поиск по стране или трафику...'}
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-xl py-3.5 pl-11 pr-4 text-sm text-on-surface focus:border-primary/50 focus:outline-none transition-colors shadow-sm"
+                    />
+                </div>
+                <button
+                    onClick={() => setShowOnlyActive(!showOnlyActive)}
+                    className={`px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider whitespace-nowrap border transition-all ${showOnlyActive ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-surface-container-lowest text-on-surface-variant border-outline-variant/20'}`}
+                >
+                    {showOnlyActive ? '✅ Active' : '📋 All'}
+                </button>
             </div>
 
             {editingId && (
-                <div className="glass-card p-4 rounded-xl space-y-3 border border-primary/30 overflow-hidden relative">
+                <div ref={formRef} className="glass-card p-4 rounded-xl space-y-3 border border-primary/30 overflow-hidden relative">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-[40px] -z-10 translate-x-1/2 -translate-y-1/2"></div>
 
                     <h4 className="font-bold text-primary mb-3 text-lg flex items-center gap-2">
@@ -194,6 +254,10 @@ export default function AdminTariffs({ t }: { t: any }) {
                             <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider pl-1 mb-1 block">Цена USD / Fiyat</label>
                             <input type="number" placeholder={t.price} value={formData.price_usd || ''} onChange={e => setFormData({ ...formData, price_usd: parseFloat(e.target.value) })} className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-3 text-sm text-on-surface focus:border-primary/50 focus:outline-none transition-colors font-bold text-green-400" />
                         </div>
+                        <div className="col-span-2">
+                            <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider pl-1 mb-1 block">Цена RUB / Рубли (опционально)</label>
+                            <input type="number" placeholder="₽ Цена в рублях" value={formData.price_rub || ''} onChange={e => setFormData({ ...formData, price_rub: parseFloat(e.target.value) || undefined })} className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-3 text-sm text-on-surface focus:border-blue-500/50 focus:outline-none transition-colors font-bold text-blue-400" />
+                        </div>
                         <div className="col-span-2 mt-2">
                             <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider pl-1 mb-1 block">Ссылки на оплату / Ödeme Linkleri</label>
                             <input type="text" placeholder={t.paymentLink} value={formData.payment_link || ''} onChange={e => setFormData({ ...formData, payment_link: e.target.value })} className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-3 text-sm text-on-surface focus:border-secondary/50 focus:outline-none transition-colors mb-2" />
@@ -222,7 +286,7 @@ export default function AdminTariffs({ t }: { t: any }) {
             )}
 
             <div className="flex flex-col gap-3">
-                {filteredTariffs.map(tData => (
+                {filteredTariffs.map((tData, idx) => (
                     <div key={tData.id} className={`glass-card p-4 rounded-xl relative transition-all overflow-hidden ${!tData.is_active ? 'opacity-50 grayscale select-none' : ''}`}>
                         {tData.is_active && <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full blur-[30px] -z-10 translate-x-1/2 -translate-y-1/2"></div>}
 
@@ -231,7 +295,10 @@ export default function AdminTariffs({ t }: { t: any }) {
                                 <span className="text-[10px] bg-secondary/20 text-secondary px-2 py-0.5 rounded font-bold uppercase">#{tData.sort_number}</span>
                                 <span className="font-headline font-bold text-on-surface text-lg tracking-wide">{tData.country}</span>
                             </div>
-                            <span className="font-headline font-extrabold text-green-400 text-xl absolute top-3 right-3">${tData.price_usd}</span>
+                            <span className="font-headline font-extrabold text-green-400 text-xl absolute top-3 right-3">
+                                ${tData.price_usd}
+                                {tData.price_rub ? <span className="block text-blue-400 text-sm font-bold">₽{tData.price_rub}</span> : null}
+                            </span>
                         </div>
 
                         <div className="grid grid-cols-2 gap-2 mb-3 bg-surface-container/50 rounded-lg p-2 border border-white/5">
@@ -245,13 +312,23 @@ export default function AdminTariffs({ t }: { t: any }) {
                             </div>
                         </div>
 
-                        <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-outline-variant/10">
-                            <button onClick={() => { setEditingId(tData.id); setFormData(tData); }} className="w-8 h-8 rounded-lg bg-surface-container-high text-on-surface flex items-center justify-center transition-colors hover:bg-surface-container-highest active:scale-90 pb-[1px]">
-                                <span className="material-symbols-outlined text-[18px]">edit</span>
-                            </button>
-                            <button onClick={() => handleDelete(tData.id)} className="w-8 h-8 rounded-lg bg-error/10 text-error flex items-center justify-center transition-all hover:bg-error hover:text-white active:scale-90 pb-[1px]">
-                                <span className="material-symbols-outlined text-[18px]">delete</span>
-                            </button>
+                        <div className="flex justify-between gap-2 mt-3 pt-3 border-t border-outline-variant/10">
+                            <div className="flex gap-1">
+                                <button onClick={() => handleMoveUp(tData, idx)} disabled={idx === 0} className="w-8 h-8 rounded-lg bg-surface-container-high text-on-surface flex items-center justify-center transition-colors hover:bg-surface-container-highest active:scale-90 disabled:opacity-30 disabled:active:scale-100">
+                                    <span className="material-symbols-outlined text-[18px]">arrow_upward</span>
+                                </button>
+                                <button onClick={() => handleMoveDown(tData, idx)} disabled={idx === filteredTariffs.length - 1} className="w-8 h-8 rounded-lg bg-surface-container-high text-on-surface flex items-center justify-center transition-colors hover:bg-surface-container-highest active:scale-90 disabled:opacity-30 disabled:active:scale-100">
+                                    <span className="material-symbols-outlined text-[18px]">arrow_downward</span>
+                                </button>
+                            </div>
+                            <div className="flex gap-2">
+                                <button onClick={() => { setEditingId(tData.id); setFormData(tData); scrollToForm(); }} className="w-8 h-8 rounded-lg bg-surface-container-high text-on-surface flex items-center justify-center transition-colors hover:bg-surface-container-highest active:scale-90 pb-[1px]">
+                                    <span className="material-symbols-outlined text-[18px]">edit</span>
+                                </button>
+                                <button onClick={() => handleDelete(tData.id)} className="w-8 h-8 rounded-lg bg-error/10 text-error flex items-center justify-center transition-all hover:bg-error hover:text-white active:scale-90 pb-[1px]">
+                                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 ))}

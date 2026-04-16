@@ -371,7 +371,7 @@ bot.on('message', async (ctx, next) => {
                         const uiLang = userLangCache[telegramId] || ctx.from.language_code || 'en';
                         const lt = locTariff(tariff, uiLang);
                         
-                        const successRu = `Выбранный тариф: ${lt.country} | ${lt.data_gb} на ${lt.validity}`;
+                        const successRu = `Выбранный тариф: ${lt.country} | ${lt.data_gb} на ${lt.validity} — $${tariff.price_usd}${tariff.price_rub ? ` (₽${tariff.price_rub})` : ''}`;
                         let finalResponse = await getLocalizedText(uiLang, successRu);
                         
                         const payTextRu = `\n\n👇 **Оплатить онлайн:**\n${tariff.payment_link || 'Обратись к менеджеру'}\n\n✅ *Сразу после успешной оплаты мы вышлем твой тариф!*`;
@@ -413,15 +413,15 @@ bot.on('message', async (ctx, next) => {
 
                                     const managerTextsLocalized = {
                                         ru: {
-                                            alert: `🚀 **ЗАКАЗ (КАТАЛОГ)!**\n\nЮзер: @${username} (ID: ${telegramId})\nТариф: ${mlt.country} | ${mlt.data_gb} на ${mlt.validity}\nЦена: $${tariff.price_usd}\n\n⚠️ ВАЖНО: Подтвердите оплату перед тем как скидывать eSIM-код!`,
+                                            alert: `🚀 **ЗАКАЗ (КАТАЛОГ)!**\n\nЮзер: @${username} (ID: ${telegramId})\nТариф: ${mlt.country} | ${mlt.data_gb} на ${mlt.validity}\nЦена: $${tariff.price_usd}${tariff.price_rub ? ` (₽${tariff.price_rub})` : ''}\n\n⚠️ ВАЖНО: Подтвердите оплату перед тем как скидывать eSIM-код!`,
                                             sendBtn: '📤 Отправить eSIM (Код/Ссылка)'
                                         },
                                         tr: {
-                                            alert: `🚀 **SİPARİŞ (KATALOG)!**\n\nKullanıcı: @${username} (ID: ${telegramId})\nTarife: ${mlt.country} | ${mlt.data_gb} - ${mlt.validity}\nFiyat: $${tariff.price_usd}\n\n⚠️ ÖNEMLİ: Link veya QR'ı göndermeden önce ödemeyi onaylayın!`,
+                                            alert: `🚀 **SİPARİŞ (KATALOG)!**\n\nKullanıcı: @${username} (ID: ${telegramId})\nTarife: ${mlt.country} | ${mlt.data_gb} - ${mlt.validity}\nFiyat: $${tariff.price_usd}${tariff.price_rub ? ` (₽${tariff.price_rub})` : ''}\n\n⚠️ ÖNEMLİ: Link veya QR'ı göndermeden önce ödemeyi onaylayın!`,
                                             sendBtn: '📤 eSIM Gönder'
                                         },
                                         en: {
-                                            alert: `🚀 **ORDER (CATALOG)!**\n\nUser: @${username} (ID: ${telegramId})\nPlan: ${mlt.country} | ${mlt.data_gb} for ${mlt.validity}\nPrice: $${tariff.price_usd}\n\n⚠️ IMPORTANT: Verify payment before sending the Link/Code!`,
+                                            alert: `🚀 **ORDER (CATALOG)!**\n\nUser: @${username} (ID: ${telegramId})\nPlan: ${mlt.country} | ${mlt.data_gb} for ${mlt.validity}\nPrice: $${tariff.price_usd}${tariff.price_rub ? ` (₽${tariff.price_rub})` : ''}\n\n⚠️ IMPORTANT: Verify payment before sending the Link/Code!`,
                                             sendBtn: '📤 Send eSIM (Code/Link)'
                                         }
                                     };

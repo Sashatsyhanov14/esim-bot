@@ -605,12 +605,12 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                     <div className="flex justify-between items-center pb-2 border-b border-white/10">
                         <div>
                             <p className="font-headline font-bold text-on-surface text-base">
-                                рџ”— {t.refDealsTitle || 'Referral deals'} @{selectedUser.username || selectedUser.telegram_id}
+                                🔗 {t.refDealsTitle || 'Referral deals'} @{selectedUser.username || selectedUser.telegram_id}
                             </p>
                             <p className="text-[11px] text-on-surface-variant mt-0.5">
-                                РџСЂРёРіР»Р°С€РµРЅРѕ: <b className="text-primary">{selectedUser.invitedCount}</b>
-                                &nbsp;В·&nbsp; РЎРґРµР»РѕРє: <b className="text-secondary">{selectedUser.refOrdersCount}</b>
-                                &nbsp;В·&nbsp; РћР±СЉС‘Рј: <b className="text-green-400">${(selectedUser.refTotalVolume || 0).toFixed(2)}</b>
+                                Приглашено: <b className="text-primary">{selectedUser.invitedCount}</b>
+                                &nbsp;·&nbsp; Сделок: <b className="text-secondary">{selectedUser.refOrdersCount}</b>
+                                &nbsp;·&nbsp; Объём: <b className="text-green-400">${(selectedUser.refTotalVolume || 0).toFixed(2)}</b>
                             </p>
                         </div>
                         <button onClick={closeRefDrilldown} className="text-on-surface-variant hover:text-on-surface p-1">
@@ -631,11 +631,11 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                                     <span className="font-bold text-on-surface">{uObj?.username ? `@${uObj.username}` : uObj?.telegram_id || '?'}</span>
                                     <div className="text-right">
                                         <b className="text-green-400">${o.price_usd}</b>
-                                        <p className="text-[10px] text-yellow-400 font-bold">+${(Number(o.price_usd) * 0.20).toFixed(2)} {t.commissionLabel || 'РєРѕРјРёСЃСЃРёСЏ'}</p>
+                                        <p className="text-[10px] text-yellow-400 font-bold">+${(Number(o.price_usd) * 0.20).toFixed(2)} {t.commissionLabel || 'комиссия'}</p>
                                     </div>
                                 </div>
                                 <div className="text-xs text-on-surface-variant space-y-0.5">
-                                    <div>{o.tariffs ? `${o.tariffs.country} | ${o.tariffs.data_gb} | ${o.tariffs.validity_period}` : 'вЂ”'}</div>
+                                    <div>{o.tariffs ? `${o.tariffs.country} | ${o.tariffs.data_gb} | ${o.tariffs.validity_period}` : '—'}</div>
                                     <div className="flex justify-between items-center">
                                         <span>{new Date(o.created_at).toLocaleString()}</span>
                                         <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${
