@@ -40,6 +40,7 @@ export default function AdminTariffs({ t }: { t: any }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [showOnlyActive, setShowOnlyActive] = useState(false);
     const [notification, setNotification] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+    const [isTranslating, setIsTranslating] = useState(false);
     const formRef = useRef<HTMLDivElement>(null);
 
     const showNotify = (msg: string, type: 'success' | 'error' = 'success') => {
@@ -144,6 +145,7 @@ export default function AdminTariffs({ t }: { t: any }) {
 
     const handleAutoTranslate = async () => {
         if (!formData.country) return;
+        setIsTranslating(true);
 
         const langs = ['ru', 'tr', 'de', 'pl', 'ar', 'fa'];
         
@@ -168,6 +170,7 @@ export default function AdminTariffs({ t }: { t: any }) {
             }
             setFormData({ ...newFormData });
         }
+        setIsTranslating(false);
     };
 
     if (loading) return <div className="text-center p-4 animate-pulse text-on-surface-variant">Загрузка тарифов...</div>;
@@ -226,9 +229,11 @@ export default function AdminTariffs({ t }: { t: any }) {
                             <input type="number" placeholder={t.sortNumber} value={formData.sort_number || ''} onChange={e => setFormData({ ...formData, sort_number: parseInt(e.target.value) })} className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-3 text-sm text-on-surface focus:border-primary/50 focus:outline-none transition-colors" />
                         </div>
 
-                        {/* EN FIELDS */}
                         <div className="col-span-2 mt-2">
-                            <h5 className="text-secondary text-sm font-bold border-b border-white/5 pb-1 mb-2">ENG (Default)</h5>
+                            <div className="flex justify-between items-end border-b border-white/5 pb-1 mb-2">
+                                <h5 className="text-secondary text-sm font-bold">ENG (Default)</h5>
+                                {isTranslating && <span className="text-[10px] text-primary animate-pulse flex items-center gap-1">✨ {t.translating || 'Translating...'}</span>}
+                            </div>
                             <input type="text" placeholder="Country (e.g. Turkey)" value={formData.country || ''} onChange={e => setFormData({ ...formData, country: e.target.value })} onBlur={() => { if(formData.country) handleAutoTranslate(); }} className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-2.5 text-sm text-on-surface focus:border-primary/50 focus:outline-none mb-2" />
                             <div className="flex gap-2">
                                 <input type="text" placeholder="Traffic (e.g. 1 GB)" value={formData.data_gb || ''} onChange={e => setFormData({ ...formData, data_gb: e.target.value })} className="w-1/2 bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-2.5 text-sm text-on-surface focus:border-primary/50 focus:outline-none" />
@@ -236,41 +241,6 @@ export default function AdminTariffs({ t }: { t: any }) {
                             </div>
                         </div>
 
-                        {/* RU FIELDS */}
-                        <div className="col-span-2 mt-2">
-                            <h5 className="text-secondary text-[10px] uppercase font-bold tracking-widest pl-1 mb-1">RUSSIAN</h5>
-                            <input type="text" placeholder="Страна (на русском)" value={formData.country_ru || ''} onChange={e => setFormData({ ...formData, country_ru: e.target.value })} className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-2.5 text-sm text-on-surface focus:border-primary/50 focus:outline-none" />
-                        </div>
-
-                        {/* TR FIELDS */}
-                        <div className="col-span-2 mt-2">
-                            <h5 className="text-secondary text-[10px] uppercase font-bold tracking-widest pl-1 mb-1">TURKISH</h5>
-                            <input type="text" placeholder="Ülke (Türkçe)" value={formData.country_tr || ''} onChange={e => setFormData({ ...formData, country_tr: e.target.value })} className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-2.5 text-sm text-on-surface focus:border-primary/50 focus:outline-none" />
-                        </div>
-
-                        {/* DE FIELDS */}
-                        <div className="col-span-2 mt-2">
-                            <h5 className="text-secondary text-[10px] uppercase font-bold tracking-widest pl-1 mb-1">GERMAN</h5>
-                            <input type="text" placeholder="Land (Deutsch)" value={formData.country_de || ''} onChange={e => setFormData({ ...formData, country_de: e.target.value })} className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-2.5 text-sm text-on-surface focus:border-primary/50 focus:outline-none" />
-                        </div>
-
-                        {/* PL FIELDS */}
-                        <div className="col-span-2 mt-2">
-                            <h5 className="text-secondary text-[10px] uppercase font-bold tracking-widest pl-1 mb-1">POLISH</h5>
-                            <input type="text" placeholder="Kraj (Polski)" value={formData.country_pl || ''} onChange={e => setFormData({ ...formData, country_pl: e.target.value })} className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-2.5 text-sm text-on-surface focus:border-primary/50 focus:outline-none" />
-                        </div>
-
-                        {/* AR FIELDS */}
-                        <div className="col-span-2 mt-2">
-                            <h5 className="text-secondary text-[10px] uppercase font-bold tracking-widest pl-1 mb-1">ARABIC</h5>
-                            <input type="text" placeholder="بلد" value={formData.country_ar || ''} onChange={e => setFormData({ ...formData, country_ar: e.target.value })} className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-2.5 text-sm text-on-surface focus:border-primary/50 focus:outline-none text-right" dir="auto" />
-                        </div>
-
-                        {/* FA FIELDS */}
-                        <div className="col-span-2 mt-2">
-                            <h5 className="text-secondary text-[10px] uppercase font-bold tracking-widest pl-1 mb-1">PERSIAN</h5>
-                            <input type="text" placeholder="کشور" value={formData.country_fa || ''} onChange={e => setFormData({ ...formData, country_fa: e.target.value })} className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-2.5 text-sm text-on-surface focus:border-primary/50 focus:outline-none text-right" dir="auto" />
-                        </div>
 
                         <div className="col-span-2 mt-2 pt-2 border-t border-white/5">
                             <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider pl-1 mb-1 block">Цена USD / Fiyat</label>
