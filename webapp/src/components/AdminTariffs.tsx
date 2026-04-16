@@ -64,8 +64,14 @@ export default function AdminTariffs({ t }: { t: any }) {
     };
 
     const handleSave = async () => {
-        if (!formData.country || !formData.data_gb || !formData.validity_period || !formData.price_usd) {
-            showNotify('Заполните обязательные поля: Country, Data, Validity, Price USD', 'error');
+        const missing = [];
+        if (!formData.country) missing.push('Country');
+        if (!formData.data_gb) missing.push('Data');
+        if (!formData.validity_period) missing.push('Validity');
+        if (formData.price_usd === undefined || isNaN(formData.price_usd)) missing.push('Price USD');
+
+        if (missing.length > 0) {
+            showNotify(`Заполните: ${missing.join(', ')}`, 'error');
             return;
         }
 
@@ -89,6 +95,8 @@ export default function AdminTariffs({ t }: { t: any }) {
         });
 
         if (editingId === 'new') {
+            // Explicitly set created_at to avoid NOT NULL constraint errors if DB default is missing
+            cleanData.created_at = new Date().toISOString();
             const { error } = await supabase.from('tariffs').insert([cleanData]);
             if (error) {
                 console.error('[INSERT ERROR]', error);
