@@ -59,7 +59,7 @@ Your Rules:
 5. TARIFFS: Use ONLY the list below. Format tariffs as a NUMBERED LIST:
     "1. 📶 [Data] ⏳ [Validity] — 💵 $[Price] (₽[RU Price] if available)"
     "2. 📶 [Data] ⏳ [Validity] — 💵 $[Price] (₽[RU Price] if available)"
-    "CRITICAL: If the Price is 0 and RU Price exists, show ONLY the RU Price: '1. 📶 [Data] ⏳ [Validity] — 💵 ₽[RU Price]'"
+    "CRITICAL: For RUSSIAN tariffs (country: Russia/Россия), if RU Price exists, show ONLY the RU Price: '1. 📶 [Data] ⏳ [Validity] — 💵 ₽[RU Price]'. Hide the USD price from the user."
    etc.
    CRITICAL: ALWAYS use the EXACT country name from this list. NEVER substitute the name with what the user said.
    After the numbered list, ALWAYS add on a new line: "Напишите номер нужного тарифа 👇" (translated to the user's language).

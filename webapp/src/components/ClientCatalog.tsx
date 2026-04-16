@@ -157,6 +157,11 @@ export default function ClientCatalog({ lang, telegramId }: { lang: string, tele
         if (c.includes('ukraine') || c.includes('украин')) return { emoji: '🇺🇦', code: 'ua' };
         return { emoji: '🏳️', code: '' };
     };
+    const isRU = (tData: any) => {
+        const c = (tData.country || '').toLowerCase();
+        const cr = (tData.country_ru || '').toLowerCase();
+        return c.includes('russia') || cr.includes('россия') || cr.includes('рф');
+    };
 
     const FlagIcon = ({ country, size = "md" }: { country: string | null, size?: "sm" | "md" | "lg" }) => {
         if (!country) return null;
@@ -206,8 +211,8 @@ export default function ClientCatalog({ lang, telegramId }: { lang: string, tele
                             
                             <div className="flex justify-between items-start mb-4">
                                 <h3 className="font-headline font-bold text-slate-100 text-lg">{loc('country', tData)}</h3>
-                                <span className={tData.price_rub && tData.price_usd === 0 ? "text-2xl font-extrabold text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.3)]" : "text-2xl font-extrabold text-green-400 drop-shadow-[0_0_8px_rgba(74,222,128,0.3)]"}>
-                                    {tData.price_rub && tData.price_usd === 0 ? (
+                                <span className={tData.price_rub && isRU(tData) ? "text-2xl font-extrabold text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.3)]" : "text-2xl font-extrabold text-green-400 drop-shadow-[0_0_8px_rgba(74,222,128,0.3)]"}>
+                                    {tData.price_rub && isRU(tData) ? (
                                         `₽${tData.price_rub}`
                                     ) : (
                                         <>

@@ -371,8 +371,14 @@ bot.on('message', async (ctx, next) => {
                         const uiLang = userLangCache[telegramId] || ctx.from.language_code || 'en';
                         const lt = locTariff(tariff, uiLang);
                         
-                        const priceText = (tariff.price_usd === 0 && tariff.price_rub) ? `₽${tariff.price_rub}` : `$${tariff.price_usd}${tariff.price_rub ? ` (₽${tariff.price_rub})` : ''}`;
-                        const successRu = `Выбранный тариф: ${lt.country} | ${lt.data_gb} на ${lt.validity} — ${priceText}`;
+                        const isRU = (tariff) => {
+                            const c = (tariff.country || '').toLowerCase();
+                            const cr = (tariff.country_ru || '').toLowerCase();
+                            return c.includes('russia') || cr.includes('россия') || cr.includes('рф');
+                        };
+                        const userPriceText = (isRU(tariff) && tariff.price_rub) ? `₽${tariff.price_rub}` : `$${tariff.price_usd}${tariff.price_rub ? ` (₽${tariff.price_rub})` : ''}`;
+                        const managerPriceText = `$${tariff.price_usd}${tariff.price_rub ? ` (₽${tariff.price_rub})` : ''}`;
+                        const successRu = `Выбранный тариф: ${lt.country} | ${lt.data_gb} на ${lt.validity} — ${userPriceText}`;
                         let finalResponse = await getLocalizedText(uiLang, successRu);
                         
                         const payTextRu = `\n\n👇 **Оплатить онлайн:**\n${tariff.payment_link || 'Обратись к менеджеру'}\n\n✅ *Сразу после успешной оплаты мы вышлем твой тариф!*`;
@@ -414,15 +420,15 @@ bot.on('message', async (ctx, next) => {
 
                                     const managerTextsLocalized = {
                                         ru: {
-                                            alert: `🚀 **ЗАКАЗ (КАТАЛОГ)!**\n\nЮзер: @${username} (ID: ${telegramId})\nТариф: ${mlt.country} | ${mlt.data_gb} на ${mlt.validity}\nЦена: ${priceText}\n\n⚠️ ВАЖНО: Подтвердите оплату перед тем как скидывать eSIM-код!`,
+                                            alert: `🚀 **ЗАКАЗ (КАТАЛОГ)!**\n\nЮзер: @${username} (ID: ${telegramId})\nТариф: ${mlt.country} | ${mlt.data_gb} на ${mlt.validity}\nЦена: ${managerPriceText}\n\n⚠️ ВАЖНО: Подтвердите оплату перед тем как скидывать eSIM-код!`,
                                             sendBtn: '📤 Отправить eSIM (Код/Ссылка)'
                                         },
                                         tr: {
-                                            alert: `🚀 **SİPARİŞ (KATALOG)!**\n\nKullanıcı: @${username} (ID: ${telegramId})\nTarife: ${mlt.country} | ${mlt.data_gb} - ${mlt.validity}\nFiyat: ${priceText}\n\n⚠️ ÖNEMLİ: Link veya QR'ı göndermeden önce ödemeyi onaylayın!`,
+                                            alert: `🚀 **SİPARİŞ (KATALOG)!**\n\nKullanıcı: @${username} (ID: ${telegramId})\nTarife: ${mlt.country} | ${mlt.data_gb} - ${mlt.validity}\nFiyat: ${managerPriceText}\n\n⚠️ ÖNEMLİ: Link veya QR'ı göndermeden önce ödemeyi onaylayın!`,
                                             sendBtn: '📤 eSIM Gönder'
                                         },
                                         en: {
-                                            alert: `🚀 **ORDER (CATALOG)!**\n\nUser: @${username} (ID: ${telegramId})\nPlan: ${mlt.country} | ${mlt.data_gb} for ${mlt.validity}\nPrice: ${priceText}\n\n⚠️ IMPORTANT: Verify payment before sending the Link/Code!`,
+                                            alert: `🚀 **ORDER (CATALOG)!**\n\nUser: @${username} (ID: ${telegramId})\nPlan: ${mlt.country} | ${mlt.data_gb} for ${mlt.validity}\nPrice: ${managerPriceText}\n\n⚠️ IMPORTANT: Verify payment before sending the Link/Code!`,
                                             sendBtn: '📤 Send eSIM (Code/Link)'
                                         }
                                     };
