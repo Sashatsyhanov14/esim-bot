@@ -164,6 +164,43 @@ app.post('/api/withdraw-request', async (req, res) => {
     }
 });
 
+// API endpoint to validate Telegram WebApp Init Data
+app.post('/api/validate-auth', async (req, res) => {
+    try {
+        const { initData } = req.body;
+        if (!initData) return res.status(400).json({ error: 'Missing initData' });
+
+        const crypto = require('crypto');
+        const botToken = process.env.BOT_TOKEN;
+        
+        const params = new URLSearchParams(initData);
+        const hash = params.get('hash');
+        const dataToCheck = [];
+
+        params.sort();
+        params.forEach((val, key) => {
+            if (key !== 'hash') {
+                dataToCheck.push(`${key}=${val}`);
+            }
+        });
+
+        const secretKey = crypto.createHmac('sha256', 'WebAppData').update(botToken).digest();
+        const calculatedHash = crypto.createHmac('sha256', secretKey).update(dataToCheck.join('\n')).digest('hex');
+
+        if (calculatedHash === hash) {
+            const userStr = params.get('user');
+            const tgUser = userStr ? JSON.parse(userStr) : null;
+            res.json({ ok: true, user: tgUser });
+        } else {
+            console.warn('[AUTH] Hash mismatch for initData');
+            res.json({ ok: false });
+        }
+    } catch (err) {
+        console.error('Auth validation error:', err.message);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
 // Any other request serves the React app
 app.get('*', (req, res) => {
     res.sendFile(path.join(webappDistPath, 'index.html'));

@@ -722,29 +722,43 @@ const App: React.FC = () => {
         tg.expand();
       }
 
-      // 1. Try URL Parameters (uid=) - most reliable for TG Desktop
-      const params = new URLSearchParams(window.location.search);
-      const uid = params.get('uid');
-      if (uid && !isNaN(parseInt(uid))) {
-        await fetchUserData(parseInt(uid));
-        return;
-      }
-
-      // 2. Try Telegram SDK Polling
       let tgUser: any = null;
-      for (let i = 0; i < 5; i++) {
-        tgUser = tg?.initDataUnsafe?.user;
-        if (tgUser?.id) break;
-        await new Promise(r => setTimeout(r, 200));
+
+      // 1. Try secure Telegram Hash validation (Priority)
+      if (tg?.initData) {
+        try {
+          const resp = await fetch('/api/validate-auth', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ initData: tg.initData })
+          });
+          const result = await resp.json();
+          if (result.ok && result.user) {
+            tgUser = result.user;
+            console.log('[AUTH] Hash verified successfully');
+          }
+        } catch (e) {
+          console.error('[AUTH] Hash verification service error:', e);
+        }
       }
 
-      // 3. Try Raw initData Parsing
-      if (!tgUser?.id && tg?.initData) {
-        try {
-          const paramsRaw = new URLSearchParams(tg.initData);
-          const userStr = paramsRaw.get('user');
-          if (userStr) tgUser = JSON.parse(decodeURIComponent(userStr));
-        } catch {}
+      // 2. Fallback to URL Parameters (uid=) - useful for dev/testing or Desktop
+      if (!tgUser?.id) {
+        const params = new URLSearchParams(window.location.search);
+        const uid = params.get('uid');
+        if (uid && !isNaN(parseInt(uid))) {
+          await fetchUserData(parseInt(uid));
+          return;
+        }
+      }
+
+      // 3. Fallback to Telegram SDK unsafe data (last resort)
+      if (!tgUser?.id) {
+        for (let i = 0; i < 5; i++) {
+          tgUser = tg?.initDataUnsafe?.user;
+          if (tgUser?.id) break;
+          await new Promise(r => setTimeout(r, 200));
+        }
       }
 
       if (tgUser?.id) {
