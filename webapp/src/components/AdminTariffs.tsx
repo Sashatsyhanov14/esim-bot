@@ -68,10 +68,27 @@ export default function AdminTariffs({ t }: { t: any }) {
             return;
         }
 
+        // Whitelist fields to prevent system fields (like created_at: null) from breaking the DB
+        const validFields = [
+            'sort_number', 'country', 'data_gb', 'validity_period', 'price_usd', 'price_rub', 
+            'payment_link', 'payment_qr_url', 'is_active',
+            'country_ru', 'data_gb_ru', 'validity_period_ru',
+            'country_de', 'data_gb_de', 'validity_period_de',
+            'country_pl', 'data_gb_pl', 'validity_period_pl',
+            'country_ar', 'data_gb_ar', 'validity_period_ar',
+            'country_fa', 'data_gb_fa', 'validity_period_fa',
+            'country_tr', 'data_gb_tr', 'validity_period_tr'
+        ];
+
+        const cleanData: any = {};
+        validFields.forEach(field => {
+            if (formData[field as keyof Tariff] !== undefined) {
+                cleanData[field] = formData[field as keyof Tariff];
+            }
+        });
+
         if (editingId === 'new') {
-            // Strip id so Supabase generates a fresh UUID
-            const { id, ...insertData } = formData as any;
-            const { error } = await supabase.from('tariffs').insert([insertData]);
+            const { error } = await supabase.from('tariffs').insert([cleanData]);
             if (error) {
                 console.error('[INSERT ERROR]', error);
                 showNotify(`Ошибка добавления: ${error.message}`, 'error');
@@ -79,7 +96,7 @@ export default function AdminTariffs({ t }: { t: any }) {
             }
             showNotify(`✅ Тариф "${formData.country}" создан!`);
         } else {
-            const { error } = await supabase.from('tariffs').update(formData).eq('id', editingId);
+            const { error } = await supabase.from('tariffs').update(cleanData).eq('id', editingId);
             if (error) {
                 console.error('[UPDATE ERROR]', error);
                 showNotify(`Ошибка обновления: ${error.message}`, 'error');
