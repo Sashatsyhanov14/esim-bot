@@ -179,6 +179,7 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
     };
 
     const handleRemoveManager = async (tgId: number) => {
+        if (!window.confirm("❗ Вы уверены, что хотите разжаловать этого сотрудника? Он потеряет доступ к панели.")) return;
         const { error } = await supabase.from('users').update({ role: 'client' }).eq('telegram_id', tgId);
         if (!error) {
             fetchManagers();
@@ -324,12 +325,14 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
                                                     <button 
                                                         onClick={() => handleUpdateRole(m.telegram_id, 'manager')}
                                                         className={`px-1.5 py-0.5 rounded-sm text-[8px] font-bold uppercase transition-all ${m.role === 'manager' ? 'bg-tertiary/20 text-tertiary' : 'text-on-surface-variant hover:text-on-surface'}`}
+                                                        title="Понизить до Менеджера"
                                                     >
                                                         M
                                                     </button>
                                                     <button 
                                                         onClick={() => handleUpdateRole(m.telegram_id, 'admin')}
                                                         className={`px-1.5 py-0.5 rounded-sm text-[8px] font-bold uppercase transition-all ${m.role === 'admin' ? 'bg-secondary/20 text-secondary' : 'text-on-surface-variant hover:text-on-surface'}`}
+                                                        title="Повысить до Админа"
                                                     >
                                                         A
                                                     </button>
@@ -611,8 +614,8 @@ export default function AdminStats({ t, globalStats }: { t: any, globalStats: an
             )}
         {/* Referral Drilldown Modal */}
         {selectedUser && (
-            <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm" onClick={closeRefDrilldown}>
-                <div className="bg-[#1a1a1f] w-full max-w-lg max-h-[82vh] rounded-t-2xl p-4 overflow-y-auto flex flex-col gap-3" onClick={e => e.stopPropagation()}>
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={closeRefDrilldown}>
+                <div className="bg-[#1a1a1f] w-full max-w-lg h-[96vh] rounded-2xl p-4 overflow-y-auto flex flex-col gap-3 shadow-2xl border border-white/10" onClick={e => e.stopPropagation()}>
                     <div className="flex justify-between items-center pb-2 border-b border-white/10">
                         <div>
                             <p className="font-headline font-bold text-on-surface text-base">
