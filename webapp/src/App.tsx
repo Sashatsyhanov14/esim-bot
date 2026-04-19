@@ -1033,7 +1033,7 @@ const App: React.FC = () => {
       return <AdminTariffs t={t} />;
     }
     if (activeTab === 'faq') {
-      return isAdmin ? <AdminFaq t={t} /> : <ClientFaq />;
+      return isAdmin ? <AdminFaq t={t} /> : <ClientFaq lang={lang} />;
     }
 
     // Default to 'stats'
@@ -1061,7 +1061,7 @@ const App: React.FC = () => {
         return <ClientCatalog lang={lang} telegramId={uid} />;
     }
     if (activeTab === 'faq') {
-        return <ClientFaq />;
+        return <ClientFaq lang={lang} />;
     }
 
     return (

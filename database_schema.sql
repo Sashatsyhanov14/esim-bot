@@ -60,6 +60,11 @@ CREATE TABLE faq (
     topic TEXT NOT NULL,
     content_ru TEXT NOT NULL,
     content_tr TEXT NOT NULL,
+    content_en TEXT,
+    content_de TEXT,
+    content_pl TEXT,
+    content_ar TEXT,
+    content_fa TEXT,
     image_url TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );

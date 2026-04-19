@@ -5,10 +5,16 @@ interface Faq {
     id: string;
     topic: string;
     content_ru: string;
+    content_tr?: string;
+    content_en?: string;
+    content_de?: string;
+    content_pl?: string;
+    content_ar?: string;
+    content_fa?: string;
     image_url?: string;
 }
 
-export default function ClientFaq() {
+export default function ClientFaq({ lang }: { lang?: string }) {
     const [faqs, setFaqs] = useState<Faq[]>([]);
     const [loading, setLoading] = useState(true);
     const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -22,6 +28,12 @@ export default function ClientFaq() {
         const { data } = await supabase.from('faq').select('*').order('created_at', { ascending: true });
         if (data) setFaqs(data);
         setLoading(false);
+    };
+
+    const getContent = (f: Faq) => {
+        if (!lang || lang === 'ru') return f.content_ru;
+        const key = `content_${lang}` as keyof Faq;
+        return (f[key] as string) || f.content_ru;
     };
 
     if (loading) {
@@ -67,10 +79,10 @@ export default function ClientFaq() {
                         </div>
 
                         {expandedId === f.id && (
-                            <div className="p-5 pt-0 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <div className="p-5 pt-0 animate-in fade-in slide-in-from-top-2 duration-300 text-left">
                                 {!f.image_url && <div className="h-px bg-white/5 mb-4" />}
                                 <div className="text-sm text-on-surface-variant leading-relaxed whitespace-pre-wrap">
-                                    {f.content_ru}
+                                    {getContent(f)}
                                 </div>
                             </div>
                         )}

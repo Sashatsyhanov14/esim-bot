@@ -5,6 +5,12 @@ interface Faq {
     id: string;
     topic: string;
     content_ru: string;
+    content_tr?: string;
+    content_en?: string;
+    content_de?: string;
+    content_pl?: string;
+    content_ar?: string;
+    content_fa?: string;
     image_url?: string;
 }
 
@@ -14,6 +20,7 @@ export default function AdminFaq({ t }: { t: any }) {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [formData, setFormData] = useState<Partial<Faq>>({});
     const [uploading, setUploading] = useState(false);
+    const [isTranslating, setIsTranslating] = useState(false);
 
     useEffect(() => {
         fetchFaqs();
@@ -24,6 +31,34 @@ export default function AdminFaq({ t }: { t: any }) {
         const { data } = await supabase.from('faq').select('*').order('created_at', { ascending: true });
         if (data) setFaqs(data);
         setLoading(false);
+    };
+
+    const handleAutoTranslate = async () => {
+        if (!formData.content_ru) return;
+        setIsTranslating(true);
+
+        const langs = ['tr', 'en', 'de', 'pl', 'ar', 'fa'];
+        const newFormData = { ...formData };
+        
+        for (const lang of langs) {
+            try {
+                const res = await fetch('/api/translate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: formData.content_ru, targetLang: lang })
+                });
+                const data = await res.json();
+                if (data.translatedText) {
+                    (newFormData as any)[`content_${lang}`] = data.translatedText;
+                }
+            } catch (e) {
+                console.error(`Translation failed for ${lang}`, e);
+            }
+            // Update state incrementally to show progress if needed, 
+            // though here we'll just set it at the end for simplicity or periodically
+        }
+        setFormData(newFormData);
+        setIsTranslating(false);
     };
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -60,7 +95,12 @@ export default function AdminFaq({ t }: { t: any }) {
         const payload = { 
             topic: formData.topic, 
             content_ru: formData.content_ru,
-            content_tr: formData.topic, // fallback to topic for tr
+            content_tr: formData.content_tr || formData.content_ru,
+            content_en: formData.content_en || formData.content_ru,
+            content_de: formData.content_de || formData.content_ru,
+            content_pl: formData.content_pl || formData.content_ru,
+            content_ar: formData.content_ar || formData.content_ru,
+            content_fa: formData.content_fa || formData.content_ru,
             image_url: formData.image_url 
         };
 
@@ -144,7 +184,7 @@ export default function AdminFaq({ t }: { t: any }) {
                     </div>
 
                     <div>
-                        <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider pl-1 mb-1 block">Тема / Konu</label>
+                        <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider pl-1 mb-1 block">Тема / Topic</label>
                         <input
                             type="text"
                             placeholder={t.faqTopic}
@@ -154,21 +194,33 @@ export default function AdminFaq({ t }: { t: any }) {
                         />
                     </div>
 
-                    <div>
-                        <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider pl-1 mb-1 block">Ответ / Cevap</label>
-                        <textarea
-                            placeholder={t.faqContent}
-                            value={formData.content_ru || ''}
-                            onChange={e => setFormData({ ...formData, content_ru: e.target.value })}
-                            className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-3 text-sm text-on-surface min-h-[120px] focus:border-primary/50 focus:outline-none transition-colors"
-                        />
+                    <div className="space-y-4">
+                        <div>
+                            <div className="flex justify-between items-center mb-1">
+                                <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider pl-1 block">Инструкция (RU)</label>
+                                {isTranslating && <span className="text-[10px] text-primary animate-pulse flex items-center gap-1 font-bold">✨ Переводим...</span>}
+                            </div>
+                            <textarea
+                                placeholder={t.faqContent}
+                                value={formData.content_ru || ''}
+                                onChange={e => setFormData({ ...formData, content_ru: e.target.value })}
+                                onBlur={() => { if(formData.content_ru) handleAutoTranslate(); }}
+                                className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-3 text-sm text-on-surface min-h-[150px] focus:border-primary/50 focus:outline-none transition-colors shadow-inner"
+                            />
+                            {!isTranslating && formData.content_ru && (
+                                <div className="mt-1 flex items-center gap-1.5 pl-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"></span>
+                                    <span className="text-[10px] text-on-surface-variant font-medium uppercase tracking-tight">Переводы активны (EN, TR, DE, PL, AR, FA)</span>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     <div className="flex gap-3 pt-3">
                         <button onClick={() => setEditingId(null)} className="flex-1 bg-surface-container-high text-on-surface py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors hover:bg-surface-container-highest">
                             {t.cancelBtn}
                         </button>
-                        <button onClick={handleSave} className="flex-1 bg-primary text-on-primary py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-[0_4px_20px_rgba(208,188,255,0.3)] hover:brightness-110 active:scale-95 disabled:opacity-50" disabled={uploading}>
+                        <button onClick={handleSave} className="flex-1 bg-primary text-on-primary py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-[0_4px_20px_rgba(208,188,255,0.3)] hover:brightness-110 active:scale-95 disabled:opacity-50" disabled={uploading || isTranslating}>
                             <span className="material-symbols-outlined text-[20px]">save</span>
                             {t.saveBtn}
                         </button>
