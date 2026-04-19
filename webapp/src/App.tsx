@@ -118,6 +118,9 @@ const translations = {
     payoutHistoryLabel: "История выплат:",
     refDealsTitle: "Сделки рефералов",
     confirmPayout: "Выплатить {amount}$ пользователю?\nБаланс будет обнулен.",
+    readMore: "Читать далее",
+    noFaq: "Инструкций пока нет",
+    loadingFaq: "Загрузка инструкций...",
   },
   tr: {
     adminTitle: "Kurucu Paneli",
@@ -218,6 +221,9 @@ const translations = {
     payoutHistoryLabel: "Ödeme geçmişi:",
     refDealsTitle: "Referans İşlemleri",
     confirmPayout: "Kullanıcıya {amount}$ ödensin mi?\nBakiye sıfırlanacak.",
+    readMore: "Devamını oku",
+    noFaq: "Henüz talimat yok",
+    loadingFaq: "Talimatlar yükleniyor...",
   },
   en: {
     adminTitle: "Founder Panel",
@@ -318,6 +324,9 @@ const translations = {
     payoutHistoryLabel: "Payout history:",
     refDealsTitle: "Referral deals",
     confirmPayout: "Payout {amount}$ to user?\nBalance will be reset.",
+    readMore: "Read more",
+    noFaq: "No instructions yet",
+    loadingFaq: "Loading instructions...",
   },
   de: {
     adminTitle: "Gründer-Panel",
@@ -415,6 +424,9 @@ const translations = {
     payoutHistoryLabel: "Auszahlungshistorie:",
     refDealsTitle: "Referral-Deals",
     confirmPayout: "{amount}$ an Nutzer auszahlen?\nGuthaben wird zurückgesetzt.",
+    readMore: "Weiterlesen",
+    noFaq: "Noch keine Anleitungen",
+    loadingFaq: "Anleitungen werden geladen...",
   },
   pl: {
     adminTitle: "Panel Założyciela",
@@ -512,6 +524,9 @@ const translations = {
     payoutHistoryLabel: "Historia wypłat:",
     refDealsTitle: "Transakcje poleconych",
     confirmPayout: "Wypłacić {amount}$ użytkownikowi?\nSaldo zostanie zresetowane.",
+    readMore: "Czytaj więcej",
+    noFaq: "Brak instrukcji",
+    loadingFaq: "Ładowanie instrukcji...",
   },
   ar: {
     adminTitle: "لوحة المؤسس",
@@ -609,6 +624,9 @@ const translations = {
     payoutHistoryLabel: "سجل الدفعات:",
     refDealsTitle: "صفقات الإحالة",
     confirmPayout: "دفع {amount}$ للمستخدم؟\nسيتم تصوير الرصيد.",
+    readMore: "اقرأ أكثر",
+    noFaq: "لا توجد تعليمات بعد",
+    loadingFaq: "جاري تحميل التعليمات...",
   },
   fa: {
     adminTitle: "پنل مؤسس",
@@ -695,8 +713,11 @@ const translations = {
       awaiting_qr: "منتظر QR",
       cancelled: "لغو شد"
     },
-    commissionLabel: "کمیسیون"
-  }
+    commissionLabel: "کمیسیون",
+    readMore: "ادامه مطلب",
+    noFaq: "هنوز دستورالعملی وجود ندارد",
+    loadingFaq: "در حال بارگذاری دستورالعمل‌ها...",
+  },
 };
 
 const App: React.FC = () => {
@@ -1033,7 +1054,7 @@ const App: React.FC = () => {
       return <AdminTariffs t={t} />;
     }
     if (activeTab === 'faq') {
-      return isAdmin ? <AdminFaq t={t} /> : <ClientFaq lang={lang} />;
+      return isAdmin ? <AdminFaq t={t} /> : <ClientFaq lang={lang} t={t} />;
     }
 
     // Default to 'stats'
@@ -1061,7 +1082,7 @@ const App: React.FC = () => {
         return <ClientCatalog lang={lang} telegramId={uid} />;
     }
     if (activeTab === 'faq') {
-        return <ClientFaq lang={lang} />;
+        return <ClientFaq lang={lang} t={t} />;
     }
 
     return (

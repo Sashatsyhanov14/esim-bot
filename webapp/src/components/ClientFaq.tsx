@@ -20,7 +20,7 @@ interface Faq {
     image_url?: string;
 }
 
-export default function ClientFaq({ lang }: { lang?: string }) {
+export default function ClientFaq({ lang, t }: { lang?: string, t?: any }) {
     const [faqs, setFaqs] = useState<Faq[]>([]);
     const [loading, setLoading] = useState(true);
     const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -52,7 +52,7 @@ export default function ClientFaq({ lang }: { lang?: string }) {
         return (
             <div className="flex flex-col items-center justify-center py-12 space-y-4 animate-pulse">
                 <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-                <p className="text-on-surface-variant font-medium">Загрузка инструкций...</p>
+                <p className="text-on-surface-variant font-medium">{t?.loadingFaq || 'Загрузка инструкций...'}</p>
             </div>
         );
     }
@@ -110,7 +110,7 @@ export default function ClientFaq({ lang }: { lang?: string }) {
                         {!f.image_url && expandedId !== f.id && (
                             <div className="px-5 pb-3">
                                 <div className="flex items-center gap-1 text-primary/40">
-                                    <span className="text-[10px] font-bold uppercase tracking-widest">Читать далее</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-widest">{t?.readMore || 'Читать далее'}</span>
                                     <span className="material-symbols-outlined text-[14px]">chevron_right</span>
                                 </div>
                             </div>
@@ -124,7 +124,7 @@ export default function ClientFaq({ lang }: { lang?: string }) {
                     <div className="w-16 h-16 bg-surface-container-high rounded-full flex items-center justify-center mx-auto mb-4 opacity-20 text-on-surface">
                         <span className="material-symbols-outlined text-4xl">help_outline</span>
                     </div>
-                    <p className="text-on-surface-variant text-sm font-medium">Инструкций пока нет</p>
+                    <p className="text-on-surface-variant text-sm font-medium">{t?.noFaq || 'Инструкций пока нет'}</p>
                 </div>
             )}
         </div>
