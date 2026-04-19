@@ -11,6 +11,12 @@ interface Faq {
     content_pl?: string;
     content_ar?: string;
     content_fa?: string;
+    topic_en?: string;
+    topic_tr?: string;
+    topic_de?: string;
+    topic_pl?: string;
+    topic_ar?: string;
+    topic_fa?: string;
     image_url?: string;
 }
 
@@ -46,14 +52,28 @@ export default function AdminFaq({ t }: { t: any }) {
         
         for (const lang of langs) {
             try {
-                const res = await fetch('/api/translate', {
+                // Translate Content
+                const resC = await fetch('/api/translate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ text: formData.content_ru, targetLang: lang })
                 });
-                const data = await res.json();
-                if (data.translatedText) {
-                    (newFormData as any)[`content_${lang}`] = data.translatedText;
+                const dataC = await resC.json();
+                if (dataC.translatedText) {
+                    (newFormData as any)[`content_${lang}`] = dataC.translatedText;
+                }
+
+                // Translate Topic
+                if (formData.topic) {
+                    const resT = await fetch('/api/translate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: formData.topic, targetLang: lang })
+                    });
+                    const dataT = await resT.json();
+                    if (dataT.translatedText) {
+                        (newFormData as any)[`topic_${lang}`] = dataT.translatedText;
+                    }
                 }
             } catch (e) {
                 console.error(`Translation failed for ${lang}`, e);
@@ -96,6 +116,12 @@ export default function AdminFaq({ t }: { t: any }) {
 
         const payload = { 
             topic: formData.topic, 
+            topic_en: formData.topic_en || formData.topic,
+            topic_tr: formData.topic_tr || formData.topic,
+            topic_de: formData.topic_de || formData.topic,
+            topic_pl: formData.topic_pl || formData.topic,
+            topic_ar: formData.topic_ar || formData.topic,
+            topic_fa: formData.topic_fa || formData.topic,
             content_ru: formData.content_ru,
             content_tr: formData.content_tr || formData.content_ru,
             content_en: formData.content_en || formData.content_ru,

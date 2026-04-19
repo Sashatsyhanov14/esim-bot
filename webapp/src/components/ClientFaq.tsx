@@ -11,6 +11,12 @@ interface Faq {
     content_pl?: string;
     content_ar?: string;
     content_fa?: string;
+    topic_en?: string;
+    topic_tr?: string;
+    topic_de?: string;
+    topic_pl?: string;
+    topic_ar?: string;
+    topic_fa?: string;
     image_url?: string;
 }
 
@@ -34,6 +40,12 @@ export default function ClientFaq({ lang }: { lang?: string }) {
         if (!lang || lang === 'ru') return f.content_ru;
         const key = `content_${lang}` as keyof Faq;
         return (f[key] as string) || f.content_ru;
+    };
+
+    const getTopic = (f: Faq) => {
+        if (!lang || lang === 'ru') return f.topic;
+        const key = `topic_${lang}` as keyof Faq;
+        return (f[key] as string) || f.topic;
     };
 
     if (loading) {
@@ -71,7 +83,7 @@ export default function ClientFaq({ lang }: { lang?: string }) {
                             <div className="p-5">
                                 <div className="flex justify-between items-start gap-3">
                                     <h4 className={`text-lg font-headline font-bold leading-tight transition-colors ${expandedId === f.id ? 'text-primary' : 'text-on-surface'}`}>
-                                        {f.topic}
+                                        {getTopic(f)}
                                     </h4>
                                     <span className={`material-symbols-outlined transition-all duration-300 ${expandedId === f.id ? 'rotate-180 text-primary' : 'text-on-surface-variant'}`}>
                                         {expandedId === f.id ? 'keyboard_arrow_up' : 'expand_more'}

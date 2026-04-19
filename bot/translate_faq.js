@@ -37,18 +37,32 @@ async function run() {
             const key = `content_${lang}`;
             // If column is empty or still contains Russian (fallback), translate it
             if (!faq[key] || (faq[key] === faq.content_ru && lang !== 'ru')) {
-                console.log(`\nLocalizing [${faq.topic}] -> [${lang.toUpperCase()}]`);
+                console.log(`\nLocalizing [${faq.topic}] -> [${lang.toUpperCase()}] (Content)`);
                 try {
                     const translated = await getLocalizedText(lang, faq.content_ru);
                     if (translated && translated !== faq.content_ru) {
                         updates[key] = translated;
                         needsUpdate = true;
-                        console.log(`✅ Success`);
-                    } else {
-                        console.log(`⚠️ Translation returned same text or empty.`);
+                        console.log(`✅ Content Success`);
                     }
                 } catch (e) {
-                    console.error(`❌ Global error during translation:`, e.message);
+                    console.error(`❌ Content error:`, e.message);
+                }
+            }
+
+            // Also localize topic
+            const topicKey = `topic_${lang}`;
+            if (!faq[topicKey] || (faq[topicKey] === faq.topic && lang !== 'ru')) {
+                console.log(`Localizing [${faq.topic}] -> [${lang.toUpperCase()}] (Topic)`);
+                try {
+                    const translatedTopic = await getLocalizedText(lang, faq.topic);
+                    if (translatedTopic && translatedTopic !== faq.topic) {
+                        updates[topicKey] = translatedTopic;
+                        needsUpdate = true;
+                        console.log(`✅ Topic Success`);
+                    }
+                } catch (e) {
+                    console.error(`❌ Topic error:`, e.message);
                 }
             }
         }
