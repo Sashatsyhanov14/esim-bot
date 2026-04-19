@@ -5,6 +5,7 @@ import AdminStats from './components/AdminStats';
 import AdminTariffs from './components/AdminTariffs';
 import AdminFaq from './components/AdminFaq';
 import ClientCatalog from './components/ClientCatalog';
+import ClientFaq from './components/ClientFaq';
 
 declare global {
   interface Window {
@@ -1032,7 +1033,7 @@ const App: React.FC = () => {
       return <AdminTariffs t={t} />;
     }
     if (activeTab === 'faq') {
-      return <AdminFaq t={t} />;
+      return isAdmin ? <AdminFaq t={t} /> : <ClientFaq />;
     }
 
     // Default to 'stats'
@@ -1058,6 +1059,9 @@ const App: React.FC = () => {
     if (activeTab === 'catalog') {
         const uid = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || user?.telegram_id || null;
         return <ClientCatalog lang={lang} telegramId={uid} />;
+    }
+    if (activeTab === 'faq') {
+        return <ClientFaq />;
     }
 
     return (
@@ -1209,7 +1213,6 @@ const App: React.FC = () => {
         )}
 
         {isAdmin && (
-          <>
             <button
               onClick={() => setActiveTab('tariffs')}
               className={`flex flex-col items-center p-2 rounded-xl transition-all w-full max-w-[80px] ${activeTab === 'tariffs' ? 'text-primary scale-110' : 'text-on-surface-variant hover:text-on-surface'}`}
@@ -1217,15 +1220,15 @@ const App: React.FC = () => {
               <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'tariffs' ? "\'FILL\' 1" : "\'FILL\' 0" }}>sell</span>
               <span className="font-['Inter'] text-[9px] font-extrabold uppercase tracking-widest mt-1">{t.tabTariffs}</span>
             </button>
-            <button
-              onClick={() => setActiveTab('faq')}
-              className={`flex flex-col items-center p-2 rounded-xl transition-all w-full max-w-[80px] ${activeTab === 'faq' ? 'text-primary scale-110' : 'text-on-surface-variant hover:text-on-surface'}`}
-            >
-              <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'faq' ? "\'FILL\' 1" : "\'FILL\' 0" }}>help</span>
-              <span className="font-['Inter'] text-[9px] font-extrabold uppercase tracking-widest mt-1">{t.tabFaq}</span>
-            </button>
-          </>
         )}
+
+        <button
+          onClick={() => setActiveTab('faq')}
+          className={`flex flex-col items-center p-2 rounded-xl transition-all w-full max-w-[80px] ${activeTab === 'faq' ? (isStaff && isManagerTab ? 'text-primary scale-110' : 'text-secondary scale-110') : 'text-on-surface-variant hover:text-on-surface'}`}
+        >
+          <span className="material-symbols-outlined" style={{ fontVariationSettings: activeTab === 'faq' ? "\'FILL\' 1" : "\'FILL\' 0" }}>help</span>
+          <span className="font-['Inter'] text-[9px] font-extrabold uppercase tracking-widest mt-1">{t.tabFaq}</span>
+        </button>
       </nav>
 
       <WithdrawModal
