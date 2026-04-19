@@ -28,7 +28,11 @@ export default function AdminFaq({ t }: { t: any }) {
 
     const fetchFaqs = async () => {
         setLoading(true);
-        const { data } = await supabase.from('faq').select('*').order('created_at', { ascending: true });
+        const { data, error } = await supabase.from('faq').select('*').order('created_at', { ascending: true });
+        if (error) {
+            console.error('[FETCH FAQ ERROR]', error);
+            alert('Ошибка загрузки FAQ: ' + error.message);
+        }
         if (data) setFaqs(data);
         setLoading(false);
     };
@@ -54,8 +58,6 @@ export default function AdminFaq({ t }: { t: any }) {
             } catch (e) {
                 console.error(`Translation failed for ${lang}`, e);
             }
-            // Update state incrementally to show progress if needed, 
-            // though here we'll just set it at the end for simplicity or periodically
         }
         setFormData(newFormData);
         setIsTranslating(false);
@@ -104,11 +106,21 @@ export default function AdminFaq({ t }: { t: any }) {
             image_url: formData.image_url 
         };
 
+        let res;
         if (editingId === 'new') {
-            await supabase.from('faq').insert([payload]);
+            // Explicitly set created_at for insert
+            (payload as any).created_at = new Date().toISOString();
+            res = await supabase.from('faq').insert([payload]);
         } else {
-            await supabase.from('faq').update(payload).eq('id', editingId);
+            res = await supabase.from('faq').update(payload).eq('id', editingId);
         }
+
+        if (res.error) {
+            console.error('[FAQ SAVE ERROR]', res.error);
+            alert('Ошибка сохранения: ' + res.error.message);
+            return;
+        }
+
         setEditingId(null);
         setFormData({});
         fetchFaqs();
