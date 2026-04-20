@@ -457,8 +457,8 @@ bot.on('message', async (ctx, next) => {
                         const { data: buyer } = await getUser(telegramId);
                         const referrerId = buyer?.referrer_id;
 
-                        const { data: allManagers } = await supabase.from('users').select('telegram_id, role').in('role', ['founder', 'manager']);
-                        const alertManagers = (allManagers || []).filter(m => m.role === 'founder' || m.telegram_id === referrerId);
+                        const { data: allAdmins } = await supabase.from('users').select('telegram_id, role').in('role', ['founder', 'admin', 'manager']);
+                        const alertManagers = (allAdmins || []).filter(m => m.role === 'founder' || m.role === 'admin' || m.telegram_id === referrerId);
                         if (alertManagers.length > 0) {
                             // Calculate 15% commission as profit
                             const profitUSD = (tariff.price_usd * 0.15).toFixed(2);
@@ -699,17 +699,20 @@ bot.on('text', async (ctx) => {
                 }
             }
 
-            const { data: userData } = await supabase.from('users').select('custom_note').eq('telegram_id', telegramId).single();
+            const { data: userData } = await supabase.from('users').select('custom_note, referrer_id').eq('telegram_id', telegramId).single();
             const userDisplay = userData?.custom_note ? `${userData.custom_note} (@${username || telegramId})` : `@${username || telegramId}`;
+            const referrerId = userData?.referrer_id;
 
             // Находим всех менеджеров и фаундеров
-            const { data: managers } = await supabase
+            const { data: allAdminsAI } = await supabase
                 .from('users')
-                .select('telegram_id')
+                .select('telegram_id, role')
                 .in('role', ['founder', 'admin', 'manager']);
 
-            if (managers && managers.length > 0) {
-                for (const manager of managers) {
+            const alertManagersAI = (allAdminsAI || []).filter(m => m.role === 'founder' || m.role === 'admin' || m.telegram_id === referrerId);
+
+            if (alertManagersAI.length > 0) {
+                for (const manager of alertManagersAI) {
                     try {
                         const mLangRaw = userLangCache[manager.telegram_id] || 'ru';
                         const mLang = mLangRaw === 'ru' ? 'ru' : (mLangRaw === 'tr' ? 'tr' : 'en');
