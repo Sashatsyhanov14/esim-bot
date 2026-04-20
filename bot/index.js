@@ -20,8 +20,9 @@ bot.telegram.getMe().then(info => {
 
 bot.use(session());
 
-// We now use PostgreSQL (Supabase) for persistent states to avoid bugs with duplicate processes.
-// Maps are kept only for very ephemeral data if needed.
+// Hybrid state tracking: uses Database (Map as fallback/cache for multi-process or recovery)
+const managerStates = new Map();
+const clientStates = new Map();
 
 // --- HELPER: Escape Markdown ---
 const esc = (text) => (text || '').toString().replace(/[_*`[\]()]/g, '\\$&');
@@ -530,8 +531,9 @@ bot.on(['photo', 'document', 'video', 'animation', 'voice'], async (ctx, next) =
     // Ensure language cache is set for attachments
     const currentLang = userLangCache[senderId] || ctx.from.language_code || 'ru';
 
-    // --- NEW: Client-side One-off Support Mode (Database-backed) ---
-    if (user && user.is_support_mode) {
+    // --- HYBRID: Client-side One-off Support Mode ---
+    const isSupportActive = (user && user.is_support_mode) || clientStates.has(senderId);
+    if (isSupportActive) {
         try {
             const { data: admins } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'admin']);
             if (admins && admins.length > 0) {
@@ -556,8 +558,8 @@ bot.on(['photo', 'document', 'video', 'animation', 'voice'], async (ctx, next) =
                         }
                     } catch (adminErr) { console.error(`Admin notify error ${admin.telegram_id}:`, adminErr.message); }
                 }
-                const { updateUser } = require('./src/supabase');
                 await updateUser(senderId, { is_support_mode: false });
+                clientStates.delete(senderId); // Sync
                 const successRu = "✅ Ваше вложение передано менеджеру. Спасибо!";
                 const successMsg = await getLocalizedText(currentLang, successRu);
                 return ctx.reply(successMsg);
@@ -565,9 +567,10 @@ bot.on(['photo', 'document', 'video', 'animation', 'voice'], async (ctx, next) =
         } catch (e) { console.error('Media support forward error:', e.message); }
     }
 
-    // --- ONE-OFF SUPPORT MODE for managers (Database-backed) ---
-    if (user && user.manager_contact_id) {
-        const targetId = user.manager_contact_id;
+    // --- HYBRID: ONE-OFF SUPPORT MODE for managers ---
+    const managerContactId = (user && user.manager_contact_id) || (managerStates.get(senderId)?.contactId);
+    if (managerContactId) {
+        const targetId = managerContactId;
         const text = ctx.message.caption || '';
         try {
             if (ctx.message.photo) {
@@ -583,6 +586,7 @@ bot.on(['photo', 'document', 'video', 'animation', 'voice'], async (ctx, next) =
             }
             const { updateUser } = require('./src/supabase');
             await updateUser(senderId, { manager_contact_id: null });
+            managerStates.delete(senderId); // Sync
             return ctx.reply('✅ Отправлено клиенту. Режим чата выключен.');
         } catch (e) { return ctx.reply('❌ Ошибка отправки клиенту.'); }
     }
@@ -626,8 +630,9 @@ bot.on('text', async (ctx) => {
     const { data: user } = await getUser(telegramId);
     const currentLang = userLangCache[telegramId] || ctx.from.language_code || 'ru';
     
-    // --- NEW: Client Forwarding (One-off - Database-backed) ---
-    if (user && user.is_support_mode) {
+    // --- HYBRID: Client Forwarding (One-off) ---
+    const isSupportActive = (user && user.is_support_mode) || clientStates.has(telegramId);
+    if (isSupportActive) {
         try {
             const { data: admins } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'admin']);
             if (admins && admins.length > 0) {
@@ -639,23 +644,27 @@ bot.on('text', async (ctx) => {
                     try { await bot.telegram.sendMessage(admin.telegram_id, alertText, { parse_mode: 'Markdown', ...buttons }); } catch (e) {}
                 }
                 await updateUser(telegramId, { is_support_mode: false });
+                clientStates.delete(telegramId); // Sync
                 const successRu = "✅ Ваше сообщение передано менеджеру. Спасибо!";
                 const successMsg = await getLocalizedText(currentLang, successRu);
                 return ctx.reply(successMsg);
             }
         } catch (e) { console.error('Client text forward error:', e.message); }
     }
-    // --- Manager Support Mode (Database-backed) ---
-    if (user && user.manager_contact_id) {
+    // --- HYBRID: Manager Support Mode ---
+    const managerContactId = (user && user.manager_contact_id) || (managerStates.get(telegramId)?.contactId);
+    if (managerContactId) {
         try {
-            await bot.telegram.sendMessage(user.manager_contact_id, ctx.message.text);
+            await bot.telegram.sendMessage(managerContactId, ctx.message.text);
             await updateUser(telegramId, { manager_contact_id: null });
+            managerStates.delete(telegramId); // Sync
             return ctx.reply('✅ Сообщение отправлено клиенту. Режим чата выключен.');
         } catch (e) { return ctx.reply('❌ Ошибка отправки.'); }
     }
 
-    // If the manager is ACTIVELY waiting for a QR/Code, we handle it in the manager flow below
-    if (user && user.waiting_order_id) return; 
+    // HYBRID: Manager awaiting QR code
+    const isAwaitingQr = (user && user.waiting_order_id) || (managerStates.has(telegramId) && managerStates.get(telegramId).orderId);
+    if (isAwaitingQr) return; 
 
     const username = ctx.from.username || ctx.from.first_name;
     const userText = ctx.message.text.trim();
@@ -730,10 +739,10 @@ bot.on('text', async (ctx) => {
         .replace(/\[LANG:.*?\]/gi, '')
         .trim();
 
-    // --- NEW: Handle Support Activation from AI ---
+    // --- HYBRID: Handle Support Activation from AI ---
     if (supportMatch && (!user || user.role === 'client')) {
-        const { updateUser } = require('./src/supabase');
         await updateUser(telegramId, { is_support_mode: true });
+        clientStates.set(telegramId, { active: true }); // Fallback
         const cancelBtn = Markup.inlineKeyboard([[Markup.button.callback('❌ Отмена', 'cancel_support_client')]]);
         try {
             await ctx.reply(finalResponse, { parse_mode: 'Markdown', ...cancelBtn });
@@ -932,8 +941,8 @@ bot.action(/^cancelqr_(.+)$/, async (ctx) => {
         return ctx.answerCbQuery('❌ У вас нет прав.', { show_alert: true });
     }
 
-    // Clear DB waiting state
-    const { updateUser } = require('./src/supabase');
+    // Clear states
+    managerStates.delete(telegramId);
     await updateUser(telegramId, { waiting_order_id: null });
     await supabase.from('orders').update({ status: 'pending', assigned_manager: null }).eq('id', orderId);
 
@@ -960,6 +969,7 @@ bot.action(/^contactuser_(.+)$/, async (ctx) => {
     const { data: user } = await getUser(telegramId);
     if (!user || (user.role !== 'founder' && user.role !== 'manager' && user.role !== 'admin')) return ctx.answerCbQuery('❌ Нет прав.');
 
+    managerStates.set(telegramId, { contactId: userId }); // Fallback
     await updateUser(telegramId, { manager_contact_id: userId });
     
     await ctx.reply(`💬 Включен режим **одного сообщения** пользователю [${userId}](tg://user?id=${userId}).\n\nВаше **следующее** сообщение (текст, фото или файл) будет переслано ему, после чего режим чата автоматически выключится.\n\n⚠️ **ВАЖНО:** Если вы отправляете файл или фото, прикрепите текст как **ПОДПИСЬ** к нему (одним сообщением), иначе режим чата выключится сразу после файла.`, {

@@ -55,14 +55,25 @@ module.exports = {
   },
 
   async updateUser(telegramId, updates) {
-    const { data, error } = await supabase
-      .from('users')
-      .update(updates)
-      .eq('telegram_id', telegramId)
-      .select()
-      .single();
-    if (error) console.error("Supabase updateUser error:", error.message);
-    return { data, error };
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .update(updates)
+        .eq('telegram_id', telegramId)
+        .select()
+        .single();
+      if (error) {
+        if (error.code === '42703') {
+           console.warn(`[Supabase] Update failed (missing columns):`, updates);
+           return { data: null, error: null }; // Silent fail to prevent crash
+        }
+        console.error("Supabase updateUser error:", error.message);
+      }
+      return { data, error };
+    } catch (e) {
+      console.error('updateUser critical error:', e.message);
+      return { data: null, error: e };
+    }
   },
 
   async getTariffs() {
