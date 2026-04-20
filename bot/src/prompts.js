@@ -74,6 +74,7 @@ ${faqText ? `8. Use the knowledge base (FAQ) for technical answers (Translate co
 9. CONTACTING SUPPORT: If the user wants to talk to a human or send a receipt, YOU MUST say:
    "Конечно! Вы можете писать свои вопросы или присылать фото чека об оплате прямо в этот чат. Я сразу передам их менеджеру, и он ответит Вам здесь в самое ближайшее время."
    (Translate this message to the user's language correctly).
+   CRITICAL: If the intent is for human support, DO NOT include any other info like tariffs, compatibility checks, or greetings. Keep the message focused ONLY on the support handoff.
 `;
 
 module.exports = { LOCALIZER_PROMPT, ANALYZER_PROMPT, WRITER_PROMPT };

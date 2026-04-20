@@ -23,6 +23,9 @@ bot.use(session());
 // In-memory state tracking for managers: { managerTelegramId: orderId }
 const managerStates = new Map();
 
+// --- HELPER: Escape Markdown ---
+const esc = (text) => (text || '').toString().replace(/[_*`[\]()]/g, '\\$&');
+
 // --- HELPER: Localization for Tariffs (Simplified: Country Only) ---
 const locTariff = (tariff, lang) => {
     const l = lang || 'en';
@@ -550,21 +553,26 @@ bot.on(['photo', 'document'], async (ctx, next) => {
     if (!user || user.role === 'client') {
         const { data: admins } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'admin']);
         if (admins && admins.length > 0) {
-            const name = ctx.from.first_name + (ctx.from.last_name ? ` ${ctx.from.last_name}` : '');
-            const username = ctx.from.username ? `@${ctx.from.username}` : 'нет username';
+            const name = esc(ctx.from.first_name + (ctx.from.last_name ? ` ${ctx.from.last_name}` : ''));
+            const username = ctx.from.username ? `@${esc(ctx.from.username)}` : 'нет username';
             const infoText = `📩 **Новое вложение от клиента!**\n\nОт: ${name} (${username})\nID: \`${senderId}\`\n[Профиль](tg://user?id=${senderId})`;
+            
+            const contactButtons = Markup.inlineKeyboard([[Markup.button.callback('✉️ Написать клиенту', `contactuser_${senderId}`)]]);
             
             for (const admin of admins) {
                 try {
+                    const caption = infoText + (ctx.message.caption ? `\n\n📝 Сообщение: ${esc(ctx.message.caption)}` : '');
                     if (ctx.message.photo) {
                         await bot.telegram.sendPhoto(admin.telegram_id, ctx.message.photo[ctx.message.photo.length - 1].file_id, { 
-                            caption: infoText + (ctx.message.caption ? `\n\n📝 Сообщение: ${ctx.message.caption}` : ''),
-                            parse_mode: 'Markdown'
+                            caption,
+                            parse_mode: 'Markdown',
+                            ...contactButtons
                         });
                     } else if (ctx.message.document) {
                         await bot.telegram.sendDocument(admin.telegram_id, ctx.message.document.file_id, { 
-                            caption: infoText + (ctx.message.caption ? `\n\n📝 Сообщение: ${ctx.message.caption}` : ''),
-                            parse_mode: 'Markdown'
+                            caption,
+                            parse_mode: 'Markdown',
+                            ...contactButtons
                         });
                     }
                 } catch (e) { console.error('Forward to admin error:', e.message); }
@@ -607,6 +615,21 @@ bot.on('text', async (ctx) => {
             userLangCache[telegramId] = user?.lang_code || systemLang;
         }
         const uiLang = userLangCache[telegramId];
+
+        // --- NEW: Forward Client Text to Admins ---
+        if (!user || user.role === 'client') {
+            try {
+                const { data: admins } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'admin']);
+                if (admins && admins.length > 0) {
+                    const name = esc(ctx.from.first_name + (ctx.from.last_name ? ` ${ctx.from.last_name}` : ''));
+                    const alertText = `💬 **Сообщение от клиента:**\nЮзер: ${name} (ID: ${telegramId})\nТекст: ${esc(userText)}`;
+                    const buttons = Markup.inlineKeyboard([[Markup.button.callback('✉️ Написать клиенту', `contactuser_${telegramId}`)]]);
+                    for (const admin of admins) {
+                        try { await bot.telegram.sendMessage(admin.telegram_id, alertText, { parse_mode: 'Markdown', ...buttons }); } catch (e) {}
+                    }
+                }
+            } catch (e) { console.error('Text forward error:', e.message); }
+        }
 
         if (!user) {
         const msgRu = 'Нажми /start для начала.';
