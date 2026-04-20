@@ -4,12 +4,11 @@ module.exports = {
             name: 'bot1',
             script: 'npm',
             args: 'start',
-            cwd: './bot',
+            cwd: './bot1/bot', // Points to the specific bot project folder
             env: {
                 NODE_ENV: 'production',
-                PORT: 3001, // Each bot needs its own port
+                PORT: 3001,
             },
-            // If you want more bots on one VPS, just copy this block with a new name and port
         },
         /*
         {

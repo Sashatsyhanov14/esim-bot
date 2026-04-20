@@ -9,6 +9,9 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// --- HELPER: Escape Markdown ---
+const esc = (text) => (text || '').toString().replace(/[_*`[\]()]/g, '\\$&');
+
 app.use(cors());
 app.use(express.json());
 
@@ -92,25 +95,31 @@ app.post('/api/catalog-buy', async (req, res) => {
 
                     const alertTexts = {
                         ru: {
-                            text: `👤 **Юзер:** @${username} (ID: ${telegramId})\n🚀 **ЗАКАЗ (КАТАЛОГ WebApp)!**\n\nТариф: ${mlt.country} | ${mlt.data_gb} на ${mlt.validity}\nЦена: $${tariff.price_usd}\n\n⚠️ ВАЖНО: Подтвердите оплату перед тем как скидывать eSIM-код!`,
-                            btn: '📤 Отправить eSIM (Код/Ссылка)'
+                            text: `👤 **Юзер:** ${userLabel} (ID: ${telegramId})\n🚀 **ЗАКАЗ (WebApp)!**\n\nТариф: ${mlt.country} | ${mlt.data_gb} на ${mlt.validity}\nЦена: $${tariff.price_usd}\n\n⚠️ ВАЖНО: Подтвердите оплату перед тем как скидывать eSIM-код!`,
+                            sendBtn: '📤 Отправить eSIM',
+                            contactBtn: '✉️ Написать клиенту'
                         },
                         tr: {
-                            text: `👤 **Kullanıcı:** @${username} (ID: ${telegramId})\n🚀 **SİPARİŞ (KATALOG WebApp)!**\n\nTarife: ${mlt.country} | ${mlt.data_gb} - ${mlt.validity}\nFiyat: $${tariff.price_usd}\n\n⚠️ ÖNEMLİ: Ödeme onayından sonra gönderin!`,
-                            btn: '📤 eSIM Gönder'
+                            text: `👤 **Kullanıcı:** ${userLabel} (ID: ${telegramId})\n🚀 **SİPARİŞ (WebApp)!**\n\nTarife: ${mlt.country} | ${mlt.data_gb} - ${mlt.validity}\nFiyat: $${tariff.price_usd}\n\n⚠️ ÖNEMLİ: Link или QR'ı göndermeden önce öдеmeyi onaylayın!`,
+                            sendBtn: '📤 eSIM Gönder',
+                            contactBtn: '✉️ Müşтерiye Yaz'
                         },
                         en: {
-                            text: `👤 **User:** @${username} (ID: ${telegramId})\n🚀 **ORDER (CATALOG WebApp)!**\n\nPlan: ${mlt.country} | ${mlt.data_gb} for ${mlt.validity}\nPrice: $${tariff.price_usd}\n\n⚠️ IMPORTANT: Verify payment before sending!`,
-                            btn: '📤 Send eSIM (Code/Link)'
+                            text: `👤 **User:** ${userLabel} (ID: ${telegramId})\n🚀 **ORDER (WebApp)!**\n\nPlan: ${mlt.country} | ${mlt.data_gb} for ${mlt.validity}\nPrice: $${tariff.price_usd}\n\n⚠️ IMPORTANT: Verify payment before sending the Link/Code!`,
+                            sendBtn: '📤 Send eSIM',
+                            contactBtn: '✉️ Write to Client'
                         }
                     };
 
                     const mt = alertTexts[mLang] || alertTexts['en'];
 
                     const buttons = (orderData && orderData.id) 
-                        ? Markup.inlineKeyboard([[Markup.button.callback(mt.btn, `sendqr_${orderData.id}`)]]) 
+                        ? Markup.inlineKeyboard([
+                            [Markup.button.callback(mt.sendBtn, `sendqr_${orderData.id}`)],
+                            [Markup.button.callback(mt.contactBtn, `contactuser_${telegramId}`)]
+                        ]) 
                         : {};
-                    await bot.telegram.sendMessage(manager.telegram_id, mt.text, buttons);
+                    await bot.telegram.sendMessage(manager.telegram_id, mt.text, { parse_mode: 'Markdown', ...buttons });
                 } catch (e) {}
             }
         }
