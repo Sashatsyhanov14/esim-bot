@@ -319,9 +319,12 @@ bot.start(async (ctx) => {
 Я — Ваш персональный ИИ-менеджер от eMedeo 🤖
 Помогу Вам:
 ✔️ подобрать лучший тариф eSIM под Вашу поездку
-✔️ сэкономить на дорогом роуминге и местных SIM-картах
+✔️ сэкономить на дорогом роуминге
 ✔️ оставаться на связи сразу после прилёта
-📲 Быстро, удобно и без лишних затрат — всё онлайн за пару минут.`;
+
+💬 **Связь с менеджером:** Если у Вас возник вопрос или нужно отправить чек об оплате — просто присылайте его прямо сюда, менеджер всё увидит и ответит Вам!
+
+📲 Быстро, удобно и всё онлайн за пару минут.`;
 
         const welcomeRuPart2 = `Рекомендую перед покупкой eSIM проверить, поддерживает ли Ваш телефон
 технологию eSIM 📱
@@ -521,6 +524,12 @@ bot.on(['photo', 'document'], async (ctx, next) => {
     const senderId = ctx.from.id;
     const { data: user } = await getUser(senderId);
     
+    // Ensure language cache is set for attachments
+    if (!userLangCache[senderId]) {
+        userLangCache[senderId] = user?.lang_code || ctx.from.language_code || 'en';
+    }
+    const currentLang = userLangCache[senderId];
+
     // --- ONE-OFF SUPPORT MODE for managers ---
     const activeState = managerStates.get(senderId);
     if (activeState && activeState.contactId) {
@@ -560,10 +569,10 @@ bot.on(['photo', 'document'], async (ctx, next) => {
                     }
                 } catch (e) { console.error('Forward to admin error:', e.message); }
             }
-            const confirmRu = `✅ Ваше сообщение/файл отправлены администратору. Мы скоро свяжемся с вами!
+            const confirmRu = `✅ Я получил Ваш файл (чек) и уже передал его менеджеру. Мы скоро свяжемся с Вами!
 
-⚠️ **Примечание:** если вы отправляете фото или файл, лучше писать пояснительный текст сразу в **описании (подписи)** к нему (одним сообщением).`;
-            const confirmMsg = await getLocalizedText(userLangCache[senderId] || 'ru', confirmRu);
+⚠️ **Примечание:** в следующий раз, если Вы отправляете фото или файл, лучше писать текст сразу в **описании (подписи)** к нему (одним сообщением).`;
+            const confirmMsg = await getLocalizedText(currentLang, confirmRu);
             return ctx.reply(confirmMsg);
         }
     }

@@ -27,6 +27,9 @@ Analysis Logic:
    a) If the user clearly names a specific plan (e.g., "5GB", "unlimited", "30 days") from a country shown -> intent: "sale", use the exact "tariff_id".
    b) If the user sends just a NUMBER (e.g., "1", "2", "3") — look in the conversation history to find which country was listed last, find the tariff at that position (1-indexed) in the database for that country, and set intent: "sale" with its "tariff_id".
    c) If the exact tariff is unclear -> intent: "clarification".
+3.5 CONTACTING HUMAN/ADMIN:
+   * If the user asks "can I talk to admin?", "call manager", "human support", "contact person", "where to send the receipt?", "I have a question for manager" -> intent: "consultation". 
+   * In "writer_instruction", tell the Writer to confirm that they CAN send messages/checks/files here and that a manager will see them and reply.
 4. LANGUAGE DETECTION (CRITICAL RULE — follow this priority order):
    a) FIRST: Look at the user's LATEST message text and detect the language. This is the highest priority.
    b) SECOND: If the latest message is ambiguous (e.g. just a number like "2" or "ok"), look at the PREVIOUS user messages in history and use their language.
@@ -68,6 +71,9 @@ ${tariffs.map(t => `- Country: ${t.country} | Data: ${t.data_gb} | Validity: ${t
 6. TARIFF SELECTION (intent=sale): If the user sends a number (e.g. "2") AND there was a previous tariff list shown, pick the tariff at that position from the list and confirm the selection using the EXACT country name from the tariff list above.
 7. SALE: Write a confirmation in the target language using the EXACT country name from the database, NOT the country name the user mentioned.
 ${faqText ? `8. Use the knowledge base (FAQ) for technical answers (Translate content if it's in another language):\n${faqText}` : ''}
+9. CONTACTING SUPPORT: If the user wants to talk to a human or send a receipt, YOU MUST say:
+   "Конечно! Вы можете писать свои вопросы или присылать фото чека об оплате прямо в этот чат. Я сразу передам их менеджеру, и он ответит Вам здесь в самое ближайшее время."
+   (Translate this message to the user's language correctly).
 `;
 
 module.exports = { LOCALIZER_PROMPT, ANALYZER_PROMPT, WRITER_PROMPT };
