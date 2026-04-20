@@ -2,7 +2,7 @@ const { Telegraf, session, Markup } = require('telegraf');
 const axios = require('axios');
 const dotenv = require('dotenv');
 const path = require('path');
-const { supabase, getUser, createUser, getTariffs, saveMessage, getHistory, createOrder, getFaq, clearHistory } = require('./src/supabase');
+const { supabase, getUser, createUser, updateUser, getTariffs, saveMessage, getHistory, createOrder, getFaq, clearHistory } = require('./src/supabase');
 const { getChatResponse, getLocalizedText } = require('./src/openai');
 
 dotenv.config({ path: path.resolve(__dirname, './.env') });
@@ -638,7 +638,6 @@ bot.on('text', async (ctx) => {
                 for (const admin of admins) {
                     try { await bot.telegram.sendMessage(admin.telegram_id, alertText, { parse_mode: 'Markdown', ...buttons }); } catch (e) {}
                 }
-                const { updateUser } = require('./src/supabase');
                 await updateUser(telegramId, { is_support_mode: false });
                 const successRu = "✅ Ваше сообщение передано менеджеру. Спасибо!";
                 const successMsg = await getLocalizedText(currentLang, successRu);
@@ -650,7 +649,6 @@ bot.on('text', async (ctx) => {
     if (user && user.manager_contact_id) {
         try {
             await bot.telegram.sendMessage(user.manager_contact_id, ctx.message.text);
-            const { updateUser } = require('./src/supabase');
             await updateUser(telegramId, { manager_contact_id: null });
             return ctx.reply('✅ Сообщение отправлено клиенту. Режим чата выключен.');
         } catch (e) { return ctx.reply('❌ Ошибка отправки.'); }
@@ -911,7 +909,6 @@ bot.action(/^sendqr_(.+)$/, async (ctx) => {
         }
     }
 
-    const { updateUser } = require('./src/supabase');
     await updateUser(telegramId, { waiting_order_id: orderId });
 
     try {
@@ -963,7 +960,6 @@ bot.action(/^contactuser_(.+)$/, async (ctx) => {
     const { data: user } = await getUser(telegramId);
     if (!user || (user.role !== 'founder' && user.role !== 'manager' && user.role !== 'admin')) return ctx.answerCbQuery('❌ Нет прав.');
 
-    const { updateUser } = require('./src/supabase');
     await updateUser(telegramId, { manager_contact_id: userId });
     
     await ctx.reply(`💬 Включен режим **одного сообщения** пользователю [${userId}](tg://user?id=${userId}).\n\nВаше **следующее** сообщение (текст, фото или файл) будет переслано ему, после чего режим чата автоматически выключится.\n\n⚠️ **ВАЖНО:** Если вы отправляете файл или фото, прикрепите текст как **ПОДПИСЬ** к нему (одним сообщением), иначе режим чата выключится сразу после файла.`, {
@@ -982,7 +978,6 @@ bot.action('exit_contact', async (ctx) => {
 });
 
 bot.action('cancel_support_client', async (ctx) => {
-    const { updateUser } = require('./src/supabase');
     await updateUser(ctx.from.id, { is_support_mode: false });
     try {
         await ctx.editMessageText('❌ Обращение в поддержку отменено.');

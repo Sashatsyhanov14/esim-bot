@@ -18,12 +18,26 @@ module.exports = {
   supabase,
 
   async getUser(telegramId) {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('telegram_id', telegramId)
-      .single();
-    return { data, error };
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('telegram_id', telegramId)
+        .single();
+      
+      if (error) {
+        // If columns are missing (e.g. before migration), return defaults instead of crashing
+        if (error.code === '42703') {
+           console.warn(`[Supabase] Missing columns in users table, using defaults for ID ${telegramId}`);
+           return { data: { telegram_id: telegramId, is_support_mode: false, manager_contact_id: null, waiting_order_id: null }, error: null };
+        }
+        return { data, error };
+      }
+      return { data, error };
+    } catch (e) {
+      console.error('getUser critical error:', e.message);
+      return { data: null, error: e };
+    }
   },
 
   async createUser(user) {
