@@ -528,9 +528,7 @@ bot.on(['photo', 'document', 'video', 'animation', 'voice'], async (ctx, next) =
     const { data: user } = await getUser(senderId);
     
     // Ensure language cache is set for attachments
-    const senderId = ctx.from.id;
     const currentLang = userLangCache[senderId] || ctx.from.language_code || 'ru';
-    const { data: user } = await getUser(senderId);
 
     // --- NEW: Client-side One-off Support Mode (Database-backed) ---
     if (user && user.is_support_mode) {
@@ -665,7 +663,7 @@ bot.on('text', async (ctx) => {
     const userText = ctx.message.text.trim();
 
     try {
-        const { data: user } = await getUser(telegramId);
+        // user already loaded at start of handler
         const systemLang = ctx.from.language_code || 'en';
         if (!userLangCache[telegramId]) {
             userLangCache[telegramId] = user?.lang_code || systemLang;
