@@ -4,23 +4,29 @@ module.exports = {
             name: 'bot1',
             script: 'npm',
             args: 'start',
-            cwd: './bot1/bot', // Points to the specific bot project folder
-            env: {
-                NODE_ENV: 'production',
-                PORT: 3001,
-            },
+            cwd: './bot1/bot',
+            env: { NODE_ENV: 'production', PORT: 3001 }
         },
-        /*
         {
-          name: 'esim-bot-2',
-          script: 'npm',
-          args: 'start',
-          cwd: '/path/to/another/bot',
-          env: {
-            NODE_ENV: 'production',
-            PORT: 3002,
-          },
+            name: 'bot2',
+            script: 'npm',
+            args: 'start',
+            cwd: './bot2/bot',
+            env: { NODE_ENV: 'production', PORT: 3002 }
         },
-        */
+        {
+            name: 'bot3',
+            script: 'npm',
+            args: 'start',
+            cwd: './bot3/bot',
+            env: { NODE_ENV: 'production', PORT: 3003 }
+        },
+        {
+            name: 'bot4',
+            script: 'npm',
+            args: 'start',
+            cwd: './bot4/bot',
+            env: { NODE_ENV: 'production', PORT: 3004 }
+        }
     ],
 };
