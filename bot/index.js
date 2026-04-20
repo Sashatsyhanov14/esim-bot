@@ -114,28 +114,11 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
             }
         }
 
-        // --- NEW: Support Session (Message Forwarding) ---
-        if (activeState.contactId) {
-            const targetId = activeState.contactId;
-            const text = ctx.message.text || ctx.message.caption || '';
-            
-            try {
-                if (ctx.message.photo) {
-                    await bot.telegram.sendPhoto(targetId, ctx.message.photo[ctx.message.photo.length - 1].file_id, { caption: `💬 **Администратор:**\n${text}` });
-                } else if (ctx.message.document) {
-                    await bot.telegram.sendDocument(targetId, ctx.message.document.file_id, { caption: `💬 **Администратор:**\n${text}` });
-                } else if (ctx.message.text) {
-                    await bot.telegram.sendMessage(targetId, `💬 **Администратор:**\n${text}`);
-                }
-                
-                // --- ONE-OFF: Exit mode immediately after sending ---
-                managerStates.delete(senderId);
-                return ctx.reply(`✅ Сообщение отправлено клиенту [${targetId}](tg://user?id=${targetId}).\n\nРежим чата выключен.`, { 
-                    parse_mode: 'Markdown'
-                });
-            } catch (err) {
-                return ctx.reply(`❌ Ошибка отправки: ${err.message}`);
-            }
+        // --- HYBRID SUPPORT: Handled in the main handlers below ---
+        if (activeState?.contactId) {
+             // We return next() here to let the hybrid logic below take over, 
+             // but we keep this check for safety or we can just let it fall through.
+             return next();
         }
 
         if (ctx.message.photo || ctx.message.document) {
@@ -148,7 +131,7 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
     // Fetch the order from DB using the ID we tracked in RAM
     const { data: pendingOrder } = await supabase
         .from('orders').select('*')
-        .eq('id', activeState.orderId)
+        .eq('id', activeState?.orderId)
         .single();
 
     if (pendingOrder) {
@@ -248,7 +231,7 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
                     const cleanText = originalText.replace(/\n\n⏳ ОЖИДАНИЕ.*/g, '');
                     await bot.telegram.editMessageText(
                         senderId,
-                        activeState.messageId,
+                        activeState?.messageId,
                         undefined,
                         `✅ **ОТПРАВЛЕН (Завершено)**\n\n${cleanText}`,
                         Markup.inlineKeyboard([[Markup.button.callback('✉️ Написать клиенту', `contactuser_${userId}`)]])
