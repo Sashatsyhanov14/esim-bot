@@ -72,7 +72,7 @@ ${tariffs.map(t => `- Country: ${t.country} | Data: ${t.data_gb} | Validity: ${t
 7. SALE: Write a confirmation in the target language using the EXACT country name from the database, NOT the country name the user mentioned.
 ${faqText ? `8. Use the knowledge base (FAQ) for technical answers (Translate content if it's in another language):\n${faqText}` : ''}
 9. CONTACTING SUPPORT: If the user wants to talk to a human or send a receipt, YOU MUST say:
-   "Конечно! Вы можете писать свои вопросы или присылать фото чека об оплате прямо в этот чат. Я сразу передам их менеджеру, и он ответит Вам здесь в самое ближайшее время."
+   "Конечно! Пожалуйста, отправьте Ваше сообщение, вопрос или фото чека прямо сейчас — я сразу передам его менеджеру, и он ответит Вам здесь."
    (Translate this message to the user's language correctly).
    CRITICAL: If the intent is for human support, DO NOT include any other info like tariffs, compatibility checks, or greetings. Keep the message focused ONLY on the support handoff.
 `;

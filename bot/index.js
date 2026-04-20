@@ -20,8 +20,9 @@ bot.telegram.getMe().then(info => {
 
 bot.use(session());
 
-// In-memory state tracking for managers: { managerTelegramId: orderId }
+// In-memory state tracking for managers and clients
 const managerStates = new Map();
+const clientStates = new Map();
 
 // --- HELPER: Escape Markdown ---
 const esc = (text) => (text || '').toString().replace(/[_*`[\]()]/g, '\\$&');
@@ -523,7 +524,7 @@ bot.on('message', async (ctx, next) => {
 });
 
 // --- NEW: Forward Photos/Documents from Users to Admins ---
-bot.on(['photo', 'document'], async (ctx, next) => {
+bot.on(['photo', 'document', 'video', 'animation', 'voice'], async (ctx, next) => {
     const senderId = ctx.from.id;
     const { data: user } = await getUser(senderId);
     
@@ -531,7 +532,41 @@ bot.on(['photo', 'document'], async (ctx, next) => {
     if (!userLangCache[senderId]) {
         userLangCache[senderId] = user?.lang_code || ctx.from.language_code || 'en';
     }
-    const currentLang = userLangCache[senderId];
+    const currentLang = userLangCache[senderId] || ctx.from.language_code || 'ru';
+
+    // --- NEW: Client-side One-off Support Mode ---
+    if (clientStates.has(senderId)) {
+        try {
+            const { data: admins } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'admin']);
+            if (admins && admins.length > 0) {
+                const name = esc(ctx.from.first_name + (ctx.from.last_name ? ` ${ctx.from.last_name}` : ''));
+                const username = ctx.from.username ? `@${esc(ctx.from.username)}` : 'нет username';
+                const infoText = `📩 **Сообщение в поддержку (Медиа)!**\n\nОт: ${name} (${username})\nID: \`${senderId}\`\n[Профиль](tg://user?id=${senderId})`;
+                const contactButtons = Markup.inlineKeyboard([[Markup.button.callback('✉️ Написать клиенту', `contactuser_${senderId}`)]]);
+                
+                const caption = infoText + (ctx.message.caption ? `\n\n📝 Сообщение: ${esc(ctx.message.caption)}` : '');
+                for (const admin of admins) {
+                    try {
+                        if (ctx.message.photo) {
+                            await bot.telegram.sendPhoto(admin.telegram_id, ctx.message.photo[ctx.message.photo.length - 1].file_id, { caption, parse_mode: 'Markdown', ...contactButtons });
+                        } else if (ctx.message.document) {
+                            await bot.telegram.sendDocument(admin.telegram_id, ctx.message.document.file_id, { caption, parse_mode: 'Markdown', ...contactButtons });
+                        } else if (ctx.message.video) {
+                            await bot.telegram.sendVideo(admin.telegram_id, ctx.message.video.file_id, { caption, parse_mode: 'Markdown', ...contactButtons });
+                        } else if (ctx.message.animation) {
+                            await bot.telegram.sendAnimation(admin.telegram_id, ctx.message.animation.file_id, { caption, parse_mode: 'Markdown', ...contactButtons });
+                        } else if (ctx.message.voice) {
+                            await bot.telegram.sendVoice(admin.telegram_id, ctx.message.voice.file_id, { caption, parse_mode: 'Markdown', ...contactButtons });
+                        }
+                    } catch (adminErr) { console.error(`Admin notify error ${admin.telegram_id}:`, adminErr.message); }
+                }
+                clientStates.delete(senderId);
+                const successRu = "✅ Ваше вложение передано менеджеру. Спасибо!";
+                const successMsg = await getLocalizedText(currentLang, successRu);
+                return ctx.reply(successMsg);
+            }
+        } catch (e) { console.error('Media support forward error:', e.message); }
+    }
 
     // --- ONE-OFF SUPPORT MODE for managers ---
     const activeState = managerStates.get(senderId);
@@ -543,6 +578,12 @@ bot.on(['photo', 'document'], async (ctx, next) => {
                 await bot.telegram.sendPhoto(targetId, ctx.message.photo[ctx.message.photo.length - 1].file_id, { caption: `💬 **Администратор:**\n${text}` });
             } else if (ctx.message.document) {
                 await bot.telegram.sendDocument(targetId, ctx.message.document.file_id, { caption: `💬 **Администратор:**\n${text}` });
+            } else if (ctx.message.video) {
+                await bot.telegram.sendVideo(targetId, ctx.message.video.file_id, { caption: `💬 **Администратор:**\n${text}` });
+            } else if (ctx.message.animation) {
+                await bot.telegram.sendAnimation(targetId, ctx.message.animation.file_id, { caption: `💬 **Администратор:**\n${text}` });
+            } else if (ctx.message.voice) {
+                await bot.telegram.sendVoice(targetId, ctx.message.voice.file_id, { caption: `💬 **Администратор:**\n${text}` });
             }
             managerStates.delete(senderId);
             return ctx.reply('✅ Отправлено клиенту. Режим чата выключен.');
@@ -563,23 +604,19 @@ bot.on(['photo', 'document'], async (ctx, next) => {
                 try {
                     const caption = infoText + (ctx.message.caption ? `\n\n📝 Сообщение: ${esc(ctx.message.caption)}` : '');
                     if (ctx.message.photo) {
-                        await bot.telegram.sendPhoto(admin.telegram_id, ctx.message.photo[ctx.message.photo.length - 1].file_id, { 
-                            caption,
-                            parse_mode: 'Markdown',
-                            ...contactButtons
-                        });
+                        await bot.telegram.sendPhoto(admin.telegram_id, ctx.message.photo[ctx.message.photo.length - 1].file_id, { caption, parse_mode: 'Markdown', ...contactButtons });
                     } else if (ctx.message.document) {
-                        await bot.telegram.sendDocument(admin.telegram_id, ctx.message.document.file_id, { 
-                            caption,
-                            parse_mode: 'Markdown',
-                            ...contactButtons
-                        });
+                        await bot.telegram.sendDocument(admin.telegram_id, ctx.message.document.file_id, { caption, parse_mode: 'Markdown', ...contactButtons });
+                    } else if (ctx.message.video) {
+                        await bot.telegram.sendVideo(admin.telegram_id, ctx.message.video.file_id, { caption, parse_mode: 'Markdown', ...contactButtons });
+                    } else if (ctx.message.animation) {
+                        await bot.telegram.sendAnimation(admin.telegram_id, ctx.message.animation.file_id, { caption, parse_mode: 'Markdown', ...contactButtons });
+                    } else if (ctx.message.voice) {
+                        await bot.telegram.sendVoice(admin.telegram_id, ctx.message.voice.file_id, { caption, parse_mode: 'Markdown', ...contactButtons });
                     }
                 } catch (e) { console.error('Forward to admin error:', e.message); }
             }
-            const confirmRu = `✅ Я получил Ваш файл (чек) и уже передал его менеджеру. Мы скоро свяжемся с Вами!
-
-⚠️ **Примечание:** в следующий раз, если Вы отправляете фото или файл, лучше писать текст сразу в **описании (подписи)** к нему (одним сообщением).`;
+            const confirmRu = `✅ Я получил Ваш файл и сообщение. Я уже передал их менеджеру, мы скоро ответим Вам!`;
             const confirmMsg = await getLocalizedText(currentLang, confirmRu);
             return ctx.reply(confirmMsg);
         }
@@ -590,8 +627,28 @@ bot.on(['photo', 'document'], async (ctx, next) => {
 bot.on('text', async (ctx) => {
     const telegramId = ctx.from.id;
     const activeState = managerStates.get(telegramId);
+    const clientSupportActive = clientStates.has(telegramId);
+    const currentLang = userLangCache[telegramId] || ctx.from.language_code || 'ru';
     
-    // If manager is in contact mode, forward text (One-off)
+    // --- NEW: Client Forwarding (One-off) ---
+    if (clientSupportActive) {
+        try {
+            const { data: admins } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'admin']);
+            if (admins && admins.length > 0) {
+                const name = esc(ctx.from.first_name + (ctx.from.last_name ? ` ${ctx.from.last_name}` : ''));
+                const username = ctx.from.username ? `@${esc(ctx.from.username)}` : 'нет username';
+                const alertText = `📩 **Сообщение в поддержку (Текст)!**\nЮзер: ${name} (ID: ${telegramId})\nТекст: ${esc(ctx.message.text)}`;
+                const buttons = Markup.inlineKeyboard([[Markup.button.callback('✉️ Написать клиенту', `contactuser_${telegramId}`)]]);
+                for (const admin of admins) {
+                    try { await bot.telegram.sendMessage(admin.telegram_id, alertText, { parse_mode: 'Markdown', ...buttons }); } catch (e) {}
+                }
+                clientStates.delete(telegramId);
+                const successRu = "✅ Ваше сообщение передано менеджеру. Спасибо!";
+                const successMsg = await getLocalizedText(currentLang, successRu);
+                return ctx.reply(successMsg);
+            }
+        } catch (e) { console.error('Client text forward error:', e.message); }
+    }
     if (activeState && activeState.contactId) {
         try {
             await bot.telegram.sendMessage(activeState.contactId, ctx.message.text);
@@ -616,20 +673,7 @@ bot.on('text', async (ctx) => {
         }
         const uiLang = userLangCache[telegramId];
 
-        // --- NEW: Forward Client Text to Admins ---
-        if (!user || user.role === 'client') {
-            try {
-                const { data: admins } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'admin']);
-                if (admins && admins.length > 0) {
-                    const name = esc(ctx.from.first_name + (ctx.from.last_name ? ` ${ctx.from.last_name}` : ''));
-                    const alertText = `💬 **Сообщение от клиента:**\nЮзер: ${name} (ID: ${telegramId})\nТекст: ${esc(userText)}`;
-                    const buttons = Markup.inlineKeyboard([[Markup.button.callback('✉️ Написать клиенту', `contactuser_${telegramId}`)]]);
-                    for (const admin of admins) {
-                        try { await bot.telegram.sendMessage(admin.telegram_id, alertText, { parse_mode: 'Markdown', ...buttons }); } catch (e) {}
-                    }
-                }
-            } catch (e) { console.error('Text forward error:', e.message); }
-        }
+        // --- Forwarding moved below AI analysis to use 'intent' ---
 
         if (!user) {
         const msgRu = 'Нажми /start для начала.';
@@ -683,7 +727,25 @@ bot.on('text', async (ctx) => {
     }
 
     const saleMatch = aiResponse.match(/\[SALE_REQUEST:\s*([a-zA-Z0-9_-]+)\]/i);
-    let finalResponse = aiResponse.replace(/\[SALE_REQUEST:.*?\]/gi, '').replace(/\[LANG:.*?\]/gi, '').trim();
+    const supportMatch = aiResponse.includes('[SUPPORT_REQUEST]');
+    
+    let finalResponse = aiResponse
+        .replace(/\[SALE_REQUEST:.*?\]/gi, '')
+        .replace(/\[SUPPORT_REQUEST\]/gi, '')
+        .replace(/\[LANG:.*?\]/gi, '')
+        .trim();
+
+    // --- NEW: Handle Support Activation from AI ---
+    if (supportMatch && (!user || user.role === 'client')) {
+        clientStates.set(telegramId, { active: true });
+        const cancelBtn = Markup.inlineKeyboard([[Markup.button.callback('❌ Отмена', 'cancel_support_client')]]);
+        try {
+            await ctx.reply(finalResponse, { parse_mode: 'Markdown', ...cancelBtn });
+        } catch (e) {
+            await ctx.reply(finalResponse, cancelBtn);
+        }
+        return;
+    }
     // NOTE: The AI Writer already responds in the correct language (lang_code from Analyzer).
     // Do NOT call getLocalizedText here — it would corrupt the already-translated text.
 
@@ -915,6 +977,17 @@ bot.action('exit_contact', async (ctx) => {
     managerStates.delete(ctx.from.id);
     await ctx.deleteMessage();
     await ctx.reply('✅ Режим чата выключен. Теперь ваши сообщения не пересылаются клиенту.');
+    await ctx.answerCbQuery();
+});
+
+bot.action('cancel_support_client', async (ctx) => {
+    clientStates.delete(ctx.from.id);
+    try {
+        await ctx.editMessageText('❌ Обращение в поддержку отменено.');
+    } catch (e) {
+        await ctx.deleteMessage();
+        await ctx.reply('❌ Обращение в поддержку отменено.');
+    }
     await ctx.answerCbQuery();
 });
 

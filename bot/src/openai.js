@@ -70,6 +70,9 @@ module.exports = {
             if (analysis.intent === 'sale' && analysis.tariff_id) {
                 embeddedTags += `\n[SALE_REQUEST: ${analysis.tariff_id}]`;
             }
+            if (analysis.intent === 'human_consultation') {
+                embeddedTags += `\n[SUPPORT_REQUEST]`;
+            }
 
             return finalMessage + '\n' + embeddedTags;
 
