@@ -722,17 +722,17 @@ bot.on('text', async (ctx) => {
                             ru: {
                                 alert: `🚀 **ЗАКАЗ!**\n\nЮзер: ${userDisplay} (ID: ${telegramId})\nТариф: ${mltAI.country} | ${mltAI.data_gb} на ${mltAI.validity}\nЦена: $${tariff.price_usd}\n\n⚠️ ВАЖНО: Подтвердите оплату перед тем как скидывать eSIM-код!`,
                                 sendBtn: '📤 Отправить eSIM (Код/Ссылка)',
-                                cancelBtn: '❌ Отменить'
+                                contactBtn: '✉️ Написать клиенту'
                             },
                             tr: {
                                 alert: `🚀 **SİPARİŞ!**\n\nKullanıcı: ${userDisplay} (ID: ${telegramId})\nTarife: ${mltAI.country} | ${mltAI.data_gb} - ${mltAI.validity}\nFiyat: $${tariff.price_usd}\n\n⚠️ ÖNEMLİ: Link veya QR'ı göndermeden önce ödemeyi onaylayın!`,
                                 sendBtn: '📤 eSIM Gönder',
-                                cancelBtn: '❌ İptal'
+                                contactBtn: '✉️ Müşteriye Yaz'
                             },
                             en: {
                                 alert: `🚀 **ORDER!**\n\nUser: ${userDisplay} (ID: ${telegramId})\nPlan: ${mltAI.country} | ${mltAI.data_gb} for ${mltAI.validity}\nPrice: $${tariff.price_usd}\n\n⚠️ IMPORTANT: Verify payment before sending the Link/Code!`,
                                 sendBtn: '📤 Send eSIM (Code/Link)',
-                                cancelBtn: '❌ Cancel'
+                                contactBtn: '✉️ Write to Client'
                             }
                         };
                         const mtFinalAI = managerTextsLocalizedAI[mLang] || managerTextsLocalizedAI['en'];
