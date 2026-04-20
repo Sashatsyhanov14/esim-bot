@@ -20,9 +20,8 @@ bot.telegram.getMe().then(info => {
 
 bot.use(session());
 
-// In-memory state tracking for managers and clients
-const managerStates = new Map();
-const clientStates = new Map();
+// We now use PostgreSQL (Supabase) for persistent states to avoid bugs with duplicate processes.
+// Maps are kept only for very ephemeral data if needed.
 
 // --- HELPER: Escape Markdown ---
 const esc = (text) => (text || '').toString().replace(/[_*`[\]()]/g, '\\$&');
@@ -529,13 +528,12 @@ bot.on(['photo', 'document', 'video', 'animation', 'voice'], async (ctx, next) =
     const { data: user } = await getUser(senderId);
     
     // Ensure language cache is set for attachments
-    if (!userLangCache[senderId]) {
-        userLangCache[senderId] = user?.lang_code || ctx.from.language_code || 'en';
-    }
+    const senderId = ctx.from.id;
     const currentLang = userLangCache[senderId] || ctx.from.language_code || 'ru';
+    const { data: user } = await getUser(senderId);
 
-    // --- NEW: Client-side One-off Support Mode ---
-    if (clientStates.has(senderId)) {
+    // --- NEW: Client-side One-off Support Mode (Database-backed) ---
+    if (user && user.is_support_mode) {
         try {
             const { data: admins } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'admin']);
             if (admins && admins.length > 0) {
@@ -560,7 +558,8 @@ bot.on(['photo', 'document', 'video', 'animation', 'voice'], async (ctx, next) =
                         }
                     } catch (adminErr) { console.error(`Admin notify error ${admin.telegram_id}:`, adminErr.message); }
                 }
-                clientStates.delete(senderId);
+                const { updateUser } = require('./src/supabase');
+                await updateUser(senderId, { is_support_mode: false });
                 const successRu = "✅ Ваше вложение передано менеджеру. Спасибо!";
                 const successMsg = await getLocalizedText(currentLang, successRu);
                 return ctx.reply(successMsg);
@@ -568,10 +567,9 @@ bot.on(['photo', 'document', 'video', 'animation', 'voice'], async (ctx, next) =
         } catch (e) { console.error('Media support forward error:', e.message); }
     }
 
-    // --- ONE-OFF SUPPORT MODE for managers ---
-    const activeState = managerStates.get(senderId);
-    if (activeState && activeState.contactId) {
-        const targetId = activeState.contactId;
+    // --- ONE-OFF SUPPORT MODE for managers (Database-backed) ---
+    if (user && user.manager_contact_id) {
+        const targetId = user.manager_contact_id;
         const text = ctx.message.caption || '';
         try {
             if (ctx.message.photo) {
@@ -585,7 +583,8 @@ bot.on(['photo', 'document', 'video', 'animation', 'voice'], async (ctx, next) =
             } else if (ctx.message.voice) {
                 await bot.telegram.sendVoice(targetId, ctx.message.voice.file_id, { caption: `💬 **Администратор:**\n${text}` });
             }
-            managerStates.delete(senderId);
+            const { updateUser } = require('./src/supabase');
+            await updateUser(senderId, { manager_contact_id: null });
             return ctx.reply('✅ Отправлено клиенту. Режим чата выключен.');
         } catch (e) { return ctx.reply('❌ Ошибка отправки клиенту.'); }
     }
@@ -626,12 +625,11 @@ bot.on(['photo', 'document', 'video', 'animation', 'voice'], async (ctx, next) =
 
 bot.on('text', async (ctx) => {
     const telegramId = ctx.from.id;
-    const activeState = managerStates.get(telegramId);
-    const clientSupportActive = clientStates.has(telegramId);
+    const { data: user } = await getUser(telegramId);
     const currentLang = userLangCache[telegramId] || ctx.from.language_code || 'ru';
     
-    // --- NEW: Client Forwarding (One-off) ---
-    if (clientSupportActive) {
+    // --- NEW: Client Forwarding (One-off - Database-backed) ---
+    if (user && user.is_support_mode) {
         try {
             const { data: admins } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'admin']);
             if (admins && admins.length > 0) {
@@ -642,25 +640,26 @@ bot.on('text', async (ctx) => {
                 for (const admin of admins) {
                     try { await bot.telegram.sendMessage(admin.telegram_id, alertText, { parse_mode: 'Markdown', ...buttons }); } catch (e) {}
                 }
-                clientStates.delete(telegramId);
+                const { updateUser } = require('./src/supabase');
+                await updateUser(telegramId, { is_support_mode: false });
                 const successRu = "✅ Ваше сообщение передано менеджеру. Спасибо!";
                 const successMsg = await getLocalizedText(currentLang, successRu);
                 return ctx.reply(successMsg);
             }
         } catch (e) { console.error('Client text forward error:', e.message); }
     }
-    if (activeState && activeState.contactId) {
+    // --- Manager Support Mode (Database-backed) ---
+    if (user && user.manager_contact_id) {
         try {
-            await bot.telegram.sendMessage(activeState.contactId, ctx.message.text);
-            managerStates.delete(telegramId);
+            await bot.telegram.sendMessage(user.manager_contact_id, ctx.message.text);
+            const { updateUser } = require('./src/supabase');
+            await updateUser(telegramId, { manager_contact_id: null });
             return ctx.reply('✅ Сообщение отправлено клиенту. Режим чата выключен.');
         } catch (e) { return ctx.reply('❌ Ошибка отправки.'); }
     }
 
-    // If the manager is ACTIVELY waiting for a QR/Code, we handle it in the manager flow (line 63)
-    // Here we handle GENERIC chat. If they are the manager, we allow them to chat too 
-    // unless they specifically should be in the order flow.
-    if (activeState && activeState.orderId) return; // Wait for the manager flow below...
+    // If the manager is ACTIVELY waiting for a QR/Code, we handle it in the manager flow below
+    if (user && user.waiting_order_id) return; 
 
     const username = ctx.from.username || ctx.from.first_name;
     const userText = ctx.message.text.trim();
@@ -737,7 +736,8 @@ bot.on('text', async (ctx) => {
 
     // --- NEW: Handle Support Activation from AI ---
     if (supportMatch && (!user || user.role === 'client')) {
-        clientStates.set(telegramId, { active: true });
+        const { updateUser } = require('./src/supabase');
+        await updateUser(telegramId, { is_support_mode: true });
         const cancelBtn = Markup.inlineKeyboard([[Markup.button.callback('❌ Отмена', 'cancel_support_client')]]);
         try {
             await ctx.reply(finalResponse, { parse_mode: 'Markdown', ...cancelBtn });
@@ -896,7 +896,10 @@ bot.action(/^sendqr_(.+)$/, async (ctx) => {
         return ctx.answerCbQuery('❌ Этот заказ был отменен.', { show_alert: true });
     }
 
-    // Persist awaiting state strictly from pending state
+    // Clear any RAM state just in case
+    managerStates.delete(telegramId);
+    
+    // Persist awaiting state strictly from pending state (Database-backed)
     const { data: updated, error: updateErr } = await supabase.from('orders')
         .update({ status: 'awaiting_qr', assigned_manager: telegramId })
         .eq('id', orderId)
@@ -910,11 +913,8 @@ bot.action(/^sendqr_(.+)$/, async (ctx) => {
         }
     }
 
-    managerStates.set(telegramId, { 
-        orderId: orderId, 
-        messageId: ctx.callbackQuery.message.message_id,
-        originalText: ctx.callbackQuery.message.text
-    }); // Track msg to delete buttons later
+    const { updateUser } = require('./src/supabase');
+    await updateUser(telegramId, { waiting_order_id: orderId });
 
     try {
         await ctx.editMessageText(
@@ -937,8 +937,9 @@ bot.action(/^cancelqr_(.+)$/, async (ctx) => {
         return ctx.answerCbQuery('❌ У вас нет прав.', { show_alert: true });
     }
 
-    // Clear DB waiting state and RAM state
-    managerStates.delete(telegramId);
+    // Clear DB waiting state
+    const { updateUser } = require('./src/supabase');
+    await updateUser(telegramId, { waiting_order_id: null });
     await supabase.from('orders').update({ status: 'pending', assigned_manager: null }).eq('id', orderId);
 
     try {
@@ -964,7 +965,8 @@ bot.action(/^contactuser_(.+)$/, async (ctx) => {
     const { data: user } = await getUser(telegramId);
     if (!user || (user.role !== 'founder' && user.role !== 'manager' && user.role !== 'admin')) return ctx.answerCbQuery('❌ Нет прав.');
 
-    managerStates.set(telegramId, { contactId: userId });
+    const { updateUser } = require('./src/supabase');
+    await updateUser(telegramId, { manager_contact_id: userId });
     
     await ctx.reply(`💬 Включен режим **одного сообщения** пользователю [${userId}](tg://user?id=${userId}).\n\nВаше **следующее** сообщение (текст, фото или файл) будет переслано ему, после чего режим чата автоматически выключится.\n\n⚠️ **ВАЖНО:** Если вы отправляете файл или фото, прикрепите текст как **ПОДПИСЬ** к нему (одним сообщением), иначе режим чата выключится сразу после файла.`, {
         parse_mode: 'Markdown',
@@ -974,14 +976,16 @@ bot.action(/^contactuser_(.+)$/, async (ctx) => {
 });
 
 bot.action('exit_contact', async (ctx) => {
-    managerStates.delete(ctx.from.id);
+    const { updateUser } = require('./src/supabase');
+    await updateUser(ctx.from.id, { manager_contact_id: null });
     await ctx.deleteMessage();
     await ctx.reply('✅ Режим чата выключен. Теперь ваши сообщения не пересылаются клиенту.');
     await ctx.answerCbQuery();
 });
 
 bot.action('cancel_support_client', async (ctx) => {
-    clientStates.delete(ctx.from.id);
+    const { updateUser } = require('./src/supabase');
+    await updateUser(ctx.from.id, { is_support_mode: false });
     try {
         await ctx.editMessageText('❌ Обращение в поддержку отменено.');
     } catch (e) {
