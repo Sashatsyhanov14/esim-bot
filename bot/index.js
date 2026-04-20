@@ -94,12 +94,53 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
     // 1. Check in-memory state first (Strict Assignment)
     const activeState = managerStates.get(senderId);
     if (!activeState || !activeState.orderId) {
+        // --- NEW: Admin-to-User Direct Messaging via ID ---
+        if (ctx.message.text && /^\d{6,15}\s+/.test(ctx.message.text.trim())) {
+            const match = ctx.message.text.trim().match(/^(\d{6,15})\s+([\s\S]+)$/);
+            if (match) {
+                const targetId = match[1];
+                const text = match[2];
+                try {
+                    const header = `💬 **Сообщение от Администрации:**\n\n`;
+                    await bot.telegram.sendMessage(targetId, header + text, { parse_mode: 'Markdown' });
+                    return ctx.reply(`✅ Сообщение отправлено пользователю [${targetId}](tg://user?id=${targetId})`, { parse_mode: 'Markdown' });
+                } catch (err) {
+                    return ctx.reply(`❌ Ошибка отправки пользователю ${targetId}: ${err.message}`);
+                }
+            }
+        }
+
+        // --- NEW: Support Session (Message Forwarding) ---
+        if (activeState.contactId) {
+            const targetId = activeState.contactId;
+            const text = ctx.message.text || ctx.message.caption || '';
+            
+            try {
+                if (ctx.message.photo) {
+                    await bot.telegram.sendPhoto(targetId, ctx.message.photo[ctx.message.photo.length - 1].file_id, { caption: `💬 **Администратор:**\n${text}` });
+                } else if (ctx.message.document) {
+                    await bot.telegram.sendDocument(targetId, ctx.message.document.file_id, { caption: `💬 **Администратор:**\n${text}` });
+                } else if (ctx.message.text) {
+                    await bot.telegram.sendMessage(targetId, `💬 **Администратор:**\n${text}`);
+                }
+                
+                // --- ONE-OFF: Exit mode immediately after sending ---
+                managerStates.delete(senderId);
+                return ctx.reply(`✅ Сообщение отправлено клиенту [${targetId}](tg://user?id=${targetId}).\n\nРежим чата выключен.`, { 
+                    parse_mode: 'Markdown'
+                });
+            } catch (err) {
+                return ctx.reply(`❌ Ошибка отправки: ${err.message}`);
+            }
+        }
+
         if (ctx.message.photo || ctx.message.document) {
             return ctx.reply("❌ Ошибка: вы не выбрали заказ.\nСначала нажмите кнопку «Отправить eSIM» под нужным заказом в ленте, чтобы закрепить его за собой.");
         }
         return next();
     }
 
+    // --- MANAGER QR/LINK SUBMISSION FLOW ---
     // Fetch the order from DB using the ID we tracked in RAM
     const { data: pendingOrder } = await supabase
         .from('orders').select('*')
@@ -205,7 +246,8 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
                         senderId,
                         activeState.messageId,
                         undefined,
-                        `✅ **ОТПРАВЛЕН (Завершено)**\n\n${cleanText}`
+                        `✅ **ОТПРАВЛЕН (Завершено)**\n\n${cleanText}`,
+                        Markup.inlineKeyboard([[Markup.button.callback('✉️ Написать клиенту', `contactuser_${userId}`)]])
                     );
                 } catch (e) { console.error('Visual reset error:', e.message); }
             }
@@ -213,6 +255,7 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
             return ctx.reply('✅ Данные (ссылка/QR) успешно отправлены. Покупка зачтена (paid) и начислены бонусы.');
         }
     }
+    return next();
 });
 
 // --- CLIENT FLOW ---
@@ -292,12 +335,15 @@ bot.start(async (ctx) => {
 
         const welcomeText1 = await getLocalizedText(welcomeLang, welcomeRuPart1);
         const dashboardBtn = await getLocalizedText(welcomeLang, '📱 Открыть Дашборд');
+        const contactBtn = await getLocalizedText(welcomeLang, '📩 Написать менеджеру');
 
         // Cleanup stale keyboards
         try { const k = await ctx.reply('…', Markup.removeKeyboard()); await bot.telegram.deleteMessage(ctx.chat.id, k.message_id); } catch (e) { }
 
         await ctx.reply(welcomeText1,
-            Markup.keyboard([[Markup.button.webApp(dashboardBtn, `${process.env.WEBAPP_URL || 'https://esim.ticaretai.tr'}?uid=${telegramId}`)]]).resize()
+            Markup.keyboard([
+                [Markup.button.webApp(dashboardBtn, `${process.env.WEBAPP_URL || 'https://esim.ticaretai.tr'}?uid=${telegramId}`)]
+            ]).resize()
         );
         console.log(`[START] Welcome Part 1 sent to ${username}`);
 
@@ -392,7 +438,6 @@ bot.on('message', async (ctx, next) => {
                         } catch (mdError) {
                             await ctx.reply(finalResponse);
                         }
-
                         if (tariff.payment_qr_url) {
                             let finalQrUrl = tariff.payment_qr_url;
                             if (finalQrUrl.includes('drive.google.com')) {
@@ -430,20 +475,26 @@ bot.on('message', async (ctx, next) => {
                                     const managerTextsLocalized = {
                                         ru: {
                                             alert: `🚀 **ЗАКАЗ (КАТАЛОГ)!**\n\nЮзер: @${username} (ID: ${telegramId})\nТариф: ${mlt.country} | ${mlt.data_gb} на ${mlt.validity}\nЦена: ${managerPriceText}\n${profitText}\n\n⚠️ ВАЖНО: Подтвердите оплату перед тем как скидывать eSIM-код!`,
-                                            sendBtn: '📤 Отправить eSIM (Код/Ссылка)'
+                                            sendBtn: '📤 Отправить eSIM',
+                                            contactBtn: '✉️ Написать клиенту'
                                         },
                                         tr: {
                                             alert: `🚀 **SİPARİŞ (KATALOG)!**\n\nKullanıcı: @${username} (ID: ${telegramId})\nTarife: ${mlt.country} | ${mlt.data_gb} - ${mlt.validity}\nFiyat: ${managerPriceText}\n${profitText}\n\n⚠️ ÖNEMLİ: Link veya QR'ı göndermeden önce ödemeyi onaylayın!`,
-                                            sendBtn: '📤 eSIM Gönder'
+                                            sendBtn: '📤 eSIM Gönder',
+                                            contactBtn: '✉️ Müşteriye Yaz'
                                         },
                                         en: {
                                             alert: `🚀 **ORDER (CATALOG)!**\n\nUser: @${username} (ID: ${telegramId})\nPlan: ${mlt.country} | ${mlt.data_gb} for ${mlt.validity}\nPrice: ${managerPriceText}\n${profitText}\n\n⚠️ IMPORTANT: Verify payment before sending the Link/Code!`,
-                                            sendBtn: '📤 Send eSIM (Code/Link)'
+                                            sendBtn: '📤 Send eSIM',
+                                            contactBtn: '✉️ Write to Client'
                                         }
                                     };
                                     const mtFinal = managerTextsLocalized[mLang] || managerTextsLocalized['en'];
                                     const buttons = (orderData && orderData.id) 
-                                        ? Markup.inlineKeyboard([[Markup.button.callback(mtFinal.sendBtn, `sendqr_${orderData.id}`)]]) 
+                                        ? Markup.inlineKeyboard([
+                                            [Markup.button.callback(mtFinal.sendBtn, `sendqr_${orderData.id}`)],
+                                            [Markup.button.callback(mtFinal.contactBtn, `contactuser_${telegramId}`)]
+                                        ]) 
                                         : {};
                                     await bot.telegram.sendMessage(manager.telegram_id, mtFinal.alert, buttons);
                                 } catch (e) {}
@@ -465,10 +516,73 @@ bot.on('message', async (ctx, next) => {
     return next();
 });
 
+// --- NEW: Forward Photos/Documents from Users to Admins ---
+bot.on(['photo', 'document'], async (ctx, next) => {
+    const senderId = ctx.from.id;
+    const { data: user } = await getUser(senderId);
+    
+    // --- ONE-OFF SUPPORT MODE for managers ---
+    const activeState = managerStates.get(senderId);
+    if (activeState && activeState.contactId) {
+        const targetId = activeState.contactId;
+        const text = ctx.message.caption || '';
+        try {
+            if (ctx.message.photo) {
+                await bot.telegram.sendPhoto(targetId, ctx.message.photo[ctx.message.photo.length - 1].file_id, { caption: `💬 **Администратор:**\n${text}` });
+            } else if (ctx.message.document) {
+                await bot.telegram.sendDocument(targetId, ctx.message.document.file_id, { caption: `💬 **Администратор:**\n${text}` });
+            }
+            managerStates.delete(senderId);
+            return ctx.reply('✅ Отправлено клиенту. Режим чата выключен.');
+        } catch (e) { return ctx.reply('❌ Ошибка отправки клиенту.'); }
+    }
+
+    // Only forward if it's a client (managers are handled above)
+    if (!user || user.role === 'client') {
+        const { data: admins } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'admin']);
+        if (admins && admins.length > 0) {
+            const name = ctx.from.first_name + (ctx.from.last_name ? ` ${ctx.from.last_name}` : '');
+            const username = ctx.from.username ? `@${ctx.from.username}` : 'нет username';
+            const infoText = `📩 **Новое вложение от клиента!**\n\nОт: ${name} (${username})\nID: \`${senderId}\`\n[Профиль](tg://user?id=${senderId})`;
+            
+            for (const admin of admins) {
+                try {
+                    if (ctx.message.photo) {
+                        await bot.telegram.sendPhoto(admin.telegram_id, ctx.message.photo[ctx.message.photo.length - 1].file_id, { 
+                            caption: infoText + (ctx.message.caption ? `\n\n📝 Сообщение: ${ctx.message.caption}` : ''),
+                            parse_mode: 'Markdown'
+                        });
+                    } else if (ctx.message.document) {
+                        await bot.telegram.sendDocument(admin.telegram_id, ctx.message.document.file_id, { 
+                            caption: infoText + (ctx.message.caption ? `\n\n📝 Сообщение: ${ctx.message.caption}` : ''),
+                            parse_mode: 'Markdown'
+                        });
+                    }
+                } catch (e) { console.error('Forward to admin error:', e.message); }
+            }
+            const confirmRu = `✅ Ваше сообщение/файл отправлены администратору. Мы скоро свяжемся с вами!
+
+⚠️ **Примечание:** если вы отправляете фото или файл, лучше писать пояснительный текст сразу в **описании (подписи)** к нему (одним сообщением).`;
+            const confirmMsg = await getLocalizedText(userLangCache[senderId] || 'ru', confirmRu);
+            return ctx.reply(confirmMsg);
+        }
+    }
+    return next();
+});
+
 bot.on('text', async (ctx) => {
     const telegramId = ctx.from.id;
     const activeState = managerStates.get(telegramId);
     
+    // If manager is in contact mode, forward text (One-off)
+    if (activeState && activeState.contactId) {
+        try {
+            await bot.telegram.sendMessage(activeState.contactId, ctx.message.text);
+            managerStates.delete(telegramId);
+            return ctx.reply('✅ Сообщение отправлено клиенту. Режим чата выключен.');
+        } catch (e) { return ctx.reply('❌ Ошибка отправки.'); }
+    }
+
     // If the manager is ACTIVELY waiting for a QR/Code, we handle it in the manager flow (line 63)
     // Here we handle GENERIC chat. If they are the manager, we allow them to chat too 
     // unless they specifically should be in the order flow.
@@ -478,16 +592,14 @@ bot.on('text', async (ctx) => {
     const userText = ctx.message.text.trim();
 
     try {
-        await saveMessage(telegramId, 'user', userText);
-        let { data: user } = await getUser(telegramId);
-
+        const { data: user } = await getUser(telegramId);
         const systemLang = ctx.from.language_code || 'en';
         if (!userLangCache[telegramId]) {
             userLangCache[telegramId] = user?.lang_code || systemLang;
         }
         const uiLang = userLangCache[telegramId];
 
-    if (!user) {
+        if (!user) {
         const msgRu = 'Нажми /start для начала.';
         const msg = await getLocalizedText(systemLang, msgRu);
         return ctx.reply(msg, Markup.removeKeyboard());
@@ -544,7 +656,7 @@ bot.on('text', async (ctx) => {
     // Do NOT call getLocalizedText here — it would corrupt the already-translated text.
 
     if (saleMatch) {
-        const tariffId = saleMatch[1];
+                        const tariffId = saleMatch[1];
         const tariff = tariffs.find(t => t.id === tariffId);
 
         if (tariff) {
@@ -624,7 +736,10 @@ bot.on('text', async (ctx) => {
 
                                 // Safely handle orderData.id null check
                                 const buttons = (orderData && orderData.id) 
-                                    ? Markup.inlineKeyboard([[Markup.button.callback(mtFinalAI.sendBtn, `sendqr_${orderData.id}`)]]) 
+                                    ? Markup.inlineKeyboard([
+                                        [Markup.button.callback(mtFinalAI.sendBtn, `sendqr_${orderData.id}`)],
+                                        [Markup.button.callback(mtFinalAI.contactBtn, `contactuser_${telegramId}`)]
+                                    ]) 
                                     : {};
 
                                 await bot.telegram.sendMessage(manager.telegram_id, mtFinalAI.alert, buttons);
@@ -638,7 +753,7 @@ bot.on('text', async (ctx) => {
         } else {
             console.log(`[SALE] Tariff ${tariffId} not found in DB!`);
             const errRu = `\n❌ Ошибка: Тариф "${tariffId}" не найден в базе. Менеджер скоро подключится.`;
-            finalResponse += await getLocalizedText(targetLang, errRu);
+            finalResponse += await getLocalizedText(uiLang, errRu);
         }
     }
 
@@ -742,6 +857,30 @@ bot.action(/^cancelqr_(.+)$/, async (ctx) => {
     } catch (e) { }
 
     await ctx.answerCbQuery('Ожидание отменено.');
+});
+
+// --- NEW callbacks for contact user flow ---
+bot.action(/^contactuser_(.+)$/, async (ctx) => {
+    const userId = ctx.match[1];
+    const telegramId = ctx.from.id;
+
+    const { data: user } = await getUser(telegramId);
+    if (!user || (user.role !== 'founder' && user.role !== 'manager' && user.role !== 'admin')) return ctx.answerCbQuery('❌ Нет прав.');
+
+    managerStates.set(telegramId, { contactId: userId });
+    
+    await ctx.reply(`💬 Включен режим **одного сообщения** пользователю [${userId}](tg://user?id=${userId}).\n\nВаше **следующее** сообщение (текст, фото или файл) будет переслано ему, после чего режим чата автоматически выключится.\n\n⚠️ **ВАЖНО:** Если вы отправляете файл или фото, прикрепите текст как **ПОДПИСЬ** к нему (одним сообщением), иначе режим чата выключится сразу после файла.`, {
+        parse_mode: 'Markdown',
+        ...Markup.inlineKeyboard([[Markup.button.callback('❌ Отмена', 'exit_contact')]])
+    });
+    await ctx.answerCbQuery();
+});
+
+bot.action('exit_contact', async (ctx) => {
+    managerStates.delete(ctx.from.id);
+    await ctx.deleteMessage();
+    await ctx.reply('✅ Режим чата выключен. Теперь ваши сообщения не пересылаются клиенту.');
+    await ctx.answerCbQuery();
 });
 
 bot.action(/^cancel_(.+)$/, async (ctx) => {
