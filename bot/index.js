@@ -574,8 +574,9 @@ bot.on(['photo', 'document', 'video', 'animation', 'voice'], async (ctx, next) =
         } catch (e) { return ctx.reply('❌ Ошибка отправки клиенту.'); }
     }
 
-    // Only forward if it's a client (managers are handled above)
-    if (!user || user.role === 'client') {
+    // Only forward immediately if it's a client (managers/admins are handled above)
+    // We include !user.role to ensure NEW users can also send receipts immediately
+    if (!user || !user.role || user.role === 'client') {
         const { data: admins } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'admin']);
         if (admins && admins.length > 0) {
             const name = esc(ctx.from.first_name + (ctx.from.last_name ? ` ${ctx.from.last_name}` : ''));
