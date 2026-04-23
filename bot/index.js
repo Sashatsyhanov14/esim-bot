@@ -331,7 +331,7 @@ bot.start(async (ctx) => {
             const tariffId = startPayload.replace('buy_', '');
             let { data: tariffs } = await getTariffs();
             tariffs = tariffs || [];
-            const tariff = tariffs.find(t => t.id === tariffId);
+            const tariff = tariffs.find(t => String(t.id) === String(tariffId));
 
             if (tariff) {
                 try {

@@ -64,7 +64,7 @@ app.post('/api/catalog-buy', async (req, res) => {
 
         const { createOrder, getTariffs, supabase } = require('./src/supabase');
         let { data: tariffs } = await getTariffs();
-        const tariff = (tariffs || []).find(t => t.id === tariffId);
+        const tariff = (tariffs || []).find(t => String(t.id) === String(tariffId));
 
         if (!tariff) return res.status(404).json({ error: 'Tariff not found' });
 
