@@ -1079,7 +1079,7 @@ const App: React.FC = () => {
   const renderUserContent = () => {
     if (activeTab === 'catalog') {
         const uid = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || user?.telegram_id || null;
-        return <ClientCatalog lang={lang} telegramId={uid} />;
+        return <ClientCatalog lang={lang} />;
     }
     if (activeTab === 'faq') {
         return <ClientFaq lang={lang} t={t} />;

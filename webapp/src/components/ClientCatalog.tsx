@@ -13,7 +13,7 @@ interface Tariff {
     payment_link?: string;
 }
 
-export default function ClientCatalog({ lang, telegramId }: { lang: string, telegramId?: string | null }) {
+export default function ClientCatalog({ lang }: { lang: string }) {
     const [tariffs, setTariffs] = useState<Tariff[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
