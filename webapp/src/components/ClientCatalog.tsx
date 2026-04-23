@@ -42,23 +42,10 @@ export default function ClientCatalog({ lang, telegramId }: { lang: string, tele
         setBuyLoading(tData.id);
 
         try {
-            // First notify the backend to register the order silently
-            if (telegramId) {
-                await fetch('/api/catalog-buy', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ telegramId, tariffId: tData.id })
-                });
-            }
-
-            // Immediately redirect user to payment link
-            if (tData.payment_link) {
-                tg.openLink(tData.payment_link);
-            } else {
-                tg.openTelegramLink(`https://t.me/emedeoesimworld_bot?start=buy_${tData.id}`);
-            }
-            // Close the catalog webapp cleanly right after redirect triggers
-            setTimeout(() => tg.close(), 500); 
+            // Перенаправляем пользователя в бота. Бот сам зарегистрирует заказ,
+            // отправит ссылку на оплату и уведомит админов. Это 100% надежный метод.
+            tg.openTelegramLink(`https://t.me/emedeoesimworld_bot?start=buy_${tData.id}`);
+            setTimeout(() => tg.close(), 100); 
         } catch (e) {
             console.error(e);
             tg.openTelegramLink(`https://t.me/emedeoesimworld_bot?start=buy_${tData.id}`);
