@@ -4,6 +4,7 @@ const dotenv = require('dotenv');
 const path = require('path');
 const { supabase, getUser, createUser, updateUser, getTariffs, saveMessage, getHistory, createOrder, getFaq, clearHistory } = require('./src/supabase');
 const { getChatResponse, getLocalizedText } = require('./src/openai');
+const { t: translate } = require('./src/localizer');
 
 dotenv.config({ path: path.resolve(__dirname, './.env') });
 
@@ -60,7 +61,7 @@ IOS: https://apps.apple.com/app/emedeo/id6738978452`;
     setTimeout(async () => {
         // Read from cache at fire time — ensures we use the latest detected language
         const fireLang = userLangCache[userId] || lang;
-        const delayText = await getLocalizedText(fireLang, delayTextRu);
+        const delayText = await translate(fireLang, delayTextRu);
         try {
             const photoUrl = 'https://drive.google.com/uc?export=download&id=1zxDZ_QkKYu6VKFlS7nNlRktlLKLxSx47';
             // Use axios with headers to bypass potential blocks
@@ -199,7 +200,7 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
 Перейдите по ссылке, введите код доступа и следуйте простой инструкции на экране.
 
 Если возникнут вопросы, я всегда помогу Вам быстро разобраться и подключиться 🚀`;
-        const caption = await getLocalizedText(clientRawLang, captionRu);
+        const caption = await translate(clientRawLang, captionRu);
 
         let qrSent = false;
         try {
@@ -220,7 +221,7 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
 Если возникнут вопросы, я всегда помогу Вам быстро разобраться и подключиться 🚀
 
 ` + ctx.message.text;
-                const message = await getLocalizedText(userLangCache[userId] || 'en', messageRu);
+                const message = await translate(userLangCache[userId] || 'en', messageRu);
                 await bot.telegram.sendMessage(userId, message);
                 qrSent = true;
             }
@@ -254,7 +255,7 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
                         const { data: refUserLang } = await supabase.from('users').select('lang_code').eq('telegram_id', buyer.referrer_id).single();
                         const refLang = refUserLang?.lang_code || userLangCache[buyer.referrer_id] || 'ru';
                         const refRu = `💰 Вам начислено $${reward} (20% от продажи eSIM)! Ваш новый баланс: $${newBalance}`;
-                        const refMsg = await getLocalizedText(refLang, refRu);
+                        const refMsg = await translate(refLang, refRu);
                         await bot.telegram.sendMessage(buyer.referrer_id, refMsg);
                     } catch (e) { }
                 }
@@ -302,7 +303,7 @@ bot.start(async (ctx) => {
             const botUsername = botInfo?.username || ctx.botInfo?.username || 'emedeoesimworld_bot';
             const refLink = `https://t.me/${botUsername}?start=${telegramId}`;
             const textRu = `🎁 Вот твоя пригласительная ссылка и QR-код:\n\n${refLink}\n\nТвой промокод (для ввода вручную): \`${telegramId}\``;
-            const text = await getLocalizedText(lang, textRu);
+            const text = await translate(lang, textRu);
             const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(refLink)}&margin=10`;
             try { await ctx.replyWithPhoto(qrUrl, { caption: text, parse_mode: 'Markdown' }); } catch (e) { }
         }
@@ -364,9 +365,9 @@ bot.start(async (ctx) => {
 строка «EID» и его номер.
 Так куда планируете  лететь? 🌍 — подберу идеальный для Вас вариант 👇`;
 
-        const welcomeText1 = await getLocalizedText(welcomeLang, welcomeRuPart1);
-        const dashboardBtn = await getLocalizedText(welcomeLang, '📱 Открыть Дашборд');
-        const contactBtn = await getLocalizedText(welcomeLang, '📩 Написать менеджеру');
+        const welcomeText1 = await translate(welcomeLang, welcomeRuPart1);
+        const dashboardBtn = await translate(welcomeLang, '📱 Открыть Дашборд');
+        const contactBtn = await translate(welcomeLang, '📩 Написать менеджеру');
 
         // Cleanup stale keyboards
         try { const k = await ctx.reply('…', Markup.removeKeyboard()); await bot.telegram.deleteMessage(ctx.chat.id, k.message_id); } catch (e) { }
@@ -380,7 +381,7 @@ bot.start(async (ctx) => {
 
         setTimeout(async () => {
             try {
-                const welcomeText2 = await getLocalizedText(welcomeLang, welcomeRuPart2);
+                const welcomeText2 = await translate(welcomeLang, welcomeRuPart2);
                 await bot.telegram.sendMessage(telegramId, welcomeText2);
                 console.log(`[START] Welcome Part 2 sent to ${username}`);
             } catch (err) {
@@ -400,7 +401,7 @@ bot.command('ref', async (ctx) => {
     const refLink = `https://t.me/emedeoesimworld_bot?start=${telegramId}`;
 
     const textRu = `🎁 Вот твоя пригласительная ссылка и QR-код:\n\n${refLink}\n\nТвой промокод (для ввода вручную): \`${telegramId}\``;
-    const text = await getLocalizedText(lang, textRu);
+    const text = await translate(lang, textRu);
 
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(refLink)}&margin=10`;
 
@@ -421,7 +422,7 @@ bot.on('message', async (ctx, next) => {
             const refLink = `https://t.me/emedeoesimworld_bot?start=${telegramId}`;
 
             const textRu = `🎁 Вот твоя пригласительная ссылка и QR-код:\n\n${refLink}\n\nТвой промокод (для ввода вручную): \`${telegramId}\``;
-            const text = await getLocalizedText(lang, textRu);
+            const text = await translate(lang, textRu);
             const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(refLink)}&margin=10`;
 
             try {
@@ -456,10 +457,10 @@ bot.on('message', async (ctx, next) => {
                         const userPriceText = (isRU(tariff) && tariff.price_rub) ? `₽${tariff.price_rub}` : `$${tariff.price_usd}${tariff.price_rub ? ` (₽${tariff.price_rub})` : ''}`;
                         const managerPriceText = `$${tariff.price_usd}${tariff.price_rub ? ` (₽${tariff.price_rub})` : ''}`;
                         const successRu = `Выбранный тариф: ${lt.country} | ${lt.data_gb} на ${lt.validity} — ${userPriceText}`;
-                        let finalResponse = await getLocalizedText(uiLang, successRu);
+                        let finalResponse = await translate(uiLang, successRu);
                         
                         const payTextRu = `\n\n👇 **Оплатить онлайн:**\n${tariff.payment_link || 'Обратись к менеджеру'}\n\n✅ *Сразу после успешной оплаты мы вышлем твой тариф!*`;
-                        const payText = await getLocalizedText(uiLang, payTextRu);
+                        const payText = await translate(uiLang, payTextRu);
                         finalResponse += payText;
                         
                         await saveMessage(telegramId, 'assistant', finalResponse);
@@ -479,7 +480,7 @@ bot.on('message', async (ctx, next) => {
                             }
                             const lt = locTariff(tariff, uiLang);
                             const captionRu = `QR-код для оплаты тарифа ${lt.country}`;
-                            const qrCaption = await getLocalizedText(uiLang, captionRu);
+                            const qrCaption = await translate(uiLang, captionRu);
                             try {
                                 await ctx.replyWithPhoto(finalQrUrl, { caption: qrCaption });
                             } catch (err) {}
@@ -489,7 +490,7 @@ bot.on('message', async (ctx, next) => {
                         const referrerId = buyer?.referrer_id;
 
                         const { data: allAdmins } = await supabase.from('users').select('telegram_id, role').in('role', ['founder', 'admin', 'manager']);
-                        const alertManagers = (allAdmins || []).filter(m => m.role === 'founder' || m.role === 'admin' || m.telegram_id === referrerId);
+                        const alertManagers = (allAdmins || []).filter(m => m.role === 'founder' || m.role === 'admin' || m.role === 'manager' || m.telegram_id === referrerId);
                         if (alertManagers.length > 0) {
                             // Calculate 15% commission as profit
                             const profitUSD = (tariff.price_usd * 0.15).toFixed(2);
@@ -553,7 +554,7 @@ bot.on(['photo', 'document', 'video', 'animation', 'voice'], async (ctx, next) =
     const { data: user } = await getUser(senderId);
     
     // Ensure language cache is set for attachments
-    const currentLang = userLangCache[senderId] || ctx.from.language_code || 'ru';
+    const currentLang = userLangCache[senderId] || user?.lang_code || ctx.from.language_code || 'ru';
 
     // --- HYBRID: Client-side One-off Support Mode ---
     const isSupportActive = (user && user.is_support_mode) || clientStates.has(senderId);
@@ -562,7 +563,7 @@ bot.on(['photo', 'document', 'video', 'animation', 'voice'], async (ctx, next) =
         await updateUser(senderId, { is_support_mode: false });
         clientStates.delete(senderId); // Sync
         const successRu = "✅ Ваше вложение передано менеджеру. Спасибо!";
-        const successMsg = await getLocalizedText(currentLang, successRu);
+        const successMsg = await translate(currentLang, successRu);
         return ctx.reply(successMsg);
     }
 
@@ -595,7 +596,7 @@ bot.on(['photo', 'document', 'video', 'animation', 'voice'], async (ctx, next) =
     if (!user || !user.role || user.role === 'client') {
         await notifyAdmins(ctx, "Новое вложение от клиента!");
         const confirmRu = `✅ Я получил Ваш файл и сообщение. Я уже передал их менеджеру, мы скоро ответим Вам!`;
-        const confirmMsg = await getLocalizedText(currentLang, confirmRu);
+        const confirmMsg = await translate(currentLang, confirmRu);
         return ctx.reply(confirmMsg);
     }
     return next();
@@ -604,7 +605,7 @@ bot.on(['photo', 'document', 'video', 'animation', 'voice'], async (ctx, next) =
 bot.on('text', async (ctx) => {
     const telegramId = ctx.from.id;
     const { data: user } = await getUser(telegramId);
-    const currentLang = userLangCache[telegramId] || ctx.from.language_code || 'ru';
+    const currentLang = userLangCache[telegramId] || user?.lang_code || ctx.from.language_code || 'ru';
     
     // --- HYBRID: Client Forwarding (One-off) ---
     const isSupportActive = (user && user.is_support_mode) || clientStates.has(telegramId);
@@ -613,7 +614,7 @@ bot.on('text', async (ctx) => {
         await updateUser(telegramId, { is_support_mode: false });
         clientStates.delete(telegramId); // Sync
         const successRu = "✅ Ваше сообщение передано менеджеру. Спасибо!";
-        const successMsg = await getLocalizedText(currentLang, successRu);
+        const successMsg = await translate(currentLang, successRu);
         return ctx.reply(successMsg);
     }
     // --- HYBRID: Manager Support Mode ---
@@ -646,7 +647,7 @@ bot.on('text', async (ctx) => {
 
         if (!user) {
         const msgRu = 'Нажми /start для начала.';
-        const msg = await getLocalizedText(systemLang, msgRu);
+        const msg = await translate(systemLang, msgRu);
         return ctx.reply(msg, Markup.removeKeyboard());
     }
 
@@ -660,13 +661,13 @@ bot.on('text', async (ctx) => {
                 user.referrer_id = promoId;
 
                 const successRu = '✅ Промокод успешно применен! Спасибо.\n\nА теперь подскажи, куда летим? 🌍';
-                const successText = await getLocalizedText(uiLang, successRu);
+                const successText = await translate(uiLang, successRu);
                 return ctx.reply(successText);
             }
         }
 
         const failRu = '❌ Неверный или недействительный промокод.';
-        const failText = await getLocalizedText(uiLang, failRu);
+        const failText = await translate(uiLang, failRu);
         return ctx.reply(failText);
     }
 
@@ -708,8 +709,8 @@ bot.on('text', async (ctx) => {
     if (supportMatch) {
         await updateUser(telegramId, { is_support_mode: true });
         clientStates.set(telegramId, { active: true }); // Fallback
-        const uiLang = userLangCache[telegramId] || ctx.from.language_code || 'en';
-        const cancelText = await getLocalizedText(uiLang, '❌ Отмена');
+        const uiLang = userLangCache[telegramId] || user?.lang_code || ctx.from.language_code || 'en';
+        const cancelText = await translate(uiLang, '❌ Отмена');
         const cancelBtn = Markup.inlineKeyboard([[Markup.button.callback(cancelText, 'cancel_support_client')]]);
         try {
             await ctx.reply(finalResponse, { parse_mode: 'Markdown', ...cancelBtn });
@@ -733,10 +734,8 @@ bot.on('text', async (ctx) => {
             const ltAI = locTariff(tariff, uiLang);
 
             const payTextRu = `\n\nВыбранный тариф: ${ltAI.country} | ${ltAI.data_gb} на ${ltAI.validity}\n\n👇 **Оплатить онлайн:**\n${tariff.payment_link || 'Обратись к менеджеру'}\n\n✅ *Сразу после успешной оплаты мы вышлем твой тариф!*`;
-            const payText = await getLocalizedText(uiLang, payTextRu);
+            const payText = await translate(uiLang, payTextRu);
             finalResponse += payText;
-            // Schedule follow-up AFTER updating cache from [LANG:xx] tag above:
-            scheduleFollowup(telegramId, uiLang);
 
             await saveMessage(telegramId, 'assistant', finalResponse);
             try {
@@ -757,7 +756,7 @@ bot.on('text', async (ctx) => {
                 }
                 const ltAI_qr = locTariff(tariff, userLangCache[telegramId] || 'ru');
                 const captionRu = `QR-код для оплаты тарифа ${ltAI_qr.country}`;
-                const qrCaption = await getLocalizedText(userLangCache[telegramId] || 'ru', captionRu);
+                const qrCaption = await translate(userLangCache[telegramId] || 'ru', captionRu);
                 try {
                     await ctx.replyWithPhoto(finalQrUrl, { caption: qrCaption });
                 } catch (err) {
@@ -775,7 +774,7 @@ bot.on('text', async (ctx) => {
                 .select('telegram_id, role')
                 .in('role', ['founder', 'admin', 'manager']);
 
-            const alertManagersAI = (allAdminsAI || []).filter(m => m.role === 'founder' || m.role === 'admin' || m.telegram_id === referrerId);
+            const alertManagersAI = (allAdminsAI || []).filter(m => m.role === 'founder' || m.role === 'admin' || m.role === 'manager' || m.telegram_id === referrerId);
 
             if (alertManagersAI.length > 0) {
                 for (const manager of alertManagersAI) {
@@ -822,7 +821,7 @@ bot.on('text', async (ctx) => {
         } else {
             console.log(`[SALE] Tariff ${tariffId} not found in DB!`);
             const errRu = `\n❌ Ошибка: Тариф "${tariffId}" не найден в базе. Менеджер скоро подключится.`;
-            finalResponse += await getLocalizedText(uiLang, errRu);
+            finalResponse += await translate(uiLang, errRu);
         }
     }
 
@@ -940,18 +939,26 @@ bot.action(/^contactuser_(.+)$/, async (ctx) => {
     managerStates.set(telegramId, { contactId: userId }); // Fallback
     await updateUser(telegramId, { manager_contact_id: userId });
     
-    await ctx.reply(`💬 Включен режим **одного сообщения** пользователю [${userId}](tg://user?id=${userId}).\n\nВаше **следующее** сообщение (текст, фото или файл) будет переслано ему, после чего режим чата автоматически выключится.\n\n⚠️ **ВАЖНО:** Если вы отправляете файл или фото, прикрепите текст как **ПОДПИСЬ** к нему (одним сообщением), иначе режим чата выключится сразу после файла.`, {
+    const { data: managerUser } = await getUser(telegramId);
+    const mLang = managerUser?.lang_code || ctx.from.language_code || 'ru';
+    
+    const msgText = await translate(mLang, `💬 Включен режим **одного сообщения** пользователю [${userId}](tg://user?id=${userId}).\n\nВаше **следующее** сообщение (текст, фото или файл) будет переслано ему, после чего режим чата автоматически выключится.\n\n⚠️ **ВАЖНО:** Если вы отправляете файл или фото, прикрепите текст как **ПОДПИСЬ** к нему (одним сообщением), иначе режим чата выключится сразу после файла.`);
+    const cancelBtnText = await translate(mLang, '❌ Отмена');
+
+    await ctx.reply(msgText, {
         parse_mode: 'Markdown',
-        ...Markup.inlineKeyboard([[Markup.button.callback('❌ Отмена', 'exit_contact')]])
+        ...Markup.inlineKeyboard([[Markup.button.callback(cancelBtnText, 'exit_contact')]])
     });
     await ctx.answerCbQuery();
 });
 
 bot.action('exit_contact', async (ctx) => {
-    const { updateUser } = require('./src/supabase');
+    const { data: managerUser } = await getUser(ctx.from.id);
+    const mLang = managerUser?.lang_code || ctx.from.language_code || 'ru';
     await updateUser(ctx.from.id, { manager_contact_id: null });
     await ctx.deleteMessage();
-    await ctx.reply('✅ Режим чата выключен. Теперь ваши сообщения не пересылаются клиенту.');
+    const exitMsg = await translate(mLang, '✅ Режим чата выключен. Теперь ваши сообщения не пересылаются клиенту.');
+    await ctx.reply(exitMsg);
     await ctx.answerCbQuery();
 });
 
@@ -960,8 +967,9 @@ bot.action('cancel_support_client', async (ctx) => {
     await updateUser(telegramId, { is_support_mode: false });
     clientStates.delete(telegramId);
     
-    const uiLang = userLangCache[telegramId] || ctx.from.language_code || 'en';
-    const cancelMsg = await getLocalizedText(uiLang, '❌ Обращение в поддержку отменено.');
+    const { data: user } = await getUser(telegramId);
+    const uiLang = user?.lang_code || userLangCache[telegramId] || ctx.from.language_code || 'en';
+    const cancelMsg = await translate(uiLang, '❌ Обращение в поддержку отменено.');
     
     try {
         await ctx.editMessageText(cancelMsg);

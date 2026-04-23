@@ -75,12 +75,18 @@ app.post('/api/catalog-buy', async (req, res) => {
         if (managers && managers.length > 0) {
             const { Markup } = require('telegraf');
             
-            // Try fetch username
+            // Try fetch username and custom_note
             let username = "User";
+            let customNote = "";
             try { 
-                const { data: bUser } = await supabase.from('users').select('username').eq('telegram_id', telegramId).single();
-                if (bUser && bUser.username) username = bUser.username;
+                const { data: bUser } = await supabase.from('users').select('username, custom_note').eq('telegram_id', telegramId).single();
+                if (bUser) {
+                    if (bUser.username) username = bUser.username;
+                    if (bUser.custom_note) customNote = bUser.custom_note;
+                }
             } catch (e) {}
+
+            const userLabel = customNote ? `${customNote} (@${username})` : `@${username}`;
 
             for (const manager of managers) {
                 try {
