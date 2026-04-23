@@ -136,7 +136,7 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
     }
 
     // 1. Check in-memory state first (Strict Assignment)
-    const activeState = managerStates.get(senderId);
+    const activeState = managerStates.get(senderId) || (sender.waiting_order_id ? { orderId: sender.waiting_order_id } : null);
     if (!activeState || !activeState.orderId) {
         // --- NEW: Admin-to-User Direct Messaging via ID ---
         if (ctx.message.text && /^\d{6,15}\s+/.test(ctx.message.text.trim())) {
@@ -231,6 +231,7 @@ bot.on(['photo', 'document', 'text'], async (ctx, next) => {
 
         if (qrSent) {
             managerStates.delete(senderId); // Clear active tracking
+            await updateUser(senderId, { waiting_order_id: null }); // Clear DB tracking
 
             // --- REFERRAL PAYOUT: 20% of tariff price ---
             try {
@@ -883,6 +884,7 @@ bot.action(/^sendqr_(.+)$/, async (ctx) => {
     }
 
     await updateUser(telegramId, { waiting_order_id: orderId });
+    managerStates.set(telegramId, { orderId: orderId, messageId: ctx.callbackQuery?.message?.message_id, originalText: ctx.callbackQuery?.message?.text });
 
     try {
         await ctx.editMessageText(
@@ -973,6 +975,7 @@ bot.action(/^cancel_(.+)$/, async (ctx) => {
 
     // Safety clear in case they cancel the order while waiting for QR
     managerStates.delete(telegramId);
+    await updateUser(telegramId, { waiting_order_id: null });
 
     await supabase.from('orders').update({ status: 'cancelled' }).eq('id', orderId);
 
