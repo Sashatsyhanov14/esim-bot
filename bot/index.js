@@ -345,8 +345,8 @@ bot.start(async (ctx) => {
                         const cr = (tariff.country_ru || '').toLowerCase();
                         return c.includes('russia') || cr.includes('россия') || cr.includes('рф');
                     };
-                    const userPriceText = (isRU(tariff) && tariff.price_rub) ? `₽${tariff.price_rub}` : `$${tariff.price_usd}${tariff.price_rub ? \` (₽\${tariff.price_rub})\` : ''}`;
-                    const managerPriceText = `$${tariff.price_usd}${tariff.price_rub ? \` (₽\${tariff.price_rub})\` : ''}`;
+                    const userPriceText = (isRU(tariff) && tariff.price_rub) ? `₽${tariff.price_rub}` : `$${tariff.price_usd}${tariff.price_rub ? ` (₽${tariff.price_rub})` : ''}`;
+                    const managerPriceText = `$${tariff.price_usd}${tariff.price_rub ? ` (₽${tariff.price_rub})` : ''}`;
                     const successRu = `Выбранный тариф: ${lt.country} | ${lt.data_gb} на ${lt.validity} — ${userPriceText}`;
                     let finalResponse = await translate(uiLang, successRu);
                     
@@ -364,7 +364,7 @@ bot.start(async (ctx) => {
                     if (tariff.payment_qr_url) {
                         let finalQrUrl = tariff.payment_qr_url;
                         if (finalQrUrl.includes('drive.google.com')) {
-                            const match = finalQrUrl.match(/\\/d\\/([a-zA-Z0-9_-]+)/);
+                            const match = finalQrUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
                             if (match && match[1]) {
                                 finalQrUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
                             }
@@ -385,7 +385,7 @@ bot.start(async (ctx) => {
                     if (alertManagers.length > 0) {
                         const profitUSD = (tariff.price_usd * 0.15).toFixed(2);
                         const profitRUB = tariff.price_rub ? (tariff.price_rub * 0.15).toFixed(0) : null;
-                        const profitText = `💰 Прибыль: $${profitUSD}${profitRUB ? \` (₽\${profitRUB})\` : ''}`;
+                        const profitText = `💰 Прибыль: $${profitUSD}${profitRUB ? ` (₽${profitRUB})` : ''}`;
 
                         for (const manager of alertManagers) {
                             try {
