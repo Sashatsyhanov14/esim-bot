@@ -327,6 +327,111 @@ bot.start(async (ctx) => {
             }
         }
 
+        if (startPayload && startPayload.startsWith('buy_')) {
+            const tariffId = startPayload.replace('buy_', '');
+            let { data: tariffs } = await getTariffs();
+            tariffs = tariffs || [];
+            const tariff = tariffs.find(t => t.id === tariffId);
+
+            if (tariff) {
+                try {
+                    const { data: orderData } = await createOrder(telegramId, tariffId, tariff.price_usd);
+                    
+                    const uiLang = userLangCache[telegramId] || ctx.from.language_code || 'en';
+                    const lt = locTariff(tariff, uiLang);
+                    
+                    const isRU = (tariff) => {
+                        const c = (tariff.country || '').toLowerCase();
+                        const cr = (tariff.country_ru || '').toLowerCase();
+                        return c.includes('russia') || cr.includes('россия') || cr.includes('рф');
+                    };
+                    const userPriceText = (isRU(tariff) && tariff.price_rub) ? `₽${tariff.price_rub}` : `$${tariff.price_usd}${tariff.price_rub ? \` (₽\${tariff.price_rub})\` : ''}`;
+                    const managerPriceText = `$${tariff.price_usd}${tariff.price_rub ? \` (₽\${tariff.price_rub})\` : ''}`;
+                    const successRu = `Выбранный тариф: ${lt.country} | ${lt.data_gb} на ${lt.validity} — ${userPriceText}`;
+                    let finalResponse = await translate(uiLang, successRu);
+                    
+                    const payTextRu = `\n\n👇 **Оплатить онлайн:**\n${tariff.payment_link || 'Обратись к менеджеру'}\n\n✅ *Сразу после успешной оплаты мы вышлем твой тариф!*`;
+                    const payText = await translate(uiLang, payTextRu);
+                    finalResponse += payText;
+                    
+                    await saveMessage(telegramId, 'assistant', finalResponse);
+                    
+                    try {
+                        await ctx.reply(finalResponse, { parse_mode: 'Markdown', disable_web_page_preview: true });
+                    } catch (mdError) {
+                        await ctx.reply(finalResponse);
+                    }
+                    if (tariff.payment_qr_url) {
+                        let finalQrUrl = tariff.payment_qr_url;
+                        if (finalQrUrl.includes('drive.google.com')) {
+                            const match = finalQrUrl.match(/\\/d\\/([a-zA-Z0-9_-]+)/);
+                            if (match && match[1]) {
+                                finalQrUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+                            }
+                        }
+                        const lt_qr = locTariff(tariff, uiLang);
+                        const captionRu = `QR-код для оплаты тарифа ${lt_qr.country}`;
+                        const qrCaption = await translate(uiLang, captionRu);
+                        try {
+                            await ctx.replyWithPhoto(finalQrUrl, { caption: qrCaption });
+                        } catch (err) {}
+                    }
+
+                    const { data: buyer } = await getUser(telegramId);
+                    const referrerId = buyer?.referrer_id;
+
+                    const { data: allAdmins } = await supabase.from('users').select('telegram_id, role').in('role', ['founder', 'admin', 'manager']);
+                    const alertManagers = (allAdmins || []).filter(m => m.role === 'founder' || m.role === 'admin' || m.role === 'manager' || m.telegram_id === referrerId);
+                    if (alertManagers.length > 0) {
+                        const profitUSD = (tariff.price_usd * 0.15).toFixed(2);
+                        const profitRUB = tariff.price_rub ? (tariff.price_rub * 0.15).toFixed(0) : null;
+                        const profitText = `💰 Прибыль: $${profitUSD}${profitRUB ? \` (₽\${profitRUB})\` : ''}`;
+
+                        for (const manager of alertManagers) {
+                            try {
+                                const mLangRaw = userLangCache[manager.telegram_id] || 'ru';
+                                const mLang = mLangRaw === 'ru' ? 'ru' : (mLangRaw === 'tr' ? 'tr' : 'en');
+        
+                                const mlt_manager = locTariff(tariff, mLang);
+
+                                const managerTextsLocalized = {
+                                    ru: {
+                                        alert: `🚀 **ЗАКАЗ (BOT)!**\n\nЮзер: @${username} (ID: ${telegramId})\nТариф: ${mlt_manager.country} | ${mlt_manager.data_gb} на ${mlt_manager.validity}\nЦена: ${managerPriceText}\n${profitText}\n\n⚠️ ВАЖНО: Подтвердите оплату перед тем как скидывать eSIM-код!`,
+                                        sendBtn: '📤 Отправить eSIM',
+                                        contactBtn: '✉️ Написать клиенту'
+                                    },
+                                    tr: {
+                                        alert: `🚀 **SİPARİŞ (BOT)!**\n\nKullanıcı: @${username} (ID: ${telegramId})\nTarife: ${mlt_manager.country} | ${mlt_manager.data_gb} - ${mlt_manager.validity}\nFiyat: ${managerPriceText}\n${profitText}\n\n⚠️ ÖNEMLİ: Link veya QR'ı göndermeden önce ödemeyi onaylayın!`,
+                                        sendBtn: '📤 eSIM Gönder',
+                                        contactBtn: '✉️ Müşteriye Yaz'
+                                    },
+                                    en: {
+                                        alert: `🚀 **ORDER (BOT)!**\n\nUser: @${username} (ID: ${telegramId})\nPlan: ${mlt_manager.country} | ${mlt_manager.data_gb} for ${mlt_manager.validity}\nPrice: ${managerPriceText}\n${profitText}\n\n⚠️ IMPORTANT: Verify payment before sending the Link/Code!`,
+                                        sendBtn: '📤 Send eSIM',
+                                        contactBtn: '✉️ Write to Client'
+                                    }
+                                };
+                                const mtFinal = managerTextsLocalized[mLang] || managerTextsLocalized['en'];
+                                const buttons = (orderData && orderData.id) 
+                                    ? Markup.inlineKeyboard([
+                                        [Markup.button.callback(mtFinal.sendBtn, `sendqr_${orderData.id}`)],
+                                        [Markup.button.callback(mtFinal.contactBtn, `contactuser_${telegramId}`)]
+                                    ]) 
+                                    : {};
+                                await bot.telegram.sendMessage(manager.telegram_id, mtFinal.alert, buttons);
+                            } catch (e) {}
+                        }
+                    }
+                } catch (e) { 
+                    console.error('Sale flow error:', e.message); 
+                    await ctx.reply('❌ System error during checkout.');
+                }
+            } else {
+                await ctx.reply('❌ Tariff not found in database.');
+            }
+            return; // Stop execution here so we don't show the standard welcome message
+        }
+
         // welcomeLang: Priority on TG settings (for the first message)
         // sessionLang: Priority on DB settings (for the rest of the chat)
         const welcomeLang = ctx.from.language_code || user?.lang_code || 'en';
