@@ -28,7 +28,11 @@ CREATE TABLE users (
     referrer_id BIGINT REFERENCES users(telegram_id),
     balance DECIMAL(10, 2) DEFAULT 0.00,
     lang_code TEXT DEFAULT 'ru',
-    role TEXT DEFAULT 'user' CHECK (role IN ('user', 'founder', 'manager')),
+    role TEXT DEFAULT 'client' CHECK (role IN ('client', 'founder', 'admin', 'manager')),
+    is_support_mode BOOLEAN DEFAULT false,
+    manager_contact_id BIGINT,
+    waiting_order_id UUID,
+    custom_note TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

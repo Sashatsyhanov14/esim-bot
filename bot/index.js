@@ -705,10 +705,12 @@ bot.on('text', async (ctx) => {
         .trim();
 
     // --- HYBRID: Handle Support Activation from AI ---
-    if (supportMatch && (!user || user.role === 'client')) {
+    if (supportMatch) {
         await updateUser(telegramId, { is_support_mode: true });
         clientStates.set(telegramId, { active: true }); // Fallback
-        const cancelBtn = Markup.inlineKeyboard([[Markup.button.callback('❌ Отмена', 'cancel_support_client')]]);
+        const uiLang = userLangCache[telegramId] || ctx.from.language_code || 'en';
+        const cancelText = await getLocalizedText(uiLang, '❌ Отмена');
+        const cancelBtn = Markup.inlineKeyboard([[Markup.button.callback(cancelText, 'cancel_support_client')]]);
         try {
             await ctx.reply(finalResponse, { parse_mode: 'Markdown', ...cancelBtn });
         } catch (e) {
@@ -954,12 +956,18 @@ bot.action('exit_contact', async (ctx) => {
 });
 
 bot.action('cancel_support_client', async (ctx) => {
-    await updateUser(ctx.from.id, { is_support_mode: false });
+    const telegramId = ctx.from.id;
+    await updateUser(telegramId, { is_support_mode: false });
+    clientStates.delete(telegramId);
+    
+    const uiLang = userLangCache[telegramId] || ctx.from.language_code || 'en';
+    const cancelMsg = await getLocalizedText(uiLang, '❌ Обращение в поддержку отменено.');
+    
     try {
-        await ctx.editMessageText('❌ Обращение в поддержку отменено.');
+        await ctx.editMessageText(cancelMsg);
     } catch (e) {
         await ctx.deleteMessage();
-        await ctx.reply('❌ Обращение в поддержку отменено.');
+        await ctx.reply(cancelMsg);
     }
     await ctx.answerCbQuery();
 });
