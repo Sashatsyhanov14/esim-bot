@@ -572,17 +572,19 @@ bot.on(['photo', 'document', 'video', 'animation', 'voice'], async (ctx, next) =
     if (managerContactId) {
         const targetId = managerContactId;
         const text = ctx.message.caption || '';
+        const clientRawLang = userLangCache[targetId] || 'ru';
+        const prefix = await translate(clientRawLang, '💬 **Администратор:**');
         try {
             if (ctx.message.photo) {
-                await bot.telegram.sendPhoto(targetId, ctx.message.photo[ctx.message.photo.length - 1].file_id, { caption: `💬 **Администратор:**\n${text}` });
+                await bot.telegram.sendPhoto(targetId, ctx.message.photo[ctx.message.photo.length - 1].file_id, { caption: `${prefix}\n${text}`, parse_mode: 'Markdown' });
             } else if (ctx.message.document) {
-                await bot.telegram.sendDocument(targetId, ctx.message.document.file_id, { caption: `💬 **Администратор:**\n${text}` });
+                await bot.telegram.sendDocument(targetId, ctx.message.document.file_id, { caption: `${prefix}\n${text}`, parse_mode: 'Markdown' });
             } else if (ctx.message.video) {
-                await bot.telegram.sendVideo(targetId, ctx.message.video.file_id, { caption: `💬 **Администратор:**\n${text}` });
+                await bot.telegram.sendVideo(targetId, ctx.message.video.file_id, { caption: `${prefix}\n${text}`, parse_mode: 'Markdown' });
             } else if (ctx.message.animation) {
-                await bot.telegram.sendAnimation(targetId, ctx.message.animation.file_id, { caption: `💬 **Администратор:**\n${text}` });
+                await bot.telegram.sendAnimation(targetId, ctx.message.animation.file_id, { caption: `${prefix}\n${text}`, parse_mode: 'Markdown' });
             } else if (ctx.message.voice) {
-                await bot.telegram.sendVoice(targetId, ctx.message.voice.file_id, { caption: `💬 **Администратор:**\n${text}` });
+                await bot.telegram.sendVoice(targetId, ctx.message.voice.file_id, { caption: `${prefix}\n${text}`, parse_mode: 'Markdown' });
             }
             const { updateUser } = require('./src/supabase');
             await updateUser(senderId, { manager_contact_id: null });
@@ -621,7 +623,9 @@ bot.on('text', async (ctx) => {
     const managerContactId = (user && user.manager_contact_id) || (managerStates.get(telegramId)?.contactId);
     if (managerContactId) {
         try {
-            await bot.telegram.sendMessage(managerContactId, ctx.message.text);
+            const clientRawLang = userLangCache[managerContactId] || 'ru';
+            const prefix = await translate(clientRawLang, '💬 **Администратор:**');
+            await bot.telegram.sendMessage(managerContactId, `${prefix}\n\n${ctx.message.text}`, { parse_mode: 'Markdown' });
             await updateUser(telegramId, { manager_contact_id: null });
             managerStates.delete(telegramId); // Sync
             return ctx.reply('✅ Сообщение отправлено клиенту. Режим чата выключен.');
