@@ -3,6 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const bot = require('./index');
 const dotenv = require('dotenv');
+const { createOrder, getTariffs, supabase } = require('./src/supabase');
 
 dotenv.config();
 
@@ -62,7 +63,6 @@ app.post('/api/catalog-buy', async (req, res) => {
         const { telegramId, tariffId } = req.body;
         if (!telegramId || !tariffId) return res.status(400).json({ error: 'Missing parameters' });
 
-        const { createOrder, getTariffs, supabase } = require('./src/supabase');
         let { data: tariffs } = await getTariffs();
         const tariff = (tariffs || []).find(t => String(t.id) === String(tariffId));
 

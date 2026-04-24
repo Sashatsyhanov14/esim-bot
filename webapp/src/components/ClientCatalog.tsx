@@ -13,7 +13,7 @@ interface Tariff {
     payment_link?: string;
 }
 
-export default function ClientCatalog({ lang }: { lang: string }) {
+export default function ClientCatalog({ lang, telegramId }: { lang: string, telegramId?: string | null }) {
     const [tariffs, setTariffs] = useState<Tariff[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -42,9 +42,22 @@ export default function ClientCatalog({ lang }: { lang: string }) {
         setBuyLoading(tData.id);
 
         try {
-            // Перенаправляем пользователя в бота. Бот сам зарегистрирует заказ,
-            // отправит ссылку на оплату и уведомит админов. Это 100% надежный метод.
-            tg.openTelegramLink(`https://t.me/emedeoesimworld_bot?start=buy_${tData.id}`);
+            if (telegramId) {
+                await fetch('/api/catalog-buy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telegramId, tariffId: tData.id })
+                }).catch(e => console.error('Fetch error:', e));
+                
+                // Небольшая пауза для гарантии, что запрос ушел до закрытия WebView
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+
+            if (tData.payment_link) {
+                tg.openLink(tData.payment_link);
+            } else {
+                tg.openTelegramLink(`https://t.me/emedeoesimworld_bot?start=buy_${tData.id}`);
+            }
             setTimeout(() => tg.close(), 100); 
         } catch (e) {
             console.error(e);

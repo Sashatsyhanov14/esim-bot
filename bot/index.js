@@ -444,7 +444,6 @@ bot.start(async (ctx) => {
         // Sync DB if new user
         if (user && !user.lang_code) {
             try {
-                const { updateUser } = require('./src/supabase');
                 await updateUser(telegramId, { lang_code: sessionLang });
             } catch (e) { }
         }
@@ -691,7 +690,6 @@ bot.on(['photo', 'document', 'video', 'animation', 'voice'], async (ctx, next) =
             } else if (ctx.message.voice) {
                 await bot.telegram.sendVoice(targetId, ctx.message.voice.file_id, { caption: `${prefix}\n${text}`, parse_mode: 'Markdown' });
             }
-            const { updateUser } = require('./src/supabase');
             await updateUser(senderId, { manager_contact_id: null });
             managerStates.delete(senderId); // Sync
             return ctx.reply('✅ Отправлено клиенту. Режим чата выключен.');
