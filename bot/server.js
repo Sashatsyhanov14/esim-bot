@@ -70,30 +70,39 @@ app.post('/api/catalog-buy', async (req, res) => {
 
         const { data: orderData } = await createOrder(telegramId, tariffId, tariff.price_usd);
 
-        // Fetch managers to notify
-        const { data: managers } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'admin', 'manager']);
-        if (managers && managers.length > 0) {
+        // Fetch user info including referrer
+        let username = "User";
+        let customNote = "";
+        let referrerId = null;
+        try { 
+            const { data: bUser } = await supabase.from('users').select('username, custom_note, referrer_id').eq('telegram_id', telegramId).single();
+            if (bUser) {
+                if (bUser.username) username = bUser.username;
+                if (bUser.custom_note) customNote = bUser.custom_note;
+                referrerId = bUser.referrer_id;
+            }
+        } catch (e) {}
+
+        const userLabel = customNote ? `${customNote} (@${username})` : `@${username}`;
+
+        // Fetch staff to notify
+        const { data: staff } = await supabase.from('users').select('telegram_id, role').in('role', ['founder', 'admin', 'manager']);
+        if (staff && staff.length > 0) {
             const { Markup } = require('telegraf');
             
-            // Try fetch username and custom_note
-            let username = "User";
-            let customNote = "";
-            try { 
-                const { data: bUser } = await supabase.from('users').select('username, custom_note').eq('telegram_id', telegramId).single();
-                if (bUser) {
-                    if (bUser.username) username = bUser.username;
-                    if (bUser.custom_note) customNote = bUser.custom_note;
-                }
-            } catch (e) {}
+            // Filter: Founders and Admins get everything, Managers only from their referrals
+            const recipients = staff.filter(r => 
+                r.role === 'founder' || 
+                r.role === 'admin' || 
+                (r.role === 'manager' && String(r.telegram_id) === String(referrerId))
+            );
 
-            const userLabel = customNote ? `${customNote} (@${username})` : `@${username}`;
-
-            for (const manager of managers) {
+            for (const recipient of recipients) {
                 try {
-                    // Try to get manager's language from DB or default to 'ru' for managers
+                    // Try to get recipient's language from DB or default to 'ru' for staff
                     let mLang = 'ru';
                     try {
-                        const { data: mUser } = await supabase.from('users').select('lang_code').eq('telegram_id', manager.telegram_id).single();
+                        const { data: mUser } = await supabase.from('users').select('lang_code').eq('telegram_id', recipient.telegram_id).single();
                         if (mUser && mUser.lang_code) mLang = mUser.lang_code;
                     } catch (e) {}
 
@@ -125,7 +134,7 @@ app.post('/api/catalog-buy', async (req, res) => {
                             [Markup.button.callback(mt.contactBtn, `contactuser_${telegramId}`)]
                         ]) 
                         : {};
-                    await bot.telegram.sendMessage(manager.telegram_id, mt.text, { parse_mode: 'Markdown', ...buttons });
+                    await bot.telegram.sendMessage(recipient.telegram_id, mt.text, { parse_mode: 'Markdown', ...buttons });
                 } catch (e) {}
             }
         }
@@ -158,17 +167,23 @@ app.post('/api/withdraw-request', async (req, res) => {
         const { telegram_id, amount, method } = req.body;
         if (!telegram_id || !amount || !method) return res.status(400).json({ error: 'Missing fields' });
 
-        const { data: user } = await supabase.from('users').select('username, custom_note').eq('telegram_id', telegram_id).single();
+        const { data: user } = await supabase.from('users').select('username, custom_note, referrer_id').eq('telegram_id', telegram_id).single();
         const userLabel = user?.custom_note ? `${user.custom_note} (@${user.username || telegram_id})` : `@${user?.username || telegram_id}`;
+        const referrerId = user?.referrer_id;
 
         const msg = `👤 **Клиент:** ${userLabel} (ID: ${telegram_id})\n🚀 **ЗАПРОС БОНУСОВ!**\n\n💰 Сумма: **$${amount}**\n💳 Способ: ${method}\n\n⚠️ Проверьте баланс пользователя в админке перед выплатой!`;
 
-        const { data: managers } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'manager']);
-        if (managers && bot) {
-            for (const manager of managers) {
+        const { data: staff } = await supabase.from('users').select('telegram_id, role').in('role', ['founder', 'admin', 'manager']);
+        if (staff && bot) {
+            const recipients = staff.filter(r => 
+                r.role === 'founder' || 
+                r.role === 'admin' || 
+                (r.role === 'manager' && String(r.telegram_id) === String(referrerId))
+            );
+            for (const recipient of recipients) {
                 try {
-                    await bot.telegram.sendMessage(manager.telegram_id, msg, { parse_mode: 'Markdown' });
-                } catch (e) { console.error(`Failed to notify manager ${manager.telegram_id}:`, e.message); }
+                    await bot.telegram.sendMessage(recipient.telegram_id, msg, { parse_mode: 'Markdown' });
+                } catch (e) { console.error(`Failed to notify staff ${recipient.telegram_id}:`, e.message); }
             }
         }
 

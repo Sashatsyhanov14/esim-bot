@@ -95,29 +95,39 @@ async function notifyAdmins(ctx, title, isManualSupport = false) {
     const contactButtons = Markup.inlineKeyboard([[Markup.button.callback('✉️ Написать клиенту', `contactuser_${senderId}`)]]);
     
     try {
-        const { data: admins } = await supabase.from('users').select('telegram_id').in('role', ['founder', 'admin']);
-        if (!admins || admins.length === 0) return;
+        const { data: sender } = await getUser(senderId);
+        const referrerId = sender?.referrer_id;
 
-        for (const admin of admins) {
+        const { data: staff } = await supabase.from('users').select('telegram_id, role').in('role', ['founder', 'admin', 'manager']);
+        if (!staff || staff.length === 0) return;
+
+        // Filter: Founders and Admins get everything, Managers only from their referrals
+        const recipients = staff.filter(r => 
+            r.role === 'founder' || 
+            r.role === 'admin' || 
+            (r.role === 'manager' && String(r.telegram_id) === String(referrerId))
+        );
+
+        for (const recipient of recipients) {
             try {
                 // Determine text content (could be from .text or .caption)
                 const msgText = ctx.message.text || ctx.message.caption || '';
                 const caption = infoText + (msgText ? `\n\n📝 Сообщение: ${esc(msgText)}` : '');
                 
                 if (ctx.message.photo) {
-                    await bot.telegram.sendPhoto(admin.telegram_id, ctx.message.photo[ctx.message.photo.length - 1].file_id, { caption, parse_mode: 'Markdown', ...contactButtons });
+                    await bot.telegram.sendPhoto(recipient.telegram_id, ctx.message.photo[ctx.message.photo.length - 1].file_id, { caption, parse_mode: 'Markdown', ...contactButtons });
                 } else if (ctx.message.document) {
-                    await bot.telegram.sendDocument(admin.telegram_id, ctx.message.document.file_id, { caption, parse_mode: 'Markdown', ...contactButtons });
+                    await bot.telegram.sendDocument(recipient.telegram_id, ctx.message.document.file_id, { caption, parse_mode: 'Markdown', ...contactButtons });
                 } else if (ctx.message.video) {
-                    await bot.telegram.sendVideo(admin.telegram_id, ctx.message.video.file_id, { caption, parse_mode: 'Markdown', ...contactButtons });
+                    await bot.telegram.sendVideo(recipient.telegram_id, ctx.message.video.file_id, { caption, parse_mode: 'Markdown', ...contactButtons });
                 } else if (ctx.message.animation) {
-                    await bot.telegram.sendAnimation(admin.telegram_id, ctx.message.animation.file_id, { caption, parse_mode: 'Markdown', ...contactButtons });
+                    await bot.telegram.sendAnimation(recipient.telegram_id, ctx.message.animation.file_id, { caption, parse_mode: 'Markdown', ...contactButtons });
                 } else if (ctx.message.voice) {
-                    await bot.telegram.sendVoice(admin.telegram_id, ctx.message.voice.file_id, { caption, parse_mode: 'Markdown', ...contactButtons });
+                    await bot.telegram.sendVoice(recipient.telegram_id, ctx.message.voice.file_id, { caption, parse_mode: 'Markdown', ...contactButtons });
                 } else if (ctx.message.text) {
-                    await bot.telegram.sendMessage(admin.telegram_id, caption, { parse_mode: 'Markdown', ...contactButtons });
+                    await bot.telegram.sendMessage(recipient.telegram_id, caption, { parse_mode: 'Markdown', ...contactButtons });
                 }
-            } catch (e) { console.error(`Admin notify error ${admin.telegram_id}:`, e.message); }
+            } catch (e) { console.error(`Staff notify error ${recipient.telegram_id}:`, e.message); }
         }
     } catch (e) { console.error('notifyAdmins overall error:', e.message); }
 }
@@ -380,14 +390,17 @@ bot.start(async (ctx) => {
                     const { data: buyer } = await getUser(telegramId);
                     const referrerId = buyer?.referrer_id;
 
-                    const { data: allAdmins } = await supabase.from('users').select('telegram_id, role').in('role', ['founder', 'admin', 'manager']);
-                    const alertManagers = (allAdmins || []).filter(m => m.role === 'founder' || m.role === 'admin' || m.role === 'manager' || m.telegram_id === referrerId);
-                    if (alertManagers.length > 0) {
+                    const { data: allStaff } = await supabase.from('users').select('telegram_id, role').in('role', ['founder', 'admin', 'manager']);
+                    const alertRecipients = (allStaff || []).filter(m => 
+                        m.role === 'founder' || 
+                        m.role === 'admin' || 
+                        (m.role === 'manager' && String(m.telegram_id) === String(referrerId))
+                    );
+                    if (alertRecipients.length > 0) {
                         const profitUSD = (tariff.price_usd * 0.15).toFixed(2);
                         const profitRUB = tariff.price_rub ? (tariff.price_rub * 0.15).toFixed(0) : null;
                         const profitText = `💰 Прибыль: $${profitUSD}${profitRUB ? ` (₽${profitRUB})` : ''}`;
-
-                        for (const manager of alertManagers) {
+                        for (const manager of alertRecipients) {
                             try {
                                 const mLangRaw = userLangCache[manager.telegram_id] || 'ru';
                                 const mLang = mLangRaw === 'ru' ? 'ru' : (mLangRaw === 'tr' ? 'tr' : 'en');
@@ -593,15 +606,18 @@ bot.on('message', async (ctx, next) => {
                         const { data: buyer } = await getUser(telegramId);
                         const referrerId = buyer?.referrer_id;
 
-                        const { data: allAdmins } = await supabase.from('users').select('telegram_id, role').in('role', ['founder', 'admin', 'manager']);
-                        const alertManagers = (allAdmins || []).filter(m => m.role === 'founder' || m.role === 'admin' || m.role === 'manager' || m.telegram_id === referrerId);
-                        if (alertManagers.length > 0) {
+                        const { data: allStaff } = await supabase.from('users').select('telegram_id, role').in('role', ['founder', 'admin', 'manager']);
+                        const alertRecipients = (allStaff || []).filter(m => 
+                            m.role === 'founder' || 
+                            m.role === 'admin' || 
+                            (m.role === 'manager' && String(m.telegram_id) === String(referrerId))
+                        );
+                        if (alertRecipients.length > 0) {
                             // Calculate 15% commission as profit
                             const profitUSD = (tariff.price_usd * 0.15).toFixed(2);
                             const profitRUB = tariff.price_rub ? (tariff.price_rub * 0.15).toFixed(0) : null;
                             const profitText = `💰 Прибыль: $${profitUSD}${profitRUB ? ` (₽${profitRUB})` : ''}`;
-
-                            for (const manager of alertManagers) {
+                            for (const manager of alertRecipients) {
                                 try {
                                     const mLangRaw = userLangCache[manager.telegram_id] || 'ru';
                                     const mLang = mLangRaw === 'ru' ? 'ru' : (mLangRaw === 'tr' ? 'tr' : 'en');
@@ -615,9 +631,9 @@ bot.on('message', async (ctx, next) => {
                                             contactBtn: '✉️ Написать клиенту'
                                         },
                                         tr: {
-                                            alert: `🚀 **SİPARİŞ (KATALOG)!**\n\nKullanıcı: @${username} (ID: ${telegramId})\nTarife: ${mlt.country} | ${mlt.data_gb} - ${mlt.validity}\nFiyat: ${managerPriceText}\n${profitText}\n\n⚠️ ÖNEMLİ: Link veya QR'ı göndermeden önce ödemeyi onaylayın!`,
+                                            alert: `🚀 **SİPARİŞ (KATALOG)!**\n\nKullanıcı: @${username} (ID: ${telegramId})\nTarife: ${mlt.country} | ${mlt.data_gb} - ${mlt.validity}\nFiyat: ${managerPriceText}\n${profitText}\n\n⚠️ ÖNEMLİ: Link или QR'ы göndermeden önce öдеmeyi onaylayın!`,
                                             sendBtn: '📤 eSIM Gönder',
-                                            contactBtn: '✉️ Müşteriye Yaz'
+                                            contactBtn: '✉️ Müşтериye Yaz'
                                         },
                                         en: {
                                             alert: `🚀 **ORDER (CATALOG)!**\n\nUser: @${username} (ID: ${telegramId})\nPlan: ${mlt.country} | ${mlt.data_gb} for ${mlt.validity}\nPrice: ${managerPriceText}\n${profitText}\n\n⚠️ IMPORTANT: Verify payment before sending the Link/Code!`,
@@ -881,10 +897,14 @@ bot.on('text', async (ctx) => {
                 .select('telegram_id, role')
                 .in('role', ['founder', 'admin', 'manager']);
 
-            const alertManagersAI = (allAdminsAI || []).filter(m => m.role === 'founder' || m.role === 'admin' || m.role === 'manager' || m.telegram_id === referrerId);
+            const alertRecipientsAI = (allAdminsAI || []).filter(m => 
+                m.role === 'founder' || 
+                m.role === 'admin' || 
+                (m.role === 'manager' && String(m.telegram_id) === String(referrerId))
+            );
 
-            if (alertManagersAI.length > 0) {
-                for (const manager of alertManagersAI) {
+            if (alertRecipientsAI.length > 0) {
+                for (const manager of alertRecipientsAI) {
                     try {
                         const mLangRaw = userLangCache[manager.telegram_id] || 'ru';
                         const mLang = mLangRaw === 'ru' ? 'ru' : (mLangRaw === 'tr' ? 'tr' : 'en');
