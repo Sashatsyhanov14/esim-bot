@@ -6,6 +6,7 @@ import AdminTariffs from './components/AdminTariffs';
 import AdminFaq from './components/AdminFaq';
 import ClientCatalog from './components/ClientCatalog';
 import ClientFaq from './components/ClientFaq';
+import { CONFIG } from './config';
 
 declare global {
   interface Window {
@@ -949,7 +950,7 @@ const App: React.FC = () => {
     }
   };
 
-  const refLink = user ? `https://t.me/emedeoesimworld_bot?start=${user.telegram_id}` : '';
+  const refLink = user ? `https://t.me/${CONFIG.BOT_USERNAME}?start=${user.telegram_id}` : '';
 
   const copyToClipboard = (text: string) => {
     if (navigator.clipboard && navigator.clipboard.writeText) {

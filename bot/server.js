@@ -44,7 +44,8 @@ app.post('/api/send-qr', async (req, res) => {
         const { telegram_id } = req.body;
         if (!telegram_id) return res.status(400).json({ error: 'Missing telegram_id' });
 
-        const refLink = `https://t.me/emedeoesimworld_bot?start=${telegram_id}`;
+        const botUsername = process.env.BOT_USERNAME || 'emedeoesimworld_bot';
+        const refLink = `https://t.me/${botUsername}?start=${telegram_id}`;
 
         const caption = `🔗 Link: ${refLink}\n🎁 Promo: ${telegram_id}`;
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(refLink)}`;
@@ -66,7 +67,10 @@ app.post('/api/catalog-buy', async (req, res) => {
         let { data: tariffs } = await getTariffs();
         const tariff = (tariffs || []).find(t => String(t.id) === String(tariffId));
 
-        if (!tariff) return res.status(404).json({ error: 'Tariff not found' });
+        if (!tariff) {
+            console.error(`[API] Tariff not found for ID: ${tariffId}. Available IDs:`, (tariffs || []).map(t => t.id).join(', '));
+            return res.status(404).json({ error: 'Tariff not found' });
+        }
 
         const { data: orderData } = await createOrder(telegramId, tariffId, tariff.price_usd);
 

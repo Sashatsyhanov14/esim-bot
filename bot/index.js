@@ -341,6 +341,7 @@ bot.start(async (ctx) => {
             const tariffId = startPayload.replace('buy_', '');
             let { data: tariffs } = await getTariffs();
             tariffs = tariffs || [];
+            console.log(`[START] Looking for tariffId: ${tariffId} in ${tariffs.length} tariffs`);
             const tariff = tariffs.find(t => String(t.id) === String(tariffId));
 
             if (tariff) {
@@ -846,10 +847,23 @@ bot.on('text', async (ctx) => {
     // Do NOT call getLocalizedText here — it would corrupt the already-translated text.
 
     if (saleMatch) {
-                        const tariffId = saleMatch[1];
-        const tariff = tariffs.find(t => t.id === tariffId);
+        const tariffId = saleMatch[1].trim();
+        console.log(`[SALE] AI requested tariff ID: "${tariffId}"`);
+        
+        // Try exact ID match first
+        let tariff = tariffs.find(t => String(t.id) === String(tariffId));
+        
+        // Fallback: If AI returned a name instead of ID (happens with long names)
+        if (!tariff) {
+            console.log(`[SALE] ID match failed, trying name match for: "${tariffId}"`);
+            tariff = tariffs.find(t => 
+                t.country.toLowerCase().includes(tariffId.toLowerCase()) || 
+                (t.country_ru && t.country_ru.toLowerCase().includes(tariffId.toLowerCase()))
+            );
+        }
 
         if (tariff) {
+            console.log(`[SALE] Found tariff: ${tariff.country} (ID: ${tariff.id})`);
             try {
                 const { data: orderData } = await createOrder(telegramId, tariffId, tariff.price_usd);
 

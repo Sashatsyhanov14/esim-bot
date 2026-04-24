@@ -76,14 +76,21 @@ module.exports = {
     }
   },
 
-  async getTariffs() {
-    const { data, error } = await supabase
-      .from('tariffs')
-      .select('*, country, data_gb, validity_period') // Selection * ensures we get all new columns like country_ru, etc.
-      .eq('is_active', true)
-      .order('sort_number', { ascending: true }); // Отвечаем в отсортированном порядке, если есть
-    return { data, error };
-  },
+    async getTariffs() {
+        console.log('[SUPABASE] Fetching tariffs...');
+        const { data, error } = await supabase
+            .from('tariffs')
+            .select('*, country, data_gb, validity_period')
+            .eq('is_active', true)
+            .order('sort_number', { ascending: true });
+            
+        if (error) {
+            console.error('[SUPABASE] getTariffs Error:', error.message);
+        } else {
+            console.log(`[SUPABASE] Fetched ${data?.length || 0} active tariffs.`);
+        }
+        return { data, error };
+    },
 
   async saveMessage(userId, role, content) {
     const { error } = await supabase

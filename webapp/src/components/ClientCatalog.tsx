@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { CONFIG } from '../config';
 
 interface Tariff {
     id: string;
@@ -56,7 +57,7 @@ export default function ClientCatalog({ lang, telegramId }: { lang: string, tele
             if (tData.payment_link) {
                 tg.openLink(tData.payment_link);
             } else {
-                tg.openTelegramLink(`https://t.me/emedeoesimworld_bot?start=buy_${tData.id}`);
+                tg.openTelegramLink(`https://t.me/${CONFIG.BOT_USERNAME}?start=buy_${tData.id}`);
             }
             setTimeout(() => tg.close(), 100); 
         } catch (e) {

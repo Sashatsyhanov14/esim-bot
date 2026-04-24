@@ -7,7 +7,8 @@ module.exports = async (req, res) => {
     if (!telegram_id) return res.status(400).json({ error: 'telegram_id required' });
 
     const BOT_TOKEN = process.env.BOT_TOKEN;
-    const refLink = `https://t.me/emedeoesimworld_bot?start=${telegram_id}`;
+    const BOT_USERNAME = process.env.BOT_USERNAME || 'emedeoesimworld_bot';
+    const refLink = `https://t.me/${BOT_USERNAME}?start=${telegram_id}`;
     const uiLang = lang === 'ru' ? 'ru' : (lang === 'tr' ? 'tr' : 'en');
 
     const texts = {
