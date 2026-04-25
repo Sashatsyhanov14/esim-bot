@@ -4,6 +4,7 @@ const path = require('path');
 const bot = require('./index');
 const dotenv = require('dotenv');
 const { createOrder, getTariffs, supabase } = require('./src/supabase');
+const { t } = require('./src/localizer');
 
 dotenv.config();
 
@@ -141,6 +142,30 @@ app.post('/api/catalog-buy', async (req, res) => {
                     await bot.telegram.sendMessage(recipient.telegram_id, mt.text, { parse_mode: 'Markdown', ...buttons });
                 } catch (e) {}
             }
+        }
+        
+        // --- NEW: Notify the Client (User) ---
+        try {
+            let uLang = 'ru';
+            try {
+                const { data: uUser } = await supabase.from('users').select('lang_code').eq('telegram_id', telegramId).single();
+                if (uUser && uUser.lang_code) uLang = uUser.lang_code;
+            } catch (e) {}
+
+            const mlt_client = locTariff(tariff, uLang);
+            const isRU = (t) => {
+                const c = (t.country || '').toLowerCase();
+                const cr = (t.country_ru || '').toLowerCase();
+                return c.includes('russia') || cr.includes('россия') || cr.includes('рф');
+            };
+            const uPrice = (isRU(tariff) && tariff.price_rub) ? `₽${tariff.price_rub}` : `$${tariff.price_usd}${tariff.price_rub ? ` (₽${tariff.price_rub})` : ''}`;
+            
+            const clientMsgRu = `✅ **Заказ принят!**\n\nВы выбрали: ${mlt_client.country} | ${mlt_client.data_gb} на ${mlt_client.validity}\nЦена: ${uPrice}\n\n⏳ Менеджер уже проверяет оплату. Мы отправим Ваш eSIM сразу после подтверждения!`;
+            const clientMsg = await t(uLang, clientMsgRu);
+            
+            await bot.telegram.sendMessage(telegramId, clientMsg, { parse_mode: 'Markdown' });
+        } catch (e) {
+            console.error('[API] Client notify error:', e.message);
         }
 
         res.json({ success: true, orderId: orderData?.id });

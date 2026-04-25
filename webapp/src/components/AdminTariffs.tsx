@@ -41,6 +41,7 @@ export default function AdminTariffs({ t }: { t: any }) {
     const [showOnlyActive, setShowOnlyActive] = useState(false);
     const [notification, setNotification] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
     const [isTranslating, setIsTranslating] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
     const formRef = useRef<HTMLDivElement>(null);
 
     const showNotify = (msg: string, type: 'success' | 'error' = 'success') => {
@@ -89,10 +90,18 @@ export default function AdminTariffs({ t }: { t: any }) {
 
         const cleanData: any = {};
         validFields.forEach(field => {
-            if (formData[field as keyof Tariff] !== undefined) {
-                cleanData[field] = formData[field as keyof Tariff];
+            const val = formData[field as keyof Tariff];
+            if (val !== undefined) {
+                // Trim strings to prevent duplicates like "Korea" and "Korea "
+                if (typeof val === 'string') {
+                    cleanData[field] = val.trim();
+                } else {
+                    cleanData[field] = val;
+                }
             }
         });
+
+        setIsSaving(true);
 
         if (editingId === 'new') {
             // Explicitly set created_at to avoid NOT NULL constraint errors if DB default is missing
@@ -115,6 +124,7 @@ export default function AdminTariffs({ t }: { t: any }) {
         }
         setEditingId(null);
         setFormData({});
+        setIsSaving(false);
         fetchTariffs();
     };
 
@@ -146,8 +156,16 @@ export default function AdminTariffs({ t }: { t: any }) {
 
     const handleDelete = async (id: string) => {
         if (confirm(t.deleteConfirm)) {
-            await supabase.from('tariffs').delete().eq('id', id);
-            fetchTariffs();
+            setIsSaving(true);
+            const { error } = await supabase.from('tariffs').delete().eq('id', id);
+            if (error) {
+                console.error('[DELETE ERROR]', error);
+                showNotify(`Ошибка удаления: ${error.message}`, 'error');
+            } else {
+                showNotify('🗑️ Тариф удален');
+                await fetchTariffs();
+            }
+            setIsSaving(false);
         }
     };
 
@@ -181,19 +199,82 @@ export default function AdminTariffs({ t }: { t: any }) {
         setIsTranslating(false);
     };
 
+    const handleFixNames = async () => {
+        if (!confirm('Это уберет лишние пробелы во всех названиях стран. Продолжить?')) return;
+        setIsSaving(true);
+        const { data } = await supabase.from('tariffs').select('*');
+        if (data) {
+            for (const tData of data) {
+                const updates: any = {};
+                const fields = ['country', 'country_ru', 'country_de', 'country_pl', 'country_ar', 'country_fa', 'country_tr'];
+                let changed = false;
+                fields.forEach(f => {
+                    if (tData[f] && tData[f] !== tData[f].trim()) {
+                        updates[f] = tData[f].trim();
+                        changed = true;
+                    }
+                });
+                if (changed) {
+                    await supabase.from('tariffs').update(updates).eq('id', tData.id);
+                }
+            }
+            showNotify('✅ Названия очищены от пробелов');
+            fetchTariffs();
+        }
+        setIsSaving(false);
+    };
+
+    const handleResort = async () => {
+        if (!confirm('Это переназначит всем тарифам порядковые номера (1, 2, 3...) в текущем порядке. Продолжить?')) return;
+        setIsSaving(true);
+        const { data } = await supabase.from('tariffs').select('id').order('sort_number', { ascending: true });
+        if (data) {
+            for (let i = 0; i < data.length; i++) {
+                await supabase.from('tariffs').update({ sort_number: i + 1 }).eq('id', data[i].id);
+            }
+            showNotify('✅ Сортировка пересчитана');
+            fetchTariffs();
+        }
+        setIsSaving(false);
+    };
+
     if (loading) return <div className="text-center p-4 animate-pulse text-on-surface-variant">Загрузка тарифов...</div>;
 
     return (
         <div className="space-y-4">
             <div className="flex justify-between items-center pl-1">
-                <h3 className="text-lg font-headline font-bold text-on-surface">{t.manageTariffs}</h3>
-                <button
-                    onClick={() => { setEditingId('new'); setFormData({ is_active: true, sort_number: tariffs.length + 1 }); scrollToForm(); }}
-                    className="flex items-center gap-1 bg-primary/20 text-primary border border-primary/30 px-3 py-1.5 rounded-lg text-sm font-bold active:scale-95 transition-all hover:bg-primary/30"
-                >
-                    <span className="material-symbols-outlined text-[18px]">add</span>
-                    {t.addTariff}
-                </button>
+                <div className="flex flex-col">
+                    <h3 className="text-lg font-headline font-bold text-on-surface">{t.manageTariffs}</h3>
+                    <span className="text-[10px] text-on-surface-variant uppercase font-bold tracking-widest">Total: {tariffs.length}</span>
+                </div>
+                <div className="flex gap-2">
+                    <button
+                        onClick={handleResort}
+                        title="Пересчитать нумерацию (1, 2, 3...)"
+                        className="w-9 h-9 flex items-center justify-center bg-secondary/10 text-secondary border border-secondary/20 rounded-lg active:scale-95 transition-all hover:bg-secondary/20"
+                    >
+                        <span className="material-symbols-outlined text-[20px]">format_list_numbered</span>
+                    </button>
+                    <button
+                        onClick={handleFixNames}
+                        title="Убрать пробелы в названиях"
+                        className="w-9 h-9 flex items-center justify-center bg-secondary/10 text-secondary border border-secondary/20 rounded-lg active:scale-95 transition-all hover:bg-secondary/20"
+                    >
+                        <span className="material-symbols-outlined text-[20px]">magic_button</span>
+                    </button>
+                    <button
+                        onClick={() => { 
+                            const maxSort = tariffs.length > 0 ? Math.max(...tariffs.map(t => t.sort_number || 0)) : 0;
+                            setEditingId('new'); 
+                            setFormData({ is_active: true, sort_number: maxSort + 1 }); 
+                            scrollToForm(); 
+                        }}
+                        className="flex items-center gap-1 bg-primary/20 text-primary border border-primary/30 px-3 py-1.5 rounded-lg text-sm font-bold active:scale-95 transition-all hover:bg-primary/30"
+                    >
+                        <span className="material-symbols-outlined text-[18px]">add</span>
+                        {t.addTariff}
+                    </button>
+                </div>
             </div>
 
             <div className="flex gap-2">
@@ -277,9 +358,19 @@ export default function AdminTariffs({ t }: { t: any }) {
                         <button onClick={() => setEditingId(null)} className="flex-1 bg-surface-container-high text-on-surface py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors hover:bg-surface-container-highest">
                             {t.cancelBtn}
                         </button>
-                        <button onClick={handleSave} className="flex-1 bg-primary text-on-primary py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-[0_4px_20px_rgba(208,188,255,0.3)] hover:brightness-110 active:scale-95">
-                            <span className="material-symbols-outlined text-[20px]">save</span>
-                            {t.saveBtn}
+                        <button 
+                            onClick={handleSave} 
+                            disabled={isSaving}
+                            className="flex-1 bg-primary text-on-primary py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-[0_4px_20px_rgba(208,188,255,0.3)] hover:brightness-110 active:scale-95 disabled:opacity-70"
+                        >
+                            {isSaving ? (
+                                <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                            ) : (
+                                <>
+                                    <span className="material-symbols-outlined text-[20px]">save</span>
+                                    {t.saveBtn}
+                                </>
+                            )}
                         </button>
                     </div>
                 </div>
@@ -291,9 +382,14 @@ export default function AdminTariffs({ t }: { t: any }) {
                         {tData.is_active && <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full blur-[30px] -z-10 translate-x-1/2 -translate-y-1/2"></div>}
 
                         <div className="flex justify-between items-start mb-3 pr-16">
-                            <div className="flex items-center gap-2">
-                                <span className="text-[10px] bg-secondary/20 text-secondary px-2 py-0.5 rounded font-bold uppercase">#{tData.sort_number}</span>
-                                <span className="font-headline font-bold text-on-surface text-lg tracking-wide">{tData.country}</span>
+                            <div className="flex flex-col gap-0.5">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] bg-secondary/20 text-secondary px-2 py-0.5 rounded font-bold uppercase">#{tData.sort_number}</span>
+                                    <span className="font-headline font-bold text-on-surface text-lg tracking-wide">{tData.country}</span>
+                                </div>
+                                {tData.country_ru && (
+                                    <span className="text-[10px] text-on-surface-variant font-medium ml-12 italic">RU: {tData.country_ru}</span>
+                                )}
                             </div>
                             <span className="font-headline font-extrabold text-green-400 text-xl absolute top-3 right-3">
                                 ${tData.price_usd}

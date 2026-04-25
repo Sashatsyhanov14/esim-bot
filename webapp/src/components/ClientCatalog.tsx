@@ -54,12 +54,21 @@ export default function ClientCatalog({ lang, telegramId }: { lang: string, tele
                 await new Promise(resolve => setTimeout(resolve, 300));
             }
 
+            const successMsg = lang === 'ru' 
+                ? 'Заказ зарегистрирован! Сейчас откроется ссылка на оплату. Также мы отправили подтверждение в чат с ботом.' 
+                : 'Order registered! Payment link will open now. We also sent a confirmation to the bot chat.';
+            
             if (tData.payment_link) {
-                tg.openLink(tData.payment_link);
+                tg.showAlert(successMsg, () => {
+                    tg.openLink(tData.payment_link!);
+                    tg.close();
+                });
             } else {
-                tg.openTelegramLink(`https://t.me/${CONFIG.BOT_USERNAME}?start=buy_${tData.id}`);
+                tg.showAlert(successMsg, () => {
+                    tg.openTelegramLink(`https://t.me/${CONFIG.BOT_USERNAME}?start=buy_${tData.id}`);
+                    tg.close();
+                });
             }
-            setTimeout(() => tg.close(), 100); 
         } catch (e) {
             console.error(e);
             tg.openTelegramLink(`https://t.me/emedeoesimworld_bot?start=buy_${tData.id}`);
@@ -90,13 +99,14 @@ export default function ClientCatalog({ lang, telegramId }: { lang: string, tele
 
     // Group by localized country
     const grouped = tariffs.reduce((acc: Record<string, Tariff[]>, tariff) => {
-        const c = loc('country', tariff) || tariff.country;
+        const c = (loc('country', tariff) || tariff.country || '').trim();
+        if (!c) return acc;
         if (!acc[c]) acc[c] = [];
         acc[c].push(tariff);
         return acc;
     }, {});
 
-    const countries = Object.keys(grouped).filter(c => c.toLowerCase().includes(searchQuery.toLowerCase()));
+    const countries = Object.keys(grouped).filter(c => c.toLowerCase().includes(searchQuery.trim().toLowerCase()));
 
     const translations: Record<string, Record<string, string>> = {
         ru: { search: 'Поиск страны...', catalog: 'Каталог eSIM', back: 'Назад', buy: 'КУПИТЬ', traffic: 'Трафик', validity: 'Срок', empty: 'Ничего не найдено', loading: 'Загрузка тарифов...', open_tg: 'Откройте WebApp через Telegram' },
